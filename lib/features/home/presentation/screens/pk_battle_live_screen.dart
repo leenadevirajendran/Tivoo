@@ -12,7 +12,7 @@ import '../../../live_stream/presentation/widgets/floating_hearts_overlay.dart';
 import '../../../live_stream/presentation/widgets/gift_bottom_sheet.dart';
 import '../widgets/live_tools_bottom_sheet.dart';
 
-/// Professional, pixel-perfect PK Battle Live Screen strictly responsive for 360px+ screens.
+/// Pixel-perfect, ultra-stylish PK Battle Live Screen strictly matching the user's reference UI.
 class PkBattleLiveScreen extends StatefulWidget {
   final VoidCallback? onBack;
 
@@ -58,6 +58,7 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
     super.initState();
     ReelVideoManager.instance.pauseAll();
     _initInitialComments();
+    _initStaticLaneHearts();
   }
 
   void _initInitialComments() {
@@ -106,17 +107,35 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
     ];
   }
 
+  void _initStaticLaneHearts() {
+    _laneHearts.clear();
+    final offsets = [0.0, 4.0, -3.0, 2.0];
+    final sizes = [15.0, 17.0, 19.0, 21.0];
+    final opacities = [0.5, 0.65, 0.8, 0.95];
+
+    for (int i = 0; i < 4; i++) {
+      _laneHearts.add(
+        _FloatingLaneHeart(
+          id: 'static_$i',
+          size: sizes[i],
+          opacity: opacities[i],
+          horizontalOffset: offsets[i],
+        ),
+      );
+    }
+  }
+
   void _spawnLaneHeart() {
     final heart = _FloatingLaneHeart(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
-      size: 16.0 + _random.nextDouble() * 12.0,
-      opacity: 0.75 + _random.nextDouble() * 0.25,
-      horizontalOffset: (_random.nextDouble() - 0.5) * 16.0,
+      size: 16.0 + _random.nextDouble() * 10.0,
+      opacity: 0.8 + _random.nextDouble() * 0.2,
+      horizontalOffset: (_random.nextDouble() - 0.5) * 12.0,
     );
     if (mounted) {
       setState(() {
         _laneHearts.add(heart);
-        if (_laneHearts.length > 12) {
+        if (_laneHearts.length > 8) {
           _laneHearts.removeAt(0);
         }
       });
@@ -323,62 +342,63 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
     final botPadding = mediaQuery.padding.bottom;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF070913),
+      backgroundColor: const Color(0xFF04060E),
       body: ActiveGiftAnimationOverlay(
         key: _activeGiftKey,
         child: FloatingHeartsOverlay(
           key: _heartsKey,
           child: Stack(
             children: [
-              // 1. Background atmospheric glow
+              // 1. Deep Space Neon Cyber Background
               Positioned.fill(
                 child: Container(
                   decoration: const BoxDecoration(
                     gradient: RadialGradient(
                       center: Alignment(0, -0.4),
-                      radius: 1.3,
+                      radius: 1.4,
                       colors: [
-                        Color(0xFF141935),
-                        Color(0xFF080A14),
-                        Color(0xFF030408),
+                        Color(0xFF131938),
+                        Color(0xFF080B1A),
+                        Color(0xFF03040A),
                       ],
                     ),
                   ),
                 ),
               ),
 
-              // 2. Main Content Flow (No video bleed into comment area)
+              // 2. Clean Layered UI Structure
               SafeArea(
                 bottom: false,
                 child: Column(
                   children: [
                     const SizedBox(height: 2),
 
-                    // Top Battle Header (Neha, Center PK Crest, Arun, Exit button)
+                    // Top Battle Header (Card Capsules + PK Battle Logo + Timer + Close Button)
                     _buildTopBattleHeader(),
-
-                    // Team Neha vs Team Arun Sub-headers
-                    const SizedBox(height: 4),
-                    _buildTeamSubHeader(),
 
                     const SizedBox(height: 6),
 
-                    // Cropped Split Video Arena (Explicit fixed height above comments)
+                    // Team Neha vs Team Arun Sub-headers
+                    _buildTeamSubHeader(),
+
+                    const SizedBox(height: 8),
+
+                    // Split Dual Live Stream Video Arena
                     _buildSplitVideoArena(),
 
                     const SizedBox(height: 6),
 
-                    // Clash Score Bar (Red vs Blue with 3D Gift icons)
+                    // Clash Score Bar (7,556,900 vs 483,400 with 3D Gifts)
                     _buildClashScoreBar(),
 
                     const SizedBox(height: 6),
 
-                    // Top Supporters & Send Gift CTA Bar
+                    // Top Supporters Pedestals & Send Gift CTA Bar
                     _buildTopSupportersAndSendGiftBar(),
 
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
 
-                    // Live Comments Stream with Right Floating Hearts Lane
+                    // Live Comments Stream & Right Floating Hearts Column
                     Expanded(
                       child: _buildLiveChatAndHeartsArea(),
                     ),
@@ -386,9 +406,9 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
                     // "New Messages v" Pill
                     _buildNewMessagesPill(),
 
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
 
-                    // Bottom Action Bar
+                    // Bottom Action Bar (Star, Message Input, Gift, Share, More)
                     _buildBottomActionBar(botPadding),
                   ],
                 ),
@@ -401,117 +421,121 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
   }
 
   // ===========================================================================
-  // TOP BATTLE HEADER (Responsive 360px layout, zero horizontal overflow)
+  // 1. TOP BATTLE HEADER (Matching Image 2 Reference)
   // ===========================================================================
   Widget _buildTopBattleHeader() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Left Streamer Card (Neha)
+          // Left Streamer Capsule (Neha)
           Expanded(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Avatar with Pink Ring
-                Container(
-                  padding: const EdgeInsets.all(1.5),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: const Color(0xFFFF2D78), width: 1.5),
-                    boxShadow: const [
-                      BoxShadow(color: Color(0x66FF2D78), blurRadius: 6),
-                    ],
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0x99160E22),
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: const Color(0xFFFF2D78).withValues(alpha: 0.7), width: 1.2),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFFF2D78).withValues(alpha: 0.15),
+                    blurRadius: 10,
                   ),
-                  child: CustomAvatar(radius: 17, assetPath: _leftStreamerAsset),
-                ),
-                const SizedBox(width: 5),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Flexible(
-                            child: Text(
+                ],
+              ),
+              child: Row(
+                children: [
+                  // Circular Avatar with Glowing Ring
+                  Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFFFF2D78), width: 1.8),
+                    ),
+                    child: CustomAvatar(radius: 17, assetPath: _leftStreamerAsset),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
                               _leftStreamerName,
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 12,
+                                fontSize: 12.5,
                                 fontWeight: FontWeight.bold,
                               ),
-                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(width: 2),
+                            const Text('👑', style: TextStyle(fontSize: 10)),
+                          ],
+                        ),
+                        const SizedBox(height: 1),
+                        Row(
+                          children: [
+                            const Text('❤️ ', style: TextStyle(fontSize: 8.5)),
+                            Text(
+                              _leftLikes,
+                              style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 3),
+                        GestureDetector(
+                          onTap: () => setState(() => _isFollowingNeha = !_isFollowingNeha),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2.5),
+                            decoration: BoxDecoration(
+                              color: _isFollowingNeha ? Colors.white24 : const Color(0xFFFF2D78),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              _isFollowingNeha ? 'Following' : 'Follow',
+                              style: const TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.bold),
                             ),
                           ),
-                          const SizedBox(width: 2),
-                          const Text('👑', style: TextStyle(fontSize: 10)),
-                        ],
-                      ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text('❤️ ', style: TextStyle(fontSize: 8)),
-                          Text(
-                            _leftLikes,
-                            style: const TextStyle(color: Colors.white70, fontSize: 9.5, fontWeight: FontWeight.w500),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 2),
-                      GestureDetector(
-                        onTap: () => setState(() => _isFollowingNeha = !_isFollowingNeha),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: _isFollowingNeha ? Colors.white24 : const Color(0xFFFF2D78),
-                            borderRadius: BorderRadius.circular(8),
-                            boxShadow: [
-                              if (!_isFollowingNeha)
-                                const BoxShadow(color: Color(0x66FF2D78), blurRadius: 4),
-                            ],
-                          ),
-                          child: Text(
-                            _isFollowingNeha ? 'Following' : 'Follow',
-                            style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
-                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
 
-          // Center PK Battle Logo & Timer
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 2),
+          // Center PK Battle Logo & Timer Emblem
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // PK Crown & Badge
+                // 3D PK Logo with Wings
                 Stack(
                   alignment: Alignment.center,
                   clipBehavior: Clip.none,
                   children: [
                     const Positioned(
-                      top: -8,
-                      child: Text('👑', style: TextStyle(fontSize: 11)),
+                      top: -10,
+                      child: Text('👑', style: TextStyle(fontSize: 14)),
                     ),
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        // Left Pink Wing
                         Container(
-                          width: 10,
-                          height: 8,
+                          width: 14,
+                          height: 12,
                           decoration: const BoxDecoration(
                             gradient: LinearGradient(colors: [Color(0x00FF2D78), Color(0xFFFF2D78)]),
-                            borderRadius: BorderRadius.horizontal(left: Radius.circular(6)),
+                            borderRadius: BorderRadius.horizontal(left: Radius.circular(8)),
                           ),
                         ),
+                        // 3D Gold "PK"
                         ShaderMask(
                           shaderCallback: (bounds) => const LinearGradient(
                             colors: [Color(0xFFFFEA00), Color(0xFFFF9100), Color(0xFFFF2D78)],
@@ -520,45 +544,52 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
                             'PK',
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 18,
+                              fontSize: 22,
                               fontWeight: FontWeight.w900,
                               fontStyle: FontStyle.italic,
                               letterSpacing: -0.5,
                             ),
                           ),
                         ),
+                        // Right Blue Wing
                         Container(
-                          width: 10,
-                          height: 8,
+                          width: 14,
+                          height: 12,
                           decoration: const BoxDecoration(
                             gradient: LinearGradient(colors: [Color(0xFF2979FF), Color(0x002979FF)]),
-                            borderRadius: BorderRadius.horizontal(right: Radius.circular(6)),
+                            borderRadius: BorderRadius.horizontal(right: Radius.circular(8)),
                           ),
                         ),
                       ],
                     ),
                   ],
                 ),
+                // BATTLE Label Pill
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0D122B),
-                    borderRadius: BorderRadius.circular(5),
-                    border: Border.all(color: const Color(0xFF2979FF).withValues(alpha: 0.6), width: 0.7),
+                    color: const Color(0xFF090D1E),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: const Color(0xFFFFD54F).withValues(alpha: 0.6), width: 0.8),
                   ),
                   child: const Text(
                     'BATTLE',
-                    style: TextStyle(color: Color(0xFF82B1FF), fontSize: 7.5, fontWeight: FontWeight.w900, letterSpacing: 0.5),
+                    style: TextStyle(
+                      color: Color(0xFFFFD54F),
+                      fontSize: 8,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.8,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 2),
-                // Battle Time Pill
+                const SizedBox(height: 3),
+                // Battle Time Countdown Badge
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: const Color(0xD00A0D1E),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFF202A50), width: 0.8),
+                    color: const Color(0xEE090D1E),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFF243260), width: 1),
                   ),
                   child: Column(
                     children: [
@@ -570,9 +601,9 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
                         _formatTimer(_secondsRemaining),
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 11.5,
+                          fontSize: 13,
                           fontWeight: FontWeight.w900,
-                          letterSpacing: 0.3,
+                          letterSpacing: 0.5,
                         ),
                       ),
                     ],
@@ -582,100 +613,113 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
             ),
           ),
 
-          // Right Streamer Card (Arun) & Exit button
+          // Right Streamer Capsule (Arun) & Floating Exit Button
           Expanded(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.end,
+            child: Stack(
+              clipBehavior: Clip.none,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    mainAxisSize: MainAxisSize.min,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0x990E182A),
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(color: const Color(0xFF2979FF).withValues(alpha: 0.7), width: 1.2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF2979FF).withValues(alpha: 0.15),
+                        blurRadius: 10,
+                      ),
+                    ],
+                  ),
+                  child: Row(
                     children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              _rightStreamerName,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              overflow: TextOverflow.ellipsis,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                Text(
+                                  _rightStreamerName,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(width: 2),
+                                const Text('👑', style: TextStyle(fontSize: 10)),
+                              ],
                             ),
-                          ),
-                          const SizedBox(width: 2),
-                          const Text('👑', style: TextStyle(fontSize: 10)),
-                        ],
-                      ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          const Text('❤️ ', style: TextStyle(fontSize: 8)),
-                          Text(
-                            _rightLikes,
-                            style: const TextStyle(color: Colors.white70, fontSize: 9.5, fontWeight: FontWeight.w500),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 2),
-                      GestureDetector(
-                        onTap: () => setState(() => _isFollowingArun = !_isFollowingArun),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: _isFollowingArun ? Colors.white24 : const Color(0xFF2979FF),
-                            borderRadius: BorderRadius.circular(8),
-                            boxShadow: [
-                              if (!_isFollowingArun)
-                                const BoxShadow(color: Color(0x662979FF), blurRadius: 4),
-                            ],
-                          ),
-                          child: Text(
-                            _isFollowingArun ? 'Following' : 'Follow',
-                            style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
-                          ),
+                            const SizedBox(height: 1),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                const Text('❤️ ', style: TextStyle(fontSize: 8.5)),
+                                Text(
+                                  _rightLikes,
+                                  style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w600),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 3),
+                            GestureDetector(
+                              onTap: () => setState(() => _isFollowingArun = !_isFollowingArun),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2.5),
+                                decoration: BoxDecoration(
+                                  color: _isFollowingArun ? Colors.white24 : const Color(0xFF2979FF),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  _isFollowingArun ? 'Following' : 'Follow',
+                                  style: const TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
+                      const SizedBox(width: 6),
+                      // Circular Avatar with Blue Ring
+                      Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: const Color(0xFF2979FF), width: 1.8),
+                        ),
+                        child: CustomAvatar(radius: 17, assetPath: _rightStreamerAsset),
+                      ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 5),
-                // Avatar with Blue Ring
-                Container(
-                  padding: const EdgeInsets.all(1.5),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: const Color(0xFF2979FF), width: 1.5),
-                    boxShadow: const [
-                      BoxShadow(color: Color(0x662979FF), blurRadius: 6),
-                    ],
-                  ),
-                  child: CustomAvatar(radius: 17, assetPath: _rightStreamerAsset),
-                ),
-                const SizedBox(width: 4),
-                // Close button
-                GestureDetector(
-                  onTap: () {
-                    if (widget.onBack != null) {
-                      widget.onBack!();
-                    } else {
-                      Navigator.of(context).maybePop();
-                    }
-                  },
-                  child: Container(
-                    width: 22,
-                    height: 22,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withValues(alpha: 0.14),
+
+                // Floating Close 'X' Button on top-right of the card
+                Positioned(
+                  top: -5,
+                  right: -4,
+                  child: GestureDetector(
+                    onTap: () {
+                      if (widget.onBack != null) {
+                        widget.onBack!();
+                      } else {
+                        Navigator.of(context).maybePop();
+                      }
+                    },
+                    child: Container(
+                      width: 20,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: const Color(0xFF14192F),
+                        border: Border.all(color: const Color(0xFF2979FF), width: 1.2),
+                      ),
+                      child: const Center(
+                        child: Icon(Icons.close_rounded, color: Colors.white, size: 12),
+                      ),
                     ),
-                    child: const Icon(Icons.close_rounded, color: Colors.white, size: 14),
                   ),
                 ),
               ],
@@ -687,7 +731,7 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
   }
 
   // ===========================================================================
-  // TEAM SUB HEADER (Responsive)
+  // 2. TEAM SUB HEADER (Matching Image 2 Reference)
   // ===========================================================================
   Widget _buildTeamSubHeader() {
     return Padding(
@@ -696,83 +740,74 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           // Team Neha Pill
-          Flexible(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-              decoration: BoxDecoration(
-                color: const Color(0x99170E20),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0x44FF2D78)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    'Team Neha 👑',
-                    style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0x99170E20),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0x66FF2D78)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Team Neha 👑',
+                  style: TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(width: 5),
+                // Mini avatar cluster
+                SizedBox(
+                  width: 28,
+                  height: 14,
+                  child: Stack(
+                    children: [
+                      Positioned(left: 0, child: CustomAvatar(radius: 7, assetPath: AppAssets.status2)),
+                      Positioned(left: 12, child: CustomAvatar(radius: 7, assetPath: AppAssets.status3)),
+                    ],
                   ),
-                  const SizedBox(width: 4),
-                  SizedBox(
-                    width: 24,
-                    height: 12,
-                    child: Stack(
-                      children: [
-                        Positioned(left: 0, child: CustomAvatar(radius: 6, assetPath: AppAssets.status2)),
-                        Positioned(left: 10, child: CustomAvatar(radius: 6, assetPath: AppAssets.status3)),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 3),
-                  const Flexible(
-                    child: Text(
-                      '1.2K',
-                      style: TextStyle(color: Colors.white60, fontSize: 9),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 4),
+                const Text(
+                  '1.2K Members',
+                  style: TextStyle(color: Colors.white60, fontSize: 9.5),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 6),
 
           // Team Arun Pill
-          Flexible(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-              decoration: BoxDecoration(
-                color: const Color(0x990E182A),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0x442979FF)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    width: 24,
-                    height: 12,
-                    child: Stack(
-                      children: [
-                        Positioned(left: 0, child: CustomAvatar(radius: 6, assetPath: AppAssets.status5)),
-                        Positioned(left: 10, child: CustomAvatar(radius: 6, assetPath: AppAssets.status1)),
-                      ],
-                    ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0x990E182A),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0x662979FF)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Mini avatar cluster
+                SizedBox(
+                  width: 28,
+                  height: 14,
+                  child: Stack(
+                    children: [
+                      Positioned(left: 0, child: CustomAvatar(radius: 7, assetPath: AppAssets.status5)),
+                      Positioned(left: 12, child: CustomAvatar(radius: 7, assetPath: AppAssets.status1)),
+                    ],
                   ),
-                  const SizedBox(width: 3),
-                  const Flexible(
-                    child: Text(
-                      '980',
-                      style: TextStyle(color: Colors.white60, fontSize: 9),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  const Text(
-                    'Team Arun 👑',
-                    style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 4),
+                const Text(
+                  '980 Members',
+                  style: TextStyle(color: Colors.white60, fontSize: 9.5),
+                ),
+                const SizedBox(width: 5),
+                const Text(
+                  'Team Arun 👑',
+                  style: TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.bold),
+                ),
+              ],
             ),
           ),
         ],
@@ -781,21 +816,21 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
   }
 
   // ===========================================================================
-  // CROPPED SPLIT VIDEO ARENA (Contained above comment area)
+  // 3. SPLIT DUAL VIDEO ARENA (Matching Image 3 Reference)
   // ===========================================================================
   Widget _buildSplitVideoArena() {
     return Container(
-      height: 230,
+      height: 235,
       margin: const EdgeInsets.symmetric(horizontal: 6),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF1E2442), width: 1.2),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF1B2244), width: 1.2),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         child: Stack(
           children: [
-            // Left & Right Video Player split
+            // Dual Live Stream Split
             Row(
               children: [
                 // Left Video Stream (Neha)
@@ -807,40 +842,40 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
                         playerId: 'pk_left',
                         videoAssetPath: _leftVideoAsset,
                       ),
-                      // Top Left Overlay Badge
+                      // Top Left Overlay Badge: [🔥 8.4K] [LIVE]
                       Positioned(
-                        top: 6,
-                        left: 6,
+                        top: 8,
+                        left: 8,
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
                               decoration: BoxDecoration(
                                 color: Colors.black54,
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(10),
                               ),
                               child: const Row(
                                 children: [
-                                  Text('🔥', style: TextStyle(fontSize: 8.5)),
-                                  SizedBox(width: 2),
+                                  Text('🔥', style: TextStyle(fontSize: 9)),
+                                  SizedBox(width: 3),
                                   Text(
                                     '8.4K',
-                                    style: TextStyle(color: Colors.white, fontSize: 8.5, fontWeight: FontWeight.bold),
+                                    style: TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.bold),
                                   ),
                                 ],
                               ),
                             ),
-                            const SizedBox(width: 3),
+                            const SizedBox(width: 4),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFFF2D55),
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(10),
                               ),
                               child: const Text(
                                 'LIVE',
-                                style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w900),
+                                style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900),
                               ),
                             ),
                           ],
@@ -859,40 +894,40 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
                         playerId: 'pk_right',
                         videoAssetPath: _rightVideoAsset,
                       ),
-                      // Top Right Overlay Badge
+                      // Top Right Overlay Badge: [🔥 1.2K] [LIVE]
                       Positioned(
-                        top: 6,
-                        left: 6,
+                        top: 8,
+                        left: 8,
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
                               decoration: BoxDecoration(
                                 color: Colors.black54,
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(10),
                               ),
                               child: const Row(
                                 children: [
-                                  Text('🔥', style: TextStyle(fontSize: 8.5)),
-                                  SizedBox(width: 2),
+                                  Text('🔥', style: TextStyle(fontSize: 9)),
+                                  SizedBox(width: 3),
                                   Text(
                                     '1.2K',
-                                    style: TextStyle(color: Colors.white, fontSize: 8.5, fontWeight: FontWeight.bold),
+                                    style: TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.bold),
                                   ),
                                 ],
                               ),
                             ),
-                            const SizedBox(width: 3),
+                            const SizedBox(width: 4),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                               decoration: BoxDecoration(
                                 color: const Color(0xFF2979FF),
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(10),
                               ),
                               child: const Text(
                                 'LIVE',
-                                style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w900),
+                                style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900),
                               ),
                             ),
                           ],
@@ -904,15 +939,15 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
               ],
             ),
 
-            // Center Energy Clash Line & VS Badge
+            // Center Clash Laser Beam & VS Badge
             Positioned.fill(
               child: Center(
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    // Vertical Glowing Energy Beam
+                    // Vertical Lightning Energy Beam
                     Container(
-                      width: 2,
+                      width: 2.5,
                       decoration: const BoxDecoration(
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
@@ -925,25 +960,25 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
                           ],
                         ),
                         boxShadow: [
-                          BoxShadow(color: Color(0xAAFF2D78), blurRadius: 6, spreadRadius: 1),
-                          BoxShadow(color: Color(0xAA2979FF), blurRadius: 6, spreadRadius: 1),
+                          BoxShadow(color: Color(0xCCFF2D78), blurRadius: 8, spreadRadius: 1),
+                          BoxShadow(color: Color(0xCC2979FF), blurRadius: 8, spreadRadius: 1),
                         ],
                       ),
                     ),
 
-                    // Centered VS Badge
+                    // Centered Circular VS Clash Emblem
                     Container(
-                      width: 36,
-                      height: 36,
+                      width: 40,
+                      height: 40,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: const RadialGradient(
-                          colors: [Color(0xFF2A1538), Color(0xFF0F152D)],
+                          colors: [Color(0xFF2C133D), Color(0xFF0C132C)],
                         ),
-                        border: Border.all(color: const Color(0xFFFF2D78), width: 1.8),
+                        border: Border.all(color: const Color(0xFFFF2D78), width: 2),
                         boxShadow: const [
-                          BoxShadow(color: Color(0xAAFF2D78), blurRadius: 10, spreadRadius: 1),
-                          BoxShadow(color: Color(0xAA2979FF), blurRadius: 10, spreadRadius: 1),
+                          BoxShadow(color: Color(0xAAFF2D78), blurRadius: 12, spreadRadius: 1),
+                          BoxShadow(color: Color(0xAA2979FF), blurRadius: 12, spreadRadius: 1),
                         ],
                       ),
                       child: const Center(
@@ -951,7 +986,7 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
                           'VS',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 12.5,
+                            fontSize: 13.5,
                             fontWeight: FontWeight.w900,
                             fontStyle: FontStyle.italic,
                             letterSpacing: -0.5,
@@ -970,7 +1005,7 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
   }
 
   // ===========================================================================
-  // CLASH SCORE BAR (Red vs Blue with 3D Gifts)
+  // 4. CLASH SCORE BAR (Matching Image 3 Reference)
   // ===========================================================================
   Widget _buildClashScoreBar() {
     final total = _leftScore + _rightScore;
@@ -979,15 +1014,15 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8),
-      height: 32,
+      height: 36,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         boxShadow: const [
-          BoxShadow(color: Colors.black87, blurRadius: 8, offset: Offset(0, 2)),
+          BoxShadow(color: Colors.black87, blurRadius: 10, offset: Offset(0, 3)),
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         child: Row(
           children: [
             // Left Score Bar (Pink/Red Gradient)
@@ -999,19 +1034,19 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
                     colors: [Color(0xFFFF1744), Color(0xFFFF2D78), Color(0xFFFF5252)],
                   ),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: Row(
                   children: [
-                    const Text('🎁', style: TextStyle(fontSize: 14)),
-                    const SizedBox(width: 4),
+                    const Text('🎁', style: TextStyle(fontSize: 16)),
+                    const SizedBox(width: 5),
                     Flexible(
                       child: Text(
                         _formatScore(_leftScore),
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 11.5,
+                          fontSize: 12.5,
                           fontWeight: FontWeight.w900,
-                          letterSpacing: 0.2,
+                          letterSpacing: 0.3,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -1021,9 +1056,9 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
               ),
             ),
 
-            // Middle Divider Bevel
+            // Middle Glowing Diamond Divider
             Container(
-              width: 2.5,
+              width: 3,
               color: Colors.white,
             ),
 
@@ -1036,7 +1071,7 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
                     colors: [Color(0xFF00B0FF), Color(0xFF2979FF), Color(0xFF1E88E5)],
                   ),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
@@ -1045,15 +1080,15 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
                         _formatScore(_rightScore),
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 11.5,
+                          fontSize: 12.5,
                           fontWeight: FontWeight.w900,
-                          letterSpacing: 0.2,
+                          letterSpacing: 0.3,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    const SizedBox(width: 4),
-                    const Text('🎁', style: TextStyle(fontSize: 14)),
+                    const SizedBox(width: 5),
+                    const Text('🎁', style: TextStyle(fontSize: 16)),
                   ],
                 ),
               ),
@@ -1065,7 +1100,7 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
   }
 
   // ===========================================================================
-  // TOP SUPPORTERS & SEND GIFT BUTTON
+  // 5. TOP SUPPORTERS & SEND GIFT CTA (Matching Image 4 Reference)
   // ===========================================================================
   Widget _buildTopSupportersAndSendGiftBar() {
     return Padding(
@@ -1073,23 +1108,23 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Left Supporters (Neha)
+          // Left Top Supporters (Neha)
           Column(
             children: [
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _buildRankedAvatar(AppAssets.status4, 1, const Color(0xFFFFD700)),
-                  const SizedBox(width: 3),
-                  _buildRankedAvatar(AppAssets.status3, 2, const Color(0xFFC0C0C0)),
-                  const SizedBox(width: 3),
+                  _buildRankedAvatar(AppAssets.status4, 1, const Color(0xFFFFD700), showCrown: true),
+                  const SizedBox(width: 4),
+                  _buildRankedAvatar(AppAssets.status3, 2, const Color(0xFFC0C0C0), showCrown: true),
+                  const SizedBox(width: 4),
                   _buildRankedAvatar(AppAssets.status2, 3, const Color(0xFFCD7F32)),
                 ],
               ),
               const SizedBox(height: 2),
               const Text(
                 'Top Supporters',
-                style: TextStyle(color: Colors.white70, fontSize: 8.5, fontWeight: FontWeight.w500),
+                style: TextStyle(color: Colors.white70, fontSize: 9, fontWeight: FontWeight.w500),
               ),
             ],
           ),
@@ -1098,24 +1133,24 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
           GestureDetector(
             onTap: _openGiftSheet,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               decoration: BoxDecoration(
                 color: const Color(0xEE111728),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFFFD54F), width: 1.2),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFFFD54F), width: 1.3),
                 boxShadow: const [
-                  BoxShadow(color: Color(0x44FFD54F), blurRadius: 6, spreadRadius: 1),
+                  BoxShadow(color: Color(0x55FFD54F), blurRadius: 8, spreadRadius: 1),
                 ],
               ),
               child: const Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('🎁', style: TextStyle(fontSize: 17)),
+                  Text('🎁', style: TextStyle(fontSize: 19)),
                   Text(
                     'Send Gift',
                     style: TextStyle(
                       color: Color(0xFFFFE082),
-                      fontSize: 9.5,
+                      fontSize: 10,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -1124,23 +1159,23 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
             ),
           ),
 
-          // Right Supporters (Arun)
+          // Right Top Supporters (Arun)
           Column(
             children: [
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _buildRankedAvatar(AppAssets.status5, 1, const Color(0xFFFFD700)),
-                  const SizedBox(width: 3),
+                  _buildRankedAvatar(AppAssets.status5, 1, const Color(0xFFFFD700), showCrown: true),
+                  const SizedBox(width: 4),
                   _buildRankedAvatar(AppAssets.status1, 2, const Color(0xFFC0C0C0)),
-                  const SizedBox(width: 3),
+                  const SizedBox(width: 4),
                   _buildRankedAvatar(AppAssets.avatarMeena, 3, const Color(0xFFCD7F32)),
                 ],
               ),
               const SizedBox(height: 2),
               const Text(
                 'Top Supporters',
-                style: TextStyle(color: Colors.white70, fontSize: 8.5, fontWeight: FontWeight.w500),
+                style: TextStyle(color: Colors.white70, fontSize: 9, fontWeight: FontWeight.w500),
               ),
             ],
           ),
@@ -1149,29 +1184,29 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
     );
   }
 
-  Widget _buildRankedAvatar(String asset, int rank, Color badgeColor) {
+  Widget _buildRankedAvatar(String asset, int rank, Color badgeColor, {bool showCrown = false}) {
     return Stack(
       clipBehavior: Clip.none,
       alignment: Alignment.center,
       children: [
-        if (rank == 1)
+        if (showCrown)
           const Positioned(
-            top: -7,
-            child: Text('👑', style: TextStyle(fontSize: 9)),
+            top: -8,
+            child: Text('👑', style: TextStyle(fontSize: 10)),
           ),
         Container(
-          padding: const EdgeInsets.all(1.2),
+          padding: const EdgeInsets.all(1.5),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: badgeColor, width: 1.1),
+            border: Border.all(color: badgeColor, width: 1.2),
           ),
-          child: CustomAvatar(radius: 12, assetPath: asset),
+          child: CustomAvatar(radius: 13, assetPath: asset),
         ),
         Positioned(
-          bottom: -3,
+          bottom: -4,
           child: Container(
-            width: 12,
-            height: 12,
+            width: 13,
+            height: 13,
             decoration: BoxDecoration(
               color: badgeColor,
               shape: BoxShape.circle,
@@ -1182,7 +1217,7 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
                 '$rank',
                 style: const TextStyle(
                   color: Colors.black,
-                  fontSize: 7.5,
+                  fontSize: 8,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -1194,16 +1229,16 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
   }
 
   // ===========================================================================
-  // LIVE CHAT & FLOATING HEARTS AREA
+  // 6. LIVE COMMENTS & RIGHT FLOATING HEARTS (Matching Image 4 Reference)
   // ===========================================================================
   Widget _buildLiveChatAndHeartsArea() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Stack(
         children: [
-          // Comments list
+          // Comments Stream List
           Positioned.fill(
-            right: 44,
+            right: 46,
             child: ListView.builder(
               controller: _chatScrollController,
               padding: EdgeInsets.zero,
@@ -1211,11 +1246,11 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
               itemBuilder: (ctx, index) {
                 final c = _comments[index];
                 return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  padding: const EdgeInsets.symmetric(vertical: 2.5),
                   child: Row(
                     children: [
-                      CustomAvatar(radius: 10, assetPath: c.userAssetPath ?? AppAssets.status4),
-                      const SizedBox(width: 6),
+                      CustomAvatar(radius: 11, assetPath: c.userAssetPath ?? AppAssets.status4),
+                      const SizedBox(width: 7),
                       Expanded(
                         child: RichText(
                           text: TextSpan(
@@ -1224,7 +1259,7 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
                                 text: '${c.userName} ',
                                 style: const TextStyle(
                                   color: Colors.white,
-                                  fontSize: 11,
+                                  fontSize: 11.5,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -1234,7 +1269,7 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
                                   color: c.type == LiveCommentType.gift
                                       ? const Color(0xFFFFD54F)
                                       : Colors.white.withValues(alpha: 0.9),
-                                  fontSize: 10.5,
+                                  fontSize: 11,
                                   fontWeight: c.type == LiveCommentType.gift ? FontWeight.w600 : FontWeight.normal,
                                 ),
                               ),
@@ -1247,7 +1282,7 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
                       const SizedBox(width: 4),
                       Text(
                         DateFormat('hh:mm a').format(c.timestamp),
-                        style: const TextStyle(color: Colors.white38, fontSize: 8.5),
+                        style: const TextStyle(color: Colors.white38, fontSize: 9),
                       ),
                     ],
                   ),
@@ -1256,34 +1291,36 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
             ),
           ),
 
-          // Right floating hearts stack
+          // Right Floating Pink Hearts Column
           Positioned(
             right: 0,
             top: 0,
             bottom: 0,
-            width: 40,
+            width: 44,
             child: Stack(
               alignment: Alignment.bottomCenter,
               children: [
+                // Ascending Hearts Stack
                 ..._laneHearts.map((heart) => _LaneHeartWidget(key: ValueKey(heart.id), heart: heart)),
-                // Big Interactive Glow Heart at bottom
+
+                // Bottom Interactive Hot-Pink Heart Button
                 GestureDetector(
                   onTap: () {
                     _spawnLaneHeart();
                     _heartsKey.currentState?.addHeart(toLeft: true);
                   },
                   child: Container(
-                    width: 36,
-                    height: 36,
+                    width: 38,
+                    height: 38,
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
                       color: Color(0x33FF2D78),
                       boxShadow: [
-                        BoxShadow(color: Color(0x88FF2D78), blurRadius: 10, spreadRadius: 1),
+                        BoxShadow(color: Color(0x88FF2D78), blurRadius: 14, spreadRadius: 2),
                       ],
                     ),
                     child: const Center(
-                      child: Icon(Icons.favorite_rounded, color: Color(0xFFFF2D78), size: 22),
+                      child: Icon(Icons.favorite_rounded, color: Color(0xFFFF2D78), size: 24),
                     ),
                   ),
                 ),
@@ -1296,27 +1333,27 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
   }
 
   // ===========================================================================
-  // "NEW MESSAGES v" PILL
+  // 7. "NEW MESSAGES v" PILL (Matching Image 4 Reference)
   // ===========================================================================
   Widget _buildNewMessagesPill() {
     return GestureDetector(
       onTap: _scrollToBottom,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3.5),
         decoration: BoxDecoration(
           color: const Color(0xEE0E1428),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFF2979FF).withValues(alpha: 0.6), width: 0.8),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFF2979FF).withValues(alpha: 0.6), width: 1),
         ),
         child: const Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               'New Messages',
-              style: TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.w600),
+              style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600),
             ),
-            SizedBox(width: 3),
-            Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF82B1FF), size: 12),
+            SizedBox(width: 4),
+            Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF82B1FF), size: 13),
           ],
         ),
       ),
@@ -1324,44 +1361,44 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
   }
 
   // ===========================================================================
-  // BOTTOM ACTION BAR
+  // 8. BOTTOM ACTION BAR (Matching Image 5 Reference)
   // ===========================================================================
   Widget _buildBottomActionBar(double bottomPadding) {
     return Container(
-      padding: EdgeInsets.fromLTRB(8, 2, 8, max(bottomPadding, 6)),
+      padding: EdgeInsets.fromLTRB(8, 4, 8, max(bottomPadding, 8)),
       child: Row(
         children: [
-          // Star Icon Button
+          // 1. Star Button with Gold Border
           GestureDetector(
             onTap: () => _heartsKey.currentState?.addHeart(toLeft: true),
             child: Container(
-              width: 36,
-              height: 36,
+              width: 38,
+              height: 38,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: const Color(0xD012172A),
-                border: Border.all(color: const Color(0xFFFFD54F), width: 1.1),
+                border: Border.all(color: const Color(0xFFFFD54F), width: 1.3),
                 boxShadow: const [
-                  BoxShadow(color: Color(0x44FFD54F), blurRadius: 6),
+                  BoxShadow(color: Color(0x44FFD54F), blurRadius: 8),
                 ],
               ),
               child: const Center(
-                child: Icon(Icons.star_rounded, color: Color(0xFFFFD54F), size: 20),
+                child: Icon(Icons.star_rounded, color: Color(0xFFFFD54F), size: 22),
               ),
             ),
           ),
           const SizedBox(width: 6),
 
-          // "Type a message..." input trigger
+          // 2. "Type a message..." Text Field with Smiley Emoji
           Expanded(
             child: GestureDetector(
               onTap: _openCommentInputModal,
               child: Container(
-                height: 36,
-                padding: const EdgeInsets.symmetric(horizontal: 10),
+                height: 38,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
                   color: const Color(0xBB121628),
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: BorderRadius.circular(19),
                   border: Border.all(color: Colors.white12),
                 ),
                 child: const Row(
@@ -1369,10 +1406,10 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
                     Expanded(
                       child: Text(
                         'Type a message...',
-                        style: TextStyle(color: Colors.white54, fontSize: 11.5),
+                        style: TextStyle(color: Colors.white54, fontSize: 12),
                       ),
                     ),
-                    Icon(Icons.sentiment_satisfied_alt_rounded, color: Colors.white54, size: 17),
+                    Icon(Icons.sentiment_satisfied_alt_rounded, color: Colors.white54, size: 18),
                   ],
                 ),
               ),
@@ -1380,24 +1417,24 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
           ),
           const SizedBox(width: 6),
 
-          // Gift Button (Hot Pink / Gold Glow)
+          // 3. Glowing Gift Button (Square with Neon Pink Border)
           GestureDetector(
             onTap: _openGiftSheet,
             child: Container(
-              height: 36,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              height: 38,
+              padding: const EdgeInsets.symmetric(horizontal: 9),
               decoration: BoxDecoration(
                 color: const Color(0xD0180F24),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFFF2D78), width: 1.2),
+                borderRadius: BorderRadius.circular(11),
+                border: Border.all(color: const Color(0xFFFF2D78), width: 1.3),
                 boxShadow: const [
-                  BoxShadow(color: Color(0x66FF2D78), blurRadius: 6),
+                  BoxShadow(color: Color(0x66FF2D78), blurRadius: 8),
                 ],
               ),
               child: const Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text('🎁', style: TextStyle(fontSize: 13)),
+                  Text('🎁', style: TextStyle(fontSize: 14)),
                   Text(
                     'Gift',
                     style: TextStyle(color: Colors.white, fontSize: 8.5, fontWeight: FontWeight.bold),
@@ -1408,7 +1445,7 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
           ),
           const SizedBox(width: 6),
 
-          // Share Button
+          // 4. Share Button
           GestureDetector(
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -1419,33 +1456,33 @@ class _PkBattleLiveScreenState extends State<PkBattleLiveScreen> {
               );
             },
             child: Container(
-              width: 36,
-              height: 36,
+              width: 38,
+              height: 38,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: const Color(0xD012172A),
                 border: Border.all(color: Colors.white12),
               ),
               child: const Center(
-                child: Icon(Icons.share_rounded, color: Colors.white, size: 17),
+                child: Icon(Icons.share_rounded, color: Colors.white, size: 18),
               ),
             ),
           ),
           const SizedBox(width: 6),
 
-          // More Options Button (...)
+          // 5. More Options Button (...)
           GestureDetector(
             onTap: () => LiveToolsBottomSheet.show(context),
             child: Container(
-              width: 36,
-              height: 36,
+              width: 38,
+              height: 38,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: const Color(0xD012172A),
                 border: Border.all(color: Colors.white12),
               ),
               child: const Center(
-                child: Icon(Icons.more_horiz_rounded, color: Colors.white, size: 17),
+                child: Icon(Icons.more_horiz_rounded, color: Colors.white, size: 18),
               ),
             ),
           ),
@@ -1472,64 +1509,27 @@ class _FloatingLaneHeart {
   });
 }
 
-class _LaneHeartWidget extends StatefulWidget {
+class _LaneHeartWidget extends StatelessWidget {
   final _FloatingLaneHeart heart;
 
   const _LaneHeartWidget({super.key, required this.heart});
 
   @override
-  State<_LaneHeartWidget> createState() => _LaneHeartWidgetState();
-}
-
-class _LaneHeartWidgetState extends State<_LaneHeartWidget>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _progress;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2200),
-    );
-
-    _progress = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
-    _controller.forward();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _progress,
-      builder: (ctx, child) {
-        final val = _progress.value;
-        final yOffset = -val * 95.0;
-        final xOffset = sin(val * pi * 2.5) * widget.heart.horizontalOffset;
-        final opacity = ((1.0 - val) * widget.heart.opacity).clamp(0.0, 1.0);
-        final scale = 0.8 + (val * 0.4);
-
-        return Transform.translate(
-          offset: Offset(xOffset, yOffset),
-          child: Transform.scale(
-            scale: scale,
-            child: Opacity(
-              opacity: opacity,
-              child: Icon(
-                Icons.favorite_rounded,
-                color: const Color(0xFFFF2D78),
-                size: widget.heart.size,
-              ),
-            ),
-          ),
-        );
-      },
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: 44.0 + (int.tryParse(heart.id.split('_').last) ?? 0) * 18.0,
+        left: heart.horizontalOffset > 0 ? heart.horizontalOffset : 0,
+        right: heart.horizontalOffset < 0 ? -heart.horizontalOffset : 0,
+      ),
+      child: Opacity(
+        opacity: heart.opacity,
+        child: Icon(
+          Icons.favorite_rounded,
+          color: const Color(0xFFFF2D78),
+          size: heart.size,
+        ),
+      ),
     );
   }
 }
