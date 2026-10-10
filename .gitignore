@@ -49,3 +49,6 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+
+# Temporary scratch scripts
+scratch/

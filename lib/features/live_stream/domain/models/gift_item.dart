@@ -1,15 +1,4 @@
-class GiftItem {
-  final String id;
-  final String name;
-  final String icon;
-  final String? imageAssetPath;
-  final int diamonds;
+/// Re-export the consolidated and unified gift options system
+library;
 
-  const GiftItem({
-    required this.id,
-    required this.name,
-    required this.icon,
-    this.imageAssetPath,
-    required this.diamonds,
-  });
-}
+export 'gift_options.dart';

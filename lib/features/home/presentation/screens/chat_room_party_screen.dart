@@ -1,22 +1,24 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_assets.dart';
 import '../../../../core/widgets/custom_avatar.dart';
-import '../../../../core/widgets/luxury_atmosphere_background.dart';
 import '../../../live_stream/domain/models/gift_item.dart';
 import '../../../live_stream/domain/models/live_comment.dart';
 import '../../../live_stream/presentation/widgets/active_gift_animation_overlay.dart';
 import '../../../live_stream/presentation/widgets/floating_hearts_overlay.dart';
 import '../../../live_stream/presentation/widgets/floating_stars_overlay.dart';
 import '../../../live_stream/presentation/widgets/gift_bottom_sheet.dart';
+import '../../../../core/widgets/luxury_atmosphere_background.dart';
 
-/// 5-Step Chat Room Flow with Yellow/Gold Luxury Theme & Audio/Video Support:
-/// Step 1: Chat Room List Screen (Header: ← Chat Room 🔍, filter chips, room cards, "+ Create Chat Room")
-/// Step 2: Tap Join (Room details preview modal: Host avatar, name, tag, capacity, Join / Cancel)
-/// Step 3: Inside Chat Room (Audio & Video 3x3 9-seat grid, Host Diya + members + "+ Invite",
-///         Audio/Video mode switch, Mic, Sound, Gift, Star, More, live chat stream & input bar)
+/// 5-Step Chat Room Flow with High-End TIVOO Aesthetics & GoogleFonts.outfit:
+/// Step 1: Chat Room List Screen (Header: ← Chat Room 🔍, room cards with Join, and "+ Create Chat Room")
+/// Step 2: Tap Join Modal (Room details preview: Host avatar, name, tag, capacity, Join / Cancel)
+/// Request & Notification Page: Host receives join request and can [Accept & Join] or [Reject]!
+/// Step 3: Inside Chat Room (Top host bar with notification bell, 3x3 9-seat audio grid, 5 action buttons: Mic, Sound, Gift, Star, More, live chat input bar)
 /// Step 4: Host Ends Room Modal ("End Chat Room? All members will be removed...", Cancel / End Room)
-/// Step 5: Room Ended Final Page (Tiki/Tivoo branding, 3D mic with crown, ribbon, Host card, 4 stats, "Back to Home")
+/// Step 5: Room Ended Final Page (Official TIVOO home branding, 3D mic with golden confetti, "Chat Room Ended" ribbon, Host card, 4 stats cards, "Back to Home")
 class ChatRoomPartyScreen extends StatefulWidget {
   final int initialStage;
   final VoidCallback? onBack;
@@ -25,7 +27,7 @@ class ChatRoomPartyScreen extends StatefulWidget {
 
   const ChatRoomPartyScreen({
     super.key,
-    this.initialStage = 1, // Default starts on Step 1: Chat Room List
+    this.initialStage = 1,
     this.onBack,
     this.isEmbeddedInHome = false,
     this.onStageChanged,
@@ -43,40 +45,33 @@ class _ChatRoomPartyScreenState extends State<ChatRoomPartyScreen>
 
   // Navigation stage:
   // 1 = Step 1: Chat Room List
-  // 3 = Step 3: Inside Chat Room (Audio / Video Talk Mode - 9 Seats)
+  // 2 = Step 2: Tap Join (Room Details Preview)
+  // 3 = Step 3: Inside Chat Room
+  // 4 = Step 4: Host Ends Room Modal
   // 5 = Step 5: Room Ended Final Summary Page
   late int _currentStage;
 
   // Selected Room Data
   late Map<String, dynamic> _selectedRoom;
 
-  // Filter chips in Step 1
-  int _selectedFilterIndex = 0;
-  final List<String> _filters = [
-    'All',
-    '🎙️ Audio',
-    '📹 Video',
-    'Trending',
-    'Friends',
-  ];
+  // Search in Step 1
+  bool _isSearchOpen = false;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
 
   // Room mode in Step 3: Audio vs Video
   bool _isVideoRoom = false;
 
-  // Mic controls
+  // Audio controls
   bool _isMicMuted = false;
+  bool _isSoundMuted = false;
   int _totalStarsCount = 12560;
 
-  // Viewer-side interactive member selection & gifts (Matching Reference Poster)
-  int? _selectedMemberIndex;
-  bool _isFollowingSelectedMember = false;
-  int _selectedGiftTab = 0; // 0: Stars, 1: Flowers, 2: Special
-  final Map<int, String> _memberFloatingGifts = {};
-
-  // PK-Style Comment Capsule & Input Field (Matching User Reference Screenshot)
-  bool _showCommentInput = false;
-  final TextEditingController _commentInputController = TextEditingController();
-  final FocusNode _commentFocusNode = FocusNode();
+  // Live Chat Comments and Controller
+  final TextEditingController _chatInputController = TextEditingController();
+  final ScrollController _chatScrollController = ScrollController();
+  late List<LiveComment> _chatMessages;
 
   // Speaking wave animation controller
   late final AnimationController _waveController;
@@ -89,14 +84,14 @@ class _ChatRoomPartyScreenState extends State<ChatRoomPartyScreen>
   // Room List Data (Matching reference image Step 1)
   late List<Map<String, dynamic>> _roomsList;
 
-  // 9 Seats for Step 3 (High Quality Studio Portraits matching Image 1)
+  // 9 Seats for Step 3 (Matching reference image Step 3)
   late List<Map<String, dynamic>> _seats;
 
-  // Live Chat Comments
-  late List<LiveComment> _chatMessages;
-  final ScrollController _chatScrollController = ScrollController();
+  // Pending Join Requests (for notification page)
+  final List<Map<String, dynamic>> _pendingRequests = [];
+
+  // Ambient heart timer
   Timer? _ambientTimer;
-  Timer? _requestSentTimer;
 
   @override
   void initState() {
@@ -121,45 +116,45 @@ class _ChatRoomPartyScreenState extends State<ChatRoomPartyScreen>
       CurvedAnimation(parent: _celebrationController, curve: Curves.easeInOut),
     );
 
-    // Step 1 Rooms matching reference image
+    // Initial Rooms list matching Step 1 in user reference (5 profiles only)
     _roomsList = [
       {
         'id': 'room_1',
         'hostName': 'Diya_Official',
-        'isVerified': true,
+        'isVerified': false,
         'tagline': "Let's talk & be friends 💕",
         'tag': 'Dream Team',
         'tagIcon': '👑',
         'capacity': '8/9',
         'viewers': '128',
         'avatar': AppAssets.avatarDiya,
-        'isVideo': false, // Audio room
+        'isVideo': false,
         'isHost': true,
       },
       {
         'id': 'room_2',
         'hostName': 'Arun_kumar',
-        'isVerified': true,
+        'isVerified': false,
         'tagline': 'Good Vibes Only ✨',
         'tag': 'Friends',
         'tagIcon': '👥',
         'capacity': '6/9',
         'viewers': '96',
         'avatar': AppAssets.avatarArun,
-        'isVideo': true, // Video room
+        'isVideo': false,
         'isHost': false,
       },
       {
         'id': 'room_3',
         'hostName': 'Sneha_Live',
-        'isVerified': true,
+        'isVerified': false,
         'tagline': 'Chill Chat 🥰',
         'tag': 'Happy Family',
         'tagIcon': '👑',
         'capacity': '7/9',
         'viewers': '142',
-        'avatar': AppAssets.avatarSneha,
-        'isVideo': false, // Audio room
+        'avatar': AppAssets.avatarMeena,
+        'isVideo': false,
         'isHost': false,
       },
       {
@@ -172,7 +167,7 @@ class _ChatRoomPartyScreenState extends State<ChatRoomPartyScreen>
         'capacity': '5/9',
         'viewers': '88',
         'avatar': AppAssets.avatarVicky,
-        'isVideo': true, // Video room
+        'isVideo': true,
         'isHost': false,
       },
       {
@@ -181,11 +176,24 @@ class _ChatRoomPartyScreenState extends State<ChatRoomPartyScreen>
         'isVerified': true,
         'tagline': 'Feel Free to Talk 💕',
         'tag': 'Sweet Hearts',
-        'tagIcon': '👑',
+        'tagIcon': '👥',
         'capacity': '8/9',
         'viewers': '115',
         'avatar': AppAssets.avatarNeha,
-        'isVideo': false, // Audio room
+        'isVideo': false,
+        'isHost': false,
+      },
+      {
+        'id': 'room_6',
+        'hostName': 'Karthik_99',
+        'isVerified': false,
+        'tagline': 'Gaming & Friends 🎮',
+        'tag': 'Legends',
+        'tagIcon': '👑',
+        'capacity': '4/9',
+        'viewers': '74',
+        'avatar': AppAssets.avatarKarthik,
+        'isVideo': false,
         'isHost': false,
       },
     ];
@@ -193,16 +201,10 @@ class _ChatRoomPartyScreenState extends State<ChatRoomPartyScreen>
     _selectedRoom = _roomsList.first;
     _isVideoRoom = _selectedRoom['isVideo'] as bool;
 
-    // Step 3 9 Seats: Ultra HD Studio Portraits matching Poster (9 People Live Together)
-    // Seat 1: Host Diya (Red mic with Host badge)
-    // Seat 2: Arun (Green mic)
-    // Seat 3: Sneha (Green mic)
-    // Seat 4: Karthik (Green mic)
-    // Seat 5: Priya (Red mic)
-    // Seat 6: Vicky (Red mic)
-    // Seat 7: Neha (Green mic)
-    // Seat 8: Saran (Green mic)
-    // Seat 9: Meena (Green mic)
+    // 9 Seats for Step 3 matching Reference Image 2:
+    // Row 1: Diya (Host, pink badge, Active, equalizer), Arun (Listening), Sneha (Listening)
+    // Row 2: Karthik (Listening), Neha (Listening, leaf doodle), Vicky (Listening, crown doodle)
+    // Row 3: Saran (Listening, sparkles doodle), Meena (Listening, heart doodle), Seat 9: "+ Invite" empty seat card!
     _seats = [
       {
         'seat': 1,
@@ -210,9 +212,9 @@ class _ChatRoomPartyScreenState extends State<ChatRoomPartyScreen>
         'isHost': true,
         'isInvite': false,
         'avatar': AppAssets.avatarDiya,
-        'video': AppAssets.video1,
+        'status': 'Active',
         'isSpeaking': true,
-        'isMicOn': false, // Red in reference poster
+        'isMicOn': true,
       },
       {
         'seat': 2,
@@ -220,19 +222,19 @@ class _ChatRoomPartyScreenState extends State<ChatRoomPartyScreen>
         'isHost': false,
         'isInvite': false,
         'avatar': AppAssets.avatarArun,
-        'video': AppAssets.video2,
-        'isSpeaking': true,
-        'isMicOn': true, // Green in reference poster
+        'status': 'Listening',
+        'isSpeaking': false,
+        'isMicOn': true,
       },
       {
         'seat': 3,
         'name': 'Sneha',
         'isHost': false,
         'isInvite': false,
-        'avatar': AppAssets.avatarSneha,
-        'video': AppAssets.video3,
+        'avatar': AppAssets.avatarPriya,
+        'status': 'Listening',
         'isSpeaking': false,
-        'isMicOn': true, // Green in reference poster
+        'isMicOn': true,
       },
       {
         'seat': 4,
@@ -240,19 +242,19 @@ class _ChatRoomPartyScreenState extends State<ChatRoomPartyScreen>
         'isHost': false,
         'isInvite': false,
         'avatar': AppAssets.avatarKarthik,
-        'video': AppAssets.video4,
-        'isSpeaking': true,
-        'isMicOn': true, // Green in reference poster
+        'status': 'Listening',
+        'isSpeaking': false,
+        'isMicOn': true,
       },
       {
         'seat': 5,
-        'name': 'Priya',
+        'name': 'Neha',
         'isHost': false,
         'isInvite': false,
-        'avatar': AppAssets.avatarPriya,
-        'video': AppAssets.video5,
-        'isSpeaking': true,
-        'isMicOn': false, // Red in reference poster
+        'avatar': AppAssets.avatarNeha,
+        'status': 'Listening',
+        'isSpeaking': false,
+        'isMicOn': true,
       },
       {
         'seat': 6,
@@ -260,43 +262,51 @@ class _ChatRoomPartyScreenState extends State<ChatRoomPartyScreen>
         'isHost': false,
         'isInvite': false,
         'avatar': AppAssets.avatarVicky,
-        'video': AppAssets.video6,
+        'status': 'Listening',
         'isSpeaking': false,
-        'isMicOn': false, // Red in reference poster
+        'isMicOn': true,
       },
       {
         'seat': 7,
-        'name': 'Neha',
-        'isHost': false,
-        'isInvite': false,
-        'avatar': AppAssets.avatarNeha,
-        'video': AppAssets.video1,
-        'isSpeaking': true,
-        'isMicOn': true, // Green in reference poster
-      },
-      {
-        'seat': 8,
         'name': 'Saran',
         'isHost': false,
         'isInvite': false,
         'avatar': AppAssets.avatarSaran,
-        'video': AppAssets.video2,
-        'isSpeaking': true,
-        'isMicOn': true, // Green in reference poster
+        'status': 'Listening',
+        'isSpeaking': false,
+        'isMicOn': true,
       },
       {
-        'seat': 9,
+        'seat': 8,
         'name': 'Meena',
         'isHost': false,
         'isInvite': false,
         'avatar': AppAssets.avatarMeena,
-        'video': AppAssets.video3,
-        'isSpeaking': true,
-        'isMicOn': true, // Green in reference poster
+        'status': 'Listening',
+        'isSpeaking': false,
+        'isMicOn': true,
+      },
+      {
+        'seat': 9,
+        'name': 'Invite',
+        'isHost': false,
+        'isInvite': true,
+        'avatar': '',
+        'isSpeaking': false,
+        'isMicOn': false,
       },
     ];
 
-    // Seed chat comments (ordered chronologically matching poster)
+    // Initial default pending request (simulating someone requesting to join audio seat)
+    _pendingRequests.add({
+      'name': 'Karthi',
+      'avatar': AppAssets.avatarKarthik,
+      'level': 'Lv.12',
+      'message': 'wants to join your chat room as speaker',
+      'time': 'Just now',
+    });
+
+    // Seed live comments
     final now = DateTime.now();
     _chatMessages = [
       LiveComment(
@@ -304,43 +314,33 @@ class _ChatRoomPartyScreenState extends State<ChatRoomPartyScreen>
         userName: 'User123',
         userAssetPath: AppAssets.avatarArun,
         message: 'So amazing! 👏',
-        timestamp: now.subtract(const Duration(seconds: 50)),
+        timestamp: now.subtract(const Duration(seconds: 40)),
       ),
       LiveComment(
         id: 'c2',
         userName: 'Queen',
         userAssetPath: AppAssets.avatarSneha,
         message: 'Super all ❤️🔥',
-        timestamp: now.subtract(const Duration(seconds: 40)),
+        timestamp: now.subtract(const Duration(seconds: 30)),
       ),
       LiveComment(
         id: 'c3',
         userName: 'Kavin',
         userAssetPath: AppAssets.avatarKarthik,
-        message: 'sent a Star ⭐ to Arun',
+        message: 'sent a Star ⭐ to Diya',
         type: LiveCommentType.gift,
-        timestamp: now.subtract(const Duration(seconds: 28)),
+        timestamp: now.subtract(const Duration(seconds: 18)),
       ),
       LiveComment(
         id: 'c4',
         userName: 'Anitha',
         userAssetPath: AppAssets.avatarNeha,
-        message: 'sent a Bouquet 💐 to Sneha',
-        type: LiveCommentType.gift,
-        timestamp: now.subtract(const Duration(seconds: 16)),
-      ),
-      LiveComment(
-        id: 'c5',
-        userName: 'User123',
-        userAssetPath: AppAssets.avatarArun,
-        message: 'sent a Rose 🌹 to Priya',
-        type: LiveCommentType.gift,
-        timestamp: now.subtract(const Duration(seconds: 6)),
+        message: 'Happy evening everyone! ✨',
+        timestamp: now.subtract(const Duration(seconds: 8)),
       ),
     ];
 
-    // Ambient floating heart generator
-    _ambientTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+    _ambientTimer = Timer.periodic(const Duration(seconds: 6), (_) {
       if (!mounted) return;
       if (_currentStage == 3) {
         _heartsKey.currentState?.addHeart();
@@ -353,1330 +353,24 @@ class _ChatRoomPartyScreenState extends State<ChatRoomPartyScreen>
     _waveController.dispose();
     _celebrationController.dispose();
     _ambientTimer?.cancel();
-    _requestSentTimer?.cancel();
-    _commentInputController.dispose();
-    _commentFocusNode.dispose();
+    _searchController.dispose();
+    _chatInputController.dispose();
     _chatScrollController.dispose();
     super.dispose();
   }
 
   void _setStage(int stage) {
-    _requestSentTimer?.cancel();
-    setState(() => _currentStage = stage);
-    widget.onStageChanged?.call(stage);
-
-    if (stage == 4) {
-      // Step 4: After 2.5 seconds of sending request, Host automatically gets notification (Step 5)!
-      _requestSentTimer = Timer(const Duration(milliseconds: 2500), () {
-        if (mounted && _currentStage == 4) {
-          _setStage(5);
-        }
-      });
-    }
-  }
-
-  void _openGiftSheet() {
-    GiftBottomSheet.show(
-      context,
-      (gift) => _processGiftSelection(gift),
-      recipients: const ['Diya (Host)', 'All 9 Members', 'Arun', 'Sneha'],
-      initialRecipient: 'Diya (Host)',
-      onGiftWithRecipientSelected: (gift, qty, recipient) {
-        _processGiftSelection(gift, quantity: qty, recipient: recipient);
-      },
-    );
-  }
-
-  void _processGiftSelection(
-    GiftItem gift, {
-    int quantity = 1,
-    String recipient = 'Diya (Host)',
-  }) {
-    final isStar = gift.id.startsWith('star_') ||
-        gift.name.toLowerCase().contains('star');
-
-    if (isStar) {
-      final multiplier = (gift.diamonds ~/ 5).clamp(1, 20);
-      _starsKey.currentState?.addStars(multiplier);
-      setState(() => _totalStarsCount += gift.diamonds * quantity);
-    } else {
-      _heartsKey.currentState?.addHeart();
-      _activeGiftKey.currentState?.playGift(
-        gift,
-        senderName: 'You',
-        count: quantity,
-        recipient: recipient,
-      );
-    }
-
-    final newComment = LiveComment(
-      id: 'g_${DateTime.now().millisecondsSinceEpoch}',
-      userName: 'You',
-      userAssetPath: AppAssets.avatarArun,
-      message: 'sent ${gift.name} ${gift.icon} x $quantity to $recipient',
-      type: LiveCommentType.gift,
-      timestamp: DateTime.now(),
-    );
-
-    setState(() {
-      _chatMessages.add(newComment);
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Sent ${gift.name} ${gift.icon} to $recipient!'),
-        backgroundColor: const Color(0xFFFFD600),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-
-  void _tapStarButton() {
-    final targetIndex = _selectedMemberIndex ?? 0;
-    _starsKey.currentState?.addStars(3);
-    setState(() {
-      _totalStarsCount += 10;
-      _memberFloatingGifts[targetIndex] = '⭐ +100';
-    });
-    final targetName = _seats[targetIndex]['name'] as String;
-    final newComment = LiveComment(
-      id: 'g_${DateTime.now().millisecondsSinceEpoch}',
-      userName: 'User123',
-      userAssetPath: AppAssets.avatarArun,
-      message: 'sent a Star ⭐ to $targetName',
-      type: LiveCommentType.gift,
-      timestamp: DateTime.now(),
-    );
-    setState(() {
-      _chatMessages.add(newComment);
-    });
-    Timer(const Duration(milliseconds: 2600), () {
-      if (!mounted) return;
+    if (_currentStage != stage) {
       setState(() {
-        _memberFloatingGifts.remove(targetIndex);
+        _currentStage = stage;
       });
-    });
-  }
-
-  void _sendQuickRose() {
-    final targetIndex = _selectedMemberIndex ?? 0;
-    _sendQuickGiftToMember(targetIndex, 'Rose', '🌹', 10, '+1');
-  }
-
-  void _sendQuickGiftToMember(
-    int memberIndex,
-    String giftName,
-    String giftIcon,
-    int cost,
-    String badge,
-  ) {
-    if (memberIndex < 0 || memberIndex >= _seats.length) return;
-    final member = _seats[memberIndex];
-    final memberName = member['name'] as String;
-
-    setState(() {
-      _memberFloatingGifts[memberIndex] = '$giftIcon $badge';
-      _totalStarsCount += cost;
-    });
-
-    if (giftName == 'Star') {
-      _starsKey.currentState?.addStars(3);
-    } else {
-      _heartsKey.currentState?.addHeart();
-    }
-
-    final newComment = LiveComment(
-      id: 'g_${DateTime.now().millisecondsSinceEpoch}',
-      userName: 'User123',
-      userAssetPath: AppAssets.avatarArun,
-      message: 'sent a $giftName $giftIcon to $memberName',
-      type: LiveCommentType.gift,
-      timestamp: DateTime.now(),
-    );
-
-    setState(() {
-      _chatMessages.add(newComment);
-    });
-
-    Timer(const Duration(milliseconds: 2600), () {
-      if (!mounted) return;
-      setState(() {
-        _memberFloatingGifts.remove(memberIndex);
-      });
-    });
-  }
-
-  void _handleSendComment(String text) {
-    final trimmed = text.trim();
-    if (trimmed.isNotEmpty) {
-      final newComment = LiveComment(
-        id: 'usr_${DateTime.now().millisecondsSinceEpoch}',
-        userName: 'User123',
-        userAssetPath: AppAssets.avatarArun,
-        message: trimmed,
-        timestamp: DateTime.now(),
-      );
-      setState(() {
-        _chatMessages.add(newComment);
-        _showCommentInput = false;
-      });
-      _commentInputController.clear();
-      _heartsKey.currentState?.addHeart();
-    } else {
-      setState(() => _showCommentInput = false);
+      widget.onStageChanged?.call(stage);
     }
   }
 
   // ===========================================================================
-  // STEP 2: TAP JOIN (ROOM PREVIEW & DETAILS MODAL)
+  // MAIN BUILD
   // ===========================================================================
-  void _showJoinPreviewModal(Map<String, dynamic> room) {
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: 'JoinModal',
-      barrierColor: Colors.black.withValues(alpha: 0.78),
-      transitionDuration: const Duration(milliseconds: 260),
-      pageBuilder: (ctx, anim1, anim2) {
-        return Center(
-          child: Material(
-            color: Colors.transparent,
-            child: Container(
-              width: MediaQuery.sizeOf(context).width * 0.84,
-              padding: const EdgeInsets.fromLTRB(22, 18, 22, 22),
-              decoration: BoxDecoration(
-                color: const Color(0xFF141224),
-                borderRadius: BorderRadius.circular(28),
-                border: Border.all(
-                  color: const Color(0xFFFFD600).withValues(alpha: 0.45),
-                  width: 1.4,
-                ),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x33FFD600),
-                    blurRadius: 24,
-                    spreadRadius: 2,
-                    offset: Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Close button on top right
-                  Align(
-                    alignment: Alignment.topRight,
-                    child: GestureDetector(
-                      onTap: () => Navigator.of(ctx).pop(),
-                      child: Container(
-                        padding: const EdgeInsets.all(5),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.08),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.close_rounded,
-                          color: Colors.white70,
-                          size: 18,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // Big Circular Host Avatar with Crown Badge
-                  Stack(
-                    alignment: Alignment.bottomRight,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: const Color(0xFFFFD600),
-                            width: 2.4,
-                          ),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color(0x55FFD600),
-                              blurRadius: 16,
-                            ),
-                          ],
-                        ),
-                        child: CustomAvatar(
-                          radius: 46,
-                          assetPath: room['avatar'] as String,
-                        ),
-                      ),
-                      Positioned(
-                        right: 2,
-                        bottom: 2,
-                        child: Container(
-                          padding: const EdgeInsets.all(5),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFFFB300),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Color(0x66FFB300),
-                                blurRadius: 6,
-                              ),
-                            ],
-                          ),
-                          child: const Text('👑', style: TextStyle(fontSize: 13)),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-
-                  // Host Name + Blue checkmark
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        room['hostName'] as String,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18.5,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      if (room['isVerified'] == true) ...[
-                        const SizedBox(width: 5),
-                        const Icon(
-                          Icons.verified_rounded,
-                          color: Color(0xFF29B6F6),
-                          size: 17,
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-
-                  // Room Tagline
-                  Text(
-                    room['tagline'] as String,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-
-                  // Team Badge & Audio/Video Indicator
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF231E3D),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: const Color(0xFFFFD600).withValues(alpha: 0.3),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Text(
-                              room['tagIcon'] as String,
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              room['tag'] as String,
-                              style: const TextStyle(
-                                color: Color(0xFFFFD600),
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: (room['isVideo'] as bool)
-                              ? const Color(0xFF381F56)
-                              : const Color(0xFF1E334D),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          (room['isVideo'] as bool) ? '📹 Video' : '🎙️ Audio',
-                          style: TextStyle(
-                            color: (room['isVideo'] as bool)
-                                ? const Color(0xFFE040FB)
-                                : const Color(0xFF40C4FF),
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Capacity
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.person_outline_rounded,
-                        color: Colors.white60,
-                        size: 15,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        room['capacity'] as String,
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 22),
-
-                  // Big Purple/Pink Gradient "Join Room" Button (Image 3 Step 3)
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.of(ctx).pop();
-                      _startJoinRequestFlow(context, room);
-                    },
-                    child: Container(
-                      width: double.infinity,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFFBA43F6), Color(0xFFE040FB)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x66BA43F6),
-                            blurRadius: 14,
-                            offset: Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: const Center(
-                        child: Text(
-                          'Join Room',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-
-                  // "Cancel" button
-                  GestureDetector(
-                    onTap: () => Navigator.of(ctx).pop(),
-                    child: Container(
-                      width: double.infinity,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(22),
-                      ),
-                      child: const Center(
-                        child: Text(
-                          'Cancel',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 14.5,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  // ===========================================================================
-  // IMAGE 3 FLOW: JOIN REQUEST SENT -> HOST NOTIFICATION -> ACCEPT / REJECT
-  // ===========================================================================
-
-  // Step 4: Show "Join Request Sent" Modal (Image 3 Step 4)
-  void _startJoinRequestFlow(BuildContext parentContext, Map<String, dynamic> room) {
-    setState(() {
-      _selectedRoom = room;
-      _isVideoRoom = room['isVideo'] as bool;
-    });
-
-    showDialog(
-      context: parentContext,
-      barrierDismissible: false,
-      barrierColor: Colors.black.withValues(alpha: 0.75),
-      builder: (requestDialogCtx) {
-        // Auto trigger Host Notification after 1.8s (simulation of Image 3 Step 5)
-        Timer? simTimer;
-        simTimer = Timer(const Duration(milliseconds: 1800), () {
-          if (requestDialogCtx.mounted) {
-            Navigator.of(requestDialogCtx).pop(); // dismiss request sent
-            _showHostNotificationDialog(parentContext, room);
-          }
-        });
-
-        return Dialog(
-          backgroundColor: const Color(0xFF0F1424),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-            side: BorderSide(color: const Color(0xFF2979FF).withValues(alpha: 0.4), width: 1.2),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 26),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Paper plane in glowing circular container (Image 3 Step 4)
-                Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF2979FF), Color(0xFF00B0FF)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF00B0FF).withValues(alpha: 0.5),
-                        blurRadius: 16,
-                      ),
-                    ],
-                  ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.send_rounded,
-                      color: Colors.white,
-                      size: 34,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 18),
-
-                // Title: Join Request Sent
-                const Text(
-                  'Join Request Sent',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                // Description
-                const Text(
-                  'Your request has been sent to the host. Please wait for acceptance.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 13,
-                    height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // Hourglass icon
-                const Icon(
-                  Icons.hourglass_empty_rounded,
-                  color: Color(0xFFFFD600),
-                  size: 26,
-                ),
-                const SizedBox(height: 18),
-
-                // Cancel Request Button
-                GestureDetector(
-                  onTap: () {
-                    simTimer?.cancel();
-                    Navigator.of(requestDialogCtx).pop();
-                    ScaffoldMessenger.of(parentContext).showSnackBar(
-                      const SnackBar(
-                        content: Text('Join request cancelled'),
-                        duration: Duration(seconds: 1),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    width: double.infinity,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(21),
-                      border: Border.all(color: Colors.white24, width: 1),
-                    ),
-                    child: const Center(
-                      child: Text(
-                        'Cancel Request',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  // Step 5: Host Gets Notification Modal (Image 3 Step 5 & Screen A)
-  void _showHostNotificationDialog(BuildContext parentContext, Map<String, dynamic> room) {
-    showDialog(
-      context: parentContext,
-      barrierDismissible: false,
-      barrierColor: Colors.black.withValues(alpha: 0.70),
-      builder: (hostDialogCtx) {
-        return Dialog(
-          backgroundColor: const Color(0xFF0F1424),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-            side: BorderSide(color: const Color(0xFFFF2D78).withValues(alpha: 0.5), width: 1.2),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Top Row: Title + Close
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Join Request (1)',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () => Navigator.of(hostDialogCtx).pop(),
-                      child: const Icon(Icons.close_rounded, color: Colors.white54, size: 20),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // Applicant Avatar & Name (Image 3 Step 5: "Karthi wants to join your room")
-                Row(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                      ),
-                      child: ClipOval(
-                        child: CustomAvatar(radius: 22, assetPath: AppAssets.status1),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text(
-                            'Karthi',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          SizedBox(height: 2),
-                          Text(
-                            'wants to join your room',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 12.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-
-                // Reject (Red) & Accept (Green) Buttons (Image 3 Step 5)
-                Row(
-                  children: [
-                    // Reject Button
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          Navigator.of(hostDialogCtx).pop();
-                          _showRejectedAlert(parentContext);
-                        },
-                        child: Container(
-                          height: 42,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFD32F2F),
-                            borderRadius: BorderRadius.circular(21),
-                            boxShadow: const [
-                              BoxShadow(color: Color(0x55D32F2F), blurRadius: 8),
-                            ],
-                          ),
-                          child: const Center(
-                            child: Text(
-                              'Reject',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-
-                    // Accept Button
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          Navigator.of(hostDialogCtx).pop();
-                          // Show "You joined the room" banner & enter room (Image 3 Step 6 / D)
-                          _setStage(3); // Enter Chat Room!
-                          ScaffoldMessenger.of(parentContext).showSnackBar(
-                            SnackBar(
-                              backgroundColor: const Color(0xFF00C853),
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              content: Row(
-                                children: const [
-                                  Icon(Icons.check_circle_rounded, color: Colors.white),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    'You joined the room',
-                                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                                  ),
-                                ],
-                              ),
-                              duration: const Duration(seconds: 2),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          height: 42,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF00C853),
-                            borderRadius: BorderRadius.circular(21),
-                            boxShadow: const [
-                              BoxShadow(color: Color(0x5500C853), blurRadius: 8),
-                            ],
-                          ),
-                          child: const Center(
-                            child: Text(
-                              'Accept',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  // Step B: User Gets Rejected Alert (Image 3 B & C)
-  void _showRejectedAlert(BuildContext parentContext) {
-    showDialog(
-      context: parentContext,
-      builder: (alertCtx) {
-        return Dialog(
-          backgroundColor: const Color(0xFF0F1424),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-            side: const BorderSide(color: Colors.white12),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Red (X) Icon
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Color(0xFFD32F2F),
-                  ),
-                  child: const Center(
-                    child: Icon(Icons.close_rounded, color: Colors.white, size: 32),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // "Your request was rejected"
-                const Text(
-                  'Your request was rejected',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 6),
-
-                // "You will continue watching as a viewer"
-                const Text(
-                  'You will continue watching as a viewer.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // OK Button
-                GestureDetector(
-                  onTap: () {
-                    Navigator.of(alertCtx).pop();
-                    _setStage(3); // Enter room in viewer mode!
-                  },
-                  child: Container(
-                    width: double.infinity,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF2979FF), Color(0xFF651FFF)],
-                      ),
-                      borderRadius: BorderRadius.circular(21),
-                    ),
-                    child: const Center(
-                      child: Text(
-                        'OK',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  // ===========================================================================
-  // STEP 4: HOST ENDS ROOM CONFIRMATION MODAL
-  // ===========================================================================
-  void _showEndRoomDialog() {
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: 'EndRoomModal',
-      barrierColor: Colors.black.withValues(alpha: 0.82),
-      transitionDuration: const Duration(milliseconds: 240),
-      pageBuilder: (ctx, anim1, anim2) {
-        return Center(
-          child: Material(
-            color: Colors.transparent,
-            child: Container(
-              width: MediaQuery.sizeOf(context).width * 0.82,
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
-              decoration: BoxDecoration(
-                color: const Color(0xFF141124),
-                borderRadius: BorderRadius.circular(26),
-                border: Border.all(
-                  color: const Color(0xFFFF2D55).withValues(alpha: 0.5),
-                  width: 1.3,
-                ),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x33FF2D55),
-                    blurRadius: 24,
-                    spreadRadius: 1,
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Glowing Power Button Icon (Matching Image 1 Step 4)
-                  Container(
-                    width: 58,
-                    height: 58,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: const Color(0xFF2E1220),
-                      border: Border.all(
-                        color: const Color(0xFFFF2D55),
-                        width: 1.5,
-                      ),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x66FF2D55),
-                          blurRadius: 16,
-                        ),
-                      ],
-                    ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.power_settings_new_rounded,
-                        color: Color(0xFFFF2D55),
-                        size: 30,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-
-                  // Title: "End Chat Room?"
-                  const Text(
-                    'End Chat Room?',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-
-                  // Subtitle: "All members will be removed and the room will end."
-                  const Text(
-                    'All members will be removed\nand the room will end.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 13,
-                      height: 1.35,
-                    ),
-                  ),
-                  const SizedBox(height: 22),
-
-                  // Row: [Cancel] & [End Room]
-                  Row(
-                    children: [
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => Navigator.of(ctx).pop(),
-                          child: Container(
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF221E36),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: Colors.white12),
-                            ),
-                            child: const Center(
-                              child: Text(
-                                'Cancel',
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () {
-                            Navigator.of(ctx).pop();
-                            _setStage(5); // Navigate to Step 5: Room Ended Final Page!
-                          },
-                          child: Container(
-                            height: 44,
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFFFF2D55), Color(0xFFCC0836)],
-                              ),
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Color(0x66FF2D55),
-                                  blurRadius: 10,
-                                  offset: Offset(0, 3),
-                                ),
-                              ],
-                            ),
-                            child: const Center(
-                              child: Text(
-                                'End Room',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  // ===========================================================================
-  // "+ CREATE CHAT ROOM" MODAL SHEET (Audio Room vs Video Room)
-  // ===========================================================================
-  void _showCreateRoomSheet() {
-    String roomTitle = 'My Fun Party';
-    String roomTag = 'Dream Team';
-    bool isVideoSelected = false;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Container(
-              padding: EdgeInsets.fromLTRB(
-                20,
-                16,
-                20,
-                MediaQuery.of(ctx).viewInsets.bottom + 24,
-              ),
-              decoration: BoxDecoration(
-                color: const Color(0xFF141224),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-                border: Border.all(
-                  color: const Color(0xFFFFD600).withValues(alpha: 0.4),
-                  width: 1.2,
-                ),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x44FFD600),
-                    blurRadius: 20,
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.white30,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-
-                  // Header
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Create Chat Room',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 19,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () => Navigator.of(ctx).pop(),
-                        child: const Icon(
-                          Icons.close_rounded,
-                          color: Colors.white60,
-                          size: 20,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Choose Type: Audio Room vs Video Room
-                  const Text(
-                    'Room Mode',
-                    style: TextStyle(
-                      color: Color(0xFFFFD600),
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => setModalState(() => isVideoSelected = false),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            decoration: BoxDecoration(
-                              color: !isVideoSelected
-                                  ? const Color(0xFFFFD600)
-                                  : const Color(0xFF1D1A30),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: !isVideoSelected
-                                    ? const Color(0xFFFFD600)
-                                    : Colors.white12,
-                              ),
-                            ),
-                            child: Column(
-                              children: [
-                                Icon(
-                                  Icons.mic_rounded,
-                                  color: !isVideoSelected ? Colors.black : Colors.white,
-                                  size: 24,
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '🎙️ Audio Room',
-                                  style: TextStyle(
-                                    color: !isVideoSelected ? Colors.black : Colors.white,
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => setModalState(() => isVideoSelected = true),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            decoration: BoxDecoration(
-                              color: isVideoSelected
-                                  ? const Color(0xFFFFD600)
-                                  : const Color(0xFF1D1A30),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: isVideoSelected
-                                    ? const Color(0xFFFFD600)
-                                    : Colors.white12,
-                              ),
-                            ),
-                            child: Column(
-                              children: [
-                                Icon(
-                                  Icons.videocam_rounded,
-                                  color: isVideoSelected ? Colors.black : Colors.white,
-                                  size: 24,
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '📹 Video Room',
-                                  style: TextStyle(
-                                    color: isVideoSelected ? Colors.black : Colors.white,
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Room Name Input
-                  const Text(
-                    'Room Title',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1F1C33),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.white12),
-                    ),
-                    child: TextField(
-                      style: const TextStyle(color: Colors.white, fontSize: 14),
-                      decoration: const InputDecoration(
-                        hintText: 'Enter room name...',
-                        hintStyle: TextStyle(color: Colors.white38),
-                        border: InputBorder.none,
-                      ),
-                      onChanged: (v) => roomTitle = v,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-
-                  // Team Tags
-                  const Text(
-                    'Category / Team Tag',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      '👑 Dream Team',
-                      '👥 Friends',
-                      '🎵 Music Lovers',
-                      '✨ Good Vibes',
-                    ].map((tag) {
-                      final isSel = roomTag == tag.replaceAll('👑 ', '').replaceAll('👥 ', '').replaceAll('🎵 ', '').replaceAll('✨ ', '');
-                      return GestureDetector(
-                        onTap: () {
-                          setModalState(() {
-                            roomTag = tag.replaceAll('👑 ', '').replaceAll('👥 ', '').replaceAll('🎵 ', '').replaceAll('✨ ', '');
-                          });
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: isSel ? const Color(0xFFFFD600) : const Color(0xFF221E36),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: isSel ? const Color(0xFFFFD600) : Colors.white12,
-                            ),
-                          ),
-                          child: Text(
-                            tag,
-                            style: TextStyle(
-                              color: isSel ? Colors.black : Colors.white70,
-                              fontWeight: isSel ? FontWeight.w900 : FontWeight.w500,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 22),
-
-                  // Start Room Button (Luminous Yellow)
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.of(ctx).pop();
-                      final newRoom = {
-                        'id': 'room_${DateTime.now().millisecondsSinceEpoch}',
-                        'hostName': 'You (Host)',
-                        'isVerified': true,
-                        'tagline': roomTitle.isEmpty ? 'Welcome to my party!' : roomTitle,
-                        'tag': roomTag,
-                        'tagIcon': '👑',
-                        'capacity': '1/9',
-                        'viewers': '1',
-                        'avatar': AppAssets.avatarArun,
-                        'isVideo': isVideoSelected,
-                        'isHost': true,
-                      };
-                      setState(() {
-                        _roomsList.insert(0, newRoom);
-                        _selectedRoom = newRoom;
-                        _isVideoRoom = isVideoSelected;
-                      });
-                      _setStage(3); // Enter newly created room!
-                    },
-                    child: Container(
-                      width: double.infinity,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFFFFEA00), Color(0xFFFF9100)],
-                        ),
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x66FFD600),
-                            blurRadius: 14,
-                            offset: Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: const Center(
-                        child: Text(
-                          'Start Room Now',
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 15.5,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return ActiveGiftAnimationOverlay(
@@ -1686,19 +380,30 @@ class _ChatRoomPartyScreenState extends State<ChatRoomPartyScreen>
         child: FloatingHeartsOverlay(
           key: _heartsKey,
           child: Scaffold(
-            backgroundColor: const Color(0xFF090812),
+            backgroundColor: Colors.transparent,
             body: Stack(
               fit: StackFit.expand,
               children: [
-                // Deep dark obsidian luxury atmosphere
-                const LuxuryAtmosphereBackground(),
+                // Global Luxury Atmosphere Background matching Home Screen
+                const LuxuryAtmosphereBackground(
+                  showParticles: true,
+                  showLightBeams: true,
+                ),
 
-                // Active Stage View (Authentic full-screen flow one by one from 1 to 6)
+                // Active Stage View (Steps 1 to 5)
                 SafeArea(
                   top: true,
                   bottom: true,
                   child: _buildCurrentStageView(),
                 ),
+
+                // Step 2 Modal Popup (when in Stage 2)
+                if (_currentStage == 2)
+                  _buildStep2TapJoinModal(),
+
+                // Step 4 Modal Popup (when in Stage 4)
+                if (_currentStage == 4)
+                  _buildStep4HostEndsRoomModal(),
               ],
             ),
           ),
@@ -1707,140 +412,489 @@ class _ChatRoomPartyScreenState extends State<ChatRoomPartyScreen>
     );
   }
 
-
-
-  // ===========================================================================
-  // STAGE ROUTER: STEPS 1 TO 6 AND BRANCHES A TO E
-  // ===========================================================================
   Widget _buildCurrentStageView() {
     switch (_currentStage) {
       case 1:
-        return _buildStep1HomePageView(); // Step 1: Home Page (Live / PK / Chat Room)
+        return _buildStep1ChatRoomListView(); // Step 1: Chat Room List
       case 2:
-        return _buildStep2ChatRoomListView(); // Step 2: Chat Room List (Hosts live)
+        return _buildStep1ChatRoomListView(); // Step 2 shows modal over list
       case 3:
-        return _buildStep3RoomPreviewView(); // Step 3: Viewer Taps Join
+        return _buildStep3InsideChatRoomView(); // Step 3: Inside Chat Room
       case 4:
-        return _buildStep4JoinRequestSentView(); // Step 4: Join Request Sent
+        return _buildStep3InsideChatRoomView(); // Step 4 shows modal over room
       case 5:
-        return _buildStep5HostNotificationView(); // Step 5 / A: Host Gets Notification & Rejects/Accepts
-      case 6:
-        return _buildStep6AcceptedRoomView(); // Step 6 / D: Host Accepts / If Accepted - User Enters
-      case 7:
-        return _buildStepBRejectedAlertView(); // Step B: User Gets Rejected Alert
-      case 8:
-        return _buildStepCViewerRoomView(); // Step C: User Stays as Viewer
-      case 9:
-        return _buildStepEFlowSummaryView(); // Step E: Flow Summary (User Side)
-      case 10:
-        return _buildRoomListView(); // Legacy list view
-      case 11:
-        return _buildInsideChatRoomView(); // Legacy full studio interactive view
-      case 12:
-        return _buildRoomEndedView(); // Legacy room ended summary
+        return _buildStep5RoomEndedView(); // Step 5: Room Ended Final Page
       default:
-        return _buildStep1HomePageView();
+        return _buildStep1ChatRoomListView();
     }
   }
 
   // ===========================================================================
-  // 1: HOME PAGE (Live / PK / Chat Room) - Matching Image 1
+  // STEP 1: CHAT ROOM LIST (Matching Phone 1 in Reference Poster)
   // ===========================================================================
-  Widget _buildStep1HomePageView() {
+  Widget _buildStep1ChatRoomListView() {
+    final filteredRooms = _roomsList.where((room) {
+      if (_searchQuery.isNotEmpty) {
+        final name = (room['hostName'] as String).toLowerCase();
+        final tag = (room['tag'] as String).toLowerCase();
+        final tagline = (room['tagline'] as String).toLowerCase();
+        final q = _searchQuery.toLowerCase();
+        if (!name.contains(q) && !tag.contains(q) && !tagline.contains(q)) {
+          return false;
+        }
+      }
+      return true;
+    }).toList();
+
     return Column(
       children: [
-        Expanded(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 1. Hero Card: "Join a Chat Room - Talk with the World" (Image 1)
-                _buildJoinChatRoomBanner(),
-                const SizedBox(height: 18),
-
-                // 2. Section Header: "Popular Rooms" + "See All"
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Popular Rooms',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16.5,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.3,
-                      ),
+        // 1. Top Bar: Back Button, TIVOO Logo, Chat Room Pill, Search (Matching Home Header)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(10, 8, 14, 6),
+          child: Row(
+            children: [
+              // Back Button (translucent circular glass)
+              GestureDetector(
+                onTap: () {
+                  if (widget.onBack != null) {
+                    widget.onBack!();
+                  } else {
+                    Navigator.of(context).maybePop();
+                  }
+                },
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.08),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.12),
                     ),
-                    GestureDetector(
-                      onTap: () => _setStage(2),
-                      child: const Text(
-                        'See All',
-                        style: TextStyle(
-                          color: Color(0xFFB39DDB),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+
+              // TIVOO Branding (matching Home Screen Logo)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Tiv',
+                    style: GoogleFonts.outfit(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  Text(
+                    'oo',
+                    style: GoogleFonts.outfit(
+                      color: const Color(0xFF00E676),
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  const Text('🌿', style: TextStyle(fontSize: 14)),
+                ],
+              ),
+
+              const SizedBox(width: 8),
+
+              // Active Chat Room Category Badge (matching Home Header tab)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFBA43F6).withValues(alpha: 0.22),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: const Color(0xFFBA43F6).withValues(alpha: 0.60),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.mic_rounded,
+                        color: Color(0xFFE1BEE7), size: 13),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Chat Room',
+                      style: GoogleFonts.outfit(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+              ),
 
-                // 3. 2x2 Grid of 4 Popular Rooms (Image 1)
-                _buildPopularRoomsGrid(),
-                const SizedBox(height: 20),
+              const Spacer(),
 
-                // 4. Section Header: "Recommended for You"
-                const Text(
-                  'Recommended for You',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.3,
+              // Search Button (glass circular button)
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _isSearchOpen = !_isSearchOpen;
+                    if (!_isSearchOpen) {
+                      _searchController.clear();
+                      _searchQuery = '';
+                    }
+                  });
+                },
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.08),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.12),
+                    ),
+                  ),
+                  child: Center(
+                    child: Icon(
+                      _isSearchOpen
+                          ? Icons.close_rounded
+                          : Icons.search_rounded,
+                      color: Colors.white70,
+                      size: 18,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 12),
-
-                // 5. Recommended List Items (Image 1)
-                _buildRecommendedItem(
-                  title: 'Chill Vibes',
-                  viewers: '92',
-                  imageAsset: AppAssets.status1,
-                  onJoin: () => _setStage(3),
-                ),
-                const SizedBox(height: 10),
-                _buildRecommendedItem(
-                  title: 'Movie Talks',
-                  viewers: '76',
-                  imageAsset: AppAssets.status2,
-                  onJoin: () => _setStage(3),
-                ),
-                const SizedBox(height: 10),
-                _buildRecommendedItem(
-                  title: 'Life Coaching',
-                  viewers: '54',
-                  imageAsset: AppAssets.status3,
-                  onJoin: () => _setStage(3),
-                ),
-                const SizedBox(height: 12),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
 
-        // Bottom "+ Create Chat Room" Pink Pill Button (Matching Image 3)
+        // Interactive Search Bar (matching Home Header Search Pill)
+        if (_isSearchOpen)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 2, 16, 8),
+            child: Container(
+              height: 42,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(21),
+                border: Border.all(
+                  color: const Color(0xFFBA43F6).withValues(alpha: 0.50),
+                  width: 1.2,
+                ),
+              ),
+              child: TextField(
+                controller: _searchController,
+                autofocus: true,
+                style: GoogleFonts.outfit(color: Colors.white, fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: 'Search room by host or topic...',
+                  hintStyle: GoogleFonts.outfit(
+                      color: Colors.white38, fontSize: 13),
+                  prefixIcon: const Icon(Icons.search_rounded,
+                      color: Colors.white54, size: 18),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear_rounded,
+                              color: Colors.white54, size: 16),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _searchQuery = '');
+                          },
+                        )
+                      : null,
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                ),
+                onChanged: (val) {
+                  setState(() => _searchQuery = val.trim());
+                },
+              ),
+            ),
+          ),
+
+        // 2. All 6 Profiles evenly filling the screen with Home Theme Styling
+        Expanded(
+          child: filteredRooms.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.search_off_rounded,
+                          color: Colors.white38, size: 48),
+                      const SizedBox(height: 10),
+                      Text(
+                        'No chat rooms found',
+                        style: GoogleFonts.outfit(
+                            color: Colors.white70, fontSize: 15),
+                      ),
+                    ],
+                  ),
+                )
+              : filteredRooms.length <= 6
+                  ? Column(
+                      children: List.generate(filteredRooms.length, (index) {
+                        return Expanded(
+                          child: Center(
+                            child: _buildRoomRowItem(filteredRooms[index]),
+                          ),
+                        );
+                      }),
+                    )
+                  : ListView.builder(
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: filteredRooms.length,
+                      itemBuilder: (context, index) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: _buildRoomRowItem(filteredRooms[index]),
+                        );
+                      },
+                    ),
+        ),
+
+        // 3. Bottom Docked Gradient Pill: "+ Create Chat Room" (Matching Home Theme)
         _buildCreateChatRoomButton(),
       ],
     );
   }
 
-  /// Prominent Pink Pill Button: "+ Create Chat Room" (Matching Image 3)
+  /// Profile Item Row:
+  /// - Glassmorphism Card matching Home Screen theme
+  /// - Square Avatar (72x72, r: 15)
+  /// - Host Name + Verified Indicator + Subtitle + 👑 Tag + 🔥 Viewers + 👤 Capacity
+  /// - Rectangular "Join" Button matching Home "LIVE" theme
+  Widget _buildRoomRowItem(Map<String, dynamic> room) {
+    final hostName = room['hostName'] as String;
+    final isVerified = room['isVerified'] as bool? ?? false;
+    final tagline = room['tagline'] as String;
+    final tag = room['tag'] as String;
+    final tagIcon = room['tagIcon'] as String? ?? '👑';
+    final capacity = room['capacity'] as String;
+    final viewers = room['viewers'] as String? ?? '96';
+    final avatar = room['avatar'] as String;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF131122).withValues(alpha: 0.65),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.08),
+          width: 1,
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x33000000),
+            blurRadius: 10,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Left: Square Profile Avatar with rounded corners
+          ClipRRect(
+            borderRadius: BorderRadius.circular(15),
+            child: Image.asset(
+              avatar,
+              width: 72,
+              height: 72,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF221E36),
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: const Icon(Icons.person, color: Colors.white30, size: 36),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+
+          // Center: Host Name, Tagline, Crown/Team Badge, Flame Viewers, Member count
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Host Name + blue verified indicator
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        hostName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.outfit(
+                          color: Colors.white,
+                          fontSize: 17.5,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.1,
+                        ),
+                      ),
+                    ),
+                    if (isVerified) ...[
+                      const SizedBox(width: 5),
+                      Container(
+                        width: 14,
+                        height: 14,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF00B0FF),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.check,
+                          color: Colors.white,
+                          size: 9.5,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 3),
+
+                // Tagline / topic
+                Text(
+                  tagline,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.outfit(
+                    color: Colors.white.withValues(alpha: 0.70),
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+                const SizedBox(height: 6),
+
+                // Team badge + 🔥 Flame Viewers (matching Home Screen!) + 👤 Capacity
+                Row(
+                  children: [
+                    Text(tagIcon, style: const TextStyle(fontSize: 12.5)),
+                    const SizedBox(width: 3),
+                    Flexible(
+                      child: Text(
+                        tag,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.outfit(
+                          color: const Color(0xFFFFD54F),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Flame viewers count (matching Home Screen 🔥 counter)
+                    const Text('🔥', style: TextStyle(fontSize: 11)),
+                    const SizedBox(width: 2),
+                    Text(
+                      viewers,
+                      style: GoogleFonts.outfit(
+                        color: const Color(0xFFFFB300),
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Icon(
+                      Icons.person,
+                      color: Colors.white54,
+                      size: 13,
+                    ),
+                    const SizedBox(width: 2),
+                    Text(
+                      capacity,
+                      style: GoogleFonts.outfit(
+                        color: Colors.white70,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+
+          // Right: Stadium Pill "Join" Button matching Home Screen "Live" Button
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                _selectedRoom = room;
+                _isVideoRoom = room['isVideo'] as bool? ?? false;
+              });
+              _setStage(2); // Opens Step 2 Tap Join Modal
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF211D32),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: const Color(0xFFFF2D55),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFFF2D55).withValues(alpha: 0.35),
+                    blurRadius: 8,
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(3.5),
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Color(0xFFFF2D55),
+                    ),
+                    child: const Icon(
+                      Icons.videocam_rounded,
+                      color: Colors.white,
+                      size: 11,
+                    ),
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    'Join',
+                    style: GoogleFonts.outfit(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Prominent Gradient Pill Button: "+ Create Chat Room" (Matching Home Theme)
   Widget _buildCreateChatRoomButton() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 16),
       child: GestureDetector(
         onTap: _showCreateRoomSheet,
         child: Container(
@@ -1848,27 +902,26 @@ class _ChatRoomPartyScreenState extends State<ChatRoomPartyScreen>
           height: 52,
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFFFF007F), Color(0xFFFF2D78)],
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
+              colors: [Color(0xFFFF2D55), Color(0xFFFF5E8A)],
             ),
             borderRadius: BorderRadius.circular(26),
-            boxShadow: [
+            boxShadow: const [
               BoxShadow(
-                color: const Color(0xFFFF007F).withValues(alpha: 0.50),
-                blurRadius: 18,
-                offset: const Offset(0, 4),
+                color: Color(0x66FF2D55),
+                blurRadius: 16,
+                spreadRadius: 1,
+                offset: Offset(0, 4),
               ),
             ],
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
-              Icon(Icons.add_rounded, color: Colors.white, size: 26),
-              SizedBox(width: 8),
+            children: [
+              const Icon(Icons.add_rounded, color: Colors.white, size: 24),
+              const SizedBox(width: 6),
               Text(
                 'Create Chat Room',
-                style: TextStyle(
+                style: GoogleFonts.outfit(
                   color: Colors.white,
                   fontSize: 16.5,
                   fontWeight: FontWeight.w900,
@@ -1882,1320 +935,415 @@ class _ChatRoomPartyScreenState extends State<ChatRoomPartyScreen>
     );
   }
 
-  /// Hero Banner: Lavender/light-blue gradient card with 3D smiling microphone character (Image 1)
-  Widget _buildJoinChatRoomBanner() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(18, 16, 14, 16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFE4DAFB), Color(0xFFC8DCFB)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x332979FF),
-            blurRadius: 18,
-            offset: Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Left text column
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Join a',
-                  style: TextStyle(
-                    color: Color(0xFF3B2874),
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 1),
-                const Text(
-                  'Chat Room',
-                  style: TextStyle(
-                    color: Color(0xFF1B1B53),
-                    fontSize: 23,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.2,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                const Text(
-                  'Talk with the World',
-                  style: TextStyle(
-                    color: Color(0xFF5B5391),
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 12),
+  // ===========================================================================
+  // CREATE CHAT ROOM MODAL (HOST CREATES ROOM)
+  // ===========================================================================
+  void _showCreateRoomSheet() {
+    final titleController = TextEditingController(text: "My Party Room 💕");
+    String selectedTag = 'Dream Team';
+    bool isVideoSelected = false;
 
-                // "Join Now" Blue Pill Button (Image 1)
-                GestureDetector(
-                  onTap: () => _setStage(2),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2979FF),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF2979FF).withValues(alpha: 0.45),
-                          blurRadius: 10,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Container(
+          padding: EdgeInsets.fromLTRB(
+              20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 24),
+          decoration: const BoxDecoration(
+            color: Color(0xFF141126),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black87,
+                blurRadius: 25,
+                offset: Offset(0, -6),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Create Chat Room',
+                    style: GoogleFonts.outfit(
+                      color: Colors.white,
+                      fontSize: 19.5,
+                      fontWeight: FontWeight.w900,
                     ),
-                    child: const Text(
-                      'Join Now',
-                      style: TextStyle(
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, color: Colors.white70),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+
+              // Room Title Field
+              Text(
+                'Room Title / Topic',
+                style: GoogleFonts.outfit(
+                  color: Colors.white70,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E1A36),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.white12),
+                ),
+                child: TextField(
+                  controller: titleController,
+                  style: GoogleFonts.outfit(color: Colors.white, fontSize: 14.5),
+                  decoration: InputDecoration(
+                    hintText: 'Enter room topic...',
+                    hintStyle: GoogleFonts.outfit(color: Colors.white38),
+                    border: InputBorder.none,
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Category / Team Tag Selector
+              Text(
+                'Category / Team Badge',
+                style: GoogleFonts.outfit(
+                  color: Colors.white70,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  'Dream Team',
+                  'Friends',
+                  'Music',
+                  'Chill Chat',
+                  'Happy Family',
+                ].map((tag) {
+                  final isSel = selectedTag == tag;
+                  return GestureDetector(
+                    onTap: () => setModalState(() => selectedTag = tag),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: isSel
+                            ? const Color(0xFFFF2A6D)
+                            : const Color(0xFF1E1A36),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: isSel
+                              ? const Color(0xFFFF2A6D)
+                              : Colors.white12,
+                        ),
+                      ),
+                      child: Text(
+                        '👑 $tag',
+                        style: GoogleFonts.outfit(
+                          color: isSel ? Colors.white : Colors.white70,
+                          fontSize: 12,
+                          fontWeight:
+                              isSel ? FontWeight.w800 : FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 16),
+
+              // Room Mode Selector
+              Text(
+                'Room Mode',
+                style: GoogleFonts.outfit(
+                  color: Colors.white70,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () =>
+                          setModalState(() => isVideoSelected = false),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          color: !isVideoSelected
+                              ? const Color(0xFFFF2A6D).withValues(alpha: 0.2)
+                              : const Color(0xFF1E1A36),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: !isVideoSelected
+                                ? const Color(0xFFFF2A6D)
+                                : Colors.white12,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.mic_rounded,
+                                color: Color(0xFFFF2A6D), size: 18),
+                            const SizedBox(width: 6),
+                            Text(
+                              '🎙️ Audio (9 Seats)',
+                              style: GoogleFonts.outfit(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () =>
+                          setModalState(() => isVideoSelected = true),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          color: isVideoSelected
+                              ? const Color(0xFFFF2A6D).withValues(alpha: 0.2)
+                              : const Color(0xFF1E1A36),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: isVideoSelected
+                                ? const Color(0xFFFF2A6D)
+                                : Colors.white12,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.videocam_rounded,
+                                color: Color(0xFFE040FB), size: 18),
+                            const SizedBox(width: 6),
+                            Text(
+                              '📹 Video Party',
+                              style: GoogleFonts.outfit(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 22),
+
+              // "Create & Start Room" Button
+              GestureDetector(
+                onTap: () {
+                  final newRoom = {
+                    'id': 'room_${DateTime.now().millisecondsSinceEpoch}',
+                    'hostName': 'You (Host)',
+                    'isVerified': true,
+                    'tagline': titleController.text.trim().isEmpty
+                        ? "Let's party together 💕"
+                        : titleController.text.trim(),
+                    'tag': selectedTag,
+                    'tagIcon': '👑',
+                    'capacity': '1/9',
+                    'viewers': '1',
+                    'avatar': AppAssets.avatarDiya,
+                    'isVideo': isVideoSelected,
+                    'isHost': true,
+                  };
+
+                  setState(() {
+                    _roomsList.insert(0, newRoom);
+                    _selectedRoom = newRoom;
+                    _isVideoRoom = isVideoSelected;
+                  });
+
+                  Navigator.pop(ctx);
+                  _setStage(3); // Enters Step 3 as Host!
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('🎉 Chat Room Created! You are the Host.'),
+                      backgroundColor: Color(0xFFFF2A6D),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                },
+                child: Container(
+                  width: double.infinity,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFFF2A6D), Color(0xFFFF5E8A)],
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x66FF2A6D),
+                        blurRadius: 10,
+                        offset: Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      'Create Room & Go Live',
+                      style: GoogleFonts.outfit(
                         color: Colors.white,
-                        fontSize: 13,
+                        fontSize: 15.5,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 0.3,
                       ),
                     ),
                   ),
                 ),
-              ],
-            ),
-          ),
-
-          // Right 3D Blue Smiling Microphone Character Graphic
-          _build3DMicrophoneCharacter(),
-        ],
-      ),
-    );
-  }
-
-  /// 3D Blue Smiling Microphone Character Graphic (Image 1)
-  Widget _build3DMicrophoneCharacter() {
-    return SizedBox(
-      width: 110,
-      height: 115,
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.center,
-        children: [
-          // Star sparkles
-          const Positioned(
-            top: 2,
-            left: 12,
-            child: Text('✦', style: TextStyle(color: Color(0xFF64B5F6), fontSize: 16)),
-          ),
-          const Positioned(
-            top: 0,
-            right: 10,
-            child: Text('★', style: TextStyle(color: Color(0xFFFF4081), fontSize: 20)),
-          ),
-          const Positioned(
-            top: 36,
-            right: 0,
-            child: Text('✦', style: TextStyle(color: Color(0xFFFFD54F), fontSize: 16)),
-          ),
-          const Positioned(
-            bottom: 24,
-            left: 2,
-            child: Text('✦', style: TextStyle(color: Colors.white, fontSize: 14)),
-          ),
-
-          // Stand circular base
-          Positioned(
-            bottom: 6,
-            child: Container(
-              width: 52,
-              height: 14,
-              decoration: BoxDecoration(
-                color: const Color(0xFF1565C0),
-                borderRadius: BorderRadius.circular(7),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF2979FF).withValues(alpha: 0.5),
-                    blurRadius: 10,
-                  ),
-                ],
               ),
-            ),
+            ],
           ),
-
-          // Stand stem
-          Positioned(
-            bottom: 15,
-            child: Container(
-              width: 9,
-              height: 22,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF42A5F5), Color(0xFF1976D2)],
-                ),
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-          ),
-
-          // Microphone Capsule Head with smiling face
-          Positioned(
-            top: 14,
-            child: Container(
-              width: 62,
-              height: 74,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF64B5F6),
-                    Color(0xFF2979FF),
-                    Color(0xFF0D47A1),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(31),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF1E88E5).withValues(alpha: 0.6),
-                    blurRadius: 14,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  // Top gloss shine highlight
-                  Positioned(
-                    top: 6,
-                    left: 14,
-                    child: Container(
-                      width: 24,
-                      height: 5,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                    ),
-                  ),
-
-                  // Happy Eyes & Cute Smile
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const SizedBox(height: 6),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: 5,
-                            height: 7,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(3),
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Container(
-                            width: 5,
-                            height: 7,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(3),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 5),
-                      // Smiling open mouth
-                      Container(
-                        width: 18,
-                        height: 10,
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// 2x2 Grid of Popular Rooms (Image 1)
-  Widget _buildPopularRoomsGrid() {
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
-      childAspectRatio: 1.25,
-      children: [
-        // 1. Friends Forever (Coral to Purple)
-        _buildPopularRoomCard(
-          title: 'Friends Forever',
-          viewers: '128',
-          gradientColors: const [Color(0xFFFF5E62), Color(0xFF8E24AA)],
-          hostAvatar: AppAssets.avatarArun,
-          listenerAvatars: const [
-            AppAssets.avatarDiya,
-            AppAssets.avatarPriya,
-            AppAssets.avatarSneha,
-            AppAssets.avatarNeha,
-          ],
-          onTap: () => _setStage(2),
-        ),
-
-        // 2. Music Lovers (Indigo to Purple)
-        _buildPopularRoomCard(
-          title: 'Music Lovers',
-          viewers: '256',
-          gradientColors: const [Color(0xFF3949AB), Color(0xFF8E24AA)],
-          hostAvatar: AppAssets.avatarKarthik,
-          listenerAvatars: const [
-            AppAssets.avatarPriya,
-            AppAssets.avatarMeena,
-            AppAssets.avatarSaran,
-          ],
-          onTap: () => _setStage(2),
-        ),
-
-        // 3. Tamil Pasanga (Electric Cyan to Blue)
-        _buildPopularRoomCard(
-          title: 'Tamil Pasanga',
-          viewers: '89',
-          gradientColors: const [Color(0xFF00B0FF), Color(0xFF1565C0)],
-          hostAvatar: AppAssets.avatarSaran,
-          listenerAvatars: const [
-            AppAssets.avatarArun,
-            AppAssets.avatarVicky,
-            AppAssets.avatarKarthik,
-            AppAssets.avatarDiya,
-          ],
-          onTap: () => _setStage(2),
-        ),
-
-        // 4. Global Talk (Emerald Green to Teal)
-        _buildPopularRoomCard(
-          title: 'Global Talk',
-          viewers: '320',
-          gradientColors: const [Color(0xFF00E676), Color(0xFF00897B)],
-          hostAvatar: AppAssets.avatarMeena,
-          listenerAvatars: const [
-            AppAssets.avatarSneha,
-            AppAssets.avatarNeha,
-            AppAssets.avatarDiya,
-            AppAssets.avatarPriya,
-          ],
-          onTap: () => _setStage(2),
-        ),
-      ],
-    );
-  }
-
-  /// Popular Room Card with Listener Avatars Stack and Host Circular Photo (Image 1)
-  Widget _buildPopularRoomCard({
-    required String title,
-    required String viewers,
-    required List<Color> gradientColors,
-    required String hostAvatar,
-    required List<String> listenerAvatars,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: gradientColors,
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: gradientColors.last.withValues(alpha: 0.35),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Row(
-                  children: [
-                    const Icon(Icons.person, color: Colors.white70, size: 13),
-                    const SizedBox(width: 3),
-                    Text(
-                      viewers,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-
-            // Bottom row: Overlapping listeners on left, Host photo on right
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                // Overlapping avatar circles
-                SizedBox(
-                  height: 22,
-                  child: Row(
-                    children: [
-                      for (int i = 0; i < listenerAvatars.length; i++)
-                        Transform.translate(
-                          offset: Offset(-i * 7.0, 0),
-                          child: Container(
-                            width: 20,
-                            height: 20,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 1.2),
-                              image: DecorationImage(
-                                image: AssetImage(listenerAvatars[i]),
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-
-                // Host circular avatar
-                Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 1.5),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.black38,
-                        blurRadius: 6,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                    image: DecorationImage(
-                      image: AssetImage(hostAvatar),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
         ),
       ),
     );
   }
 
-  /// Recommended For You Row Item (Image 1)
-  Widget _buildRecommendedItem({
-    required String title,
-    required String viewers,
-    required String imageAsset,
-    required VoidCallback onJoin,
-  }) {
+  // ===========================================================================
+  // STEP 2: TAP JOIN MODAL (Matching Phone 2 in Reference Poster)
+  // ===========================================================================
+  Widget _buildStep2TapJoinModal() {
+    final hostName = _selectedRoom['hostName'] as String;
+    final isVerified = _selectedRoom['isVerified'] as bool? ?? false;
+    final tagline = _selectedRoom['tagline'] as String;
+    final tag = _selectedRoom['tag'] as String;
+    final capacity = _selectedRoom['capacity'] as String;
+    final avatar = _selectedRoom['avatar'] as String;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFF141126),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white10),
-      ),
-      child: Row(
-        children: [
-          // Thumbnail rounded image
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.asset(
-              imageAsset,
-              width: 48,
-              height: 48,
-              fit: BoxFit.cover,
-            ),
-          ),
-          const SizedBox(width: 14),
-
-          // Title & Viewers
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(Icons.person, color: Colors.white60, size: 13),
-                    const SizedBox(width: 3),
-                    Text(
-                      viewers,
-                      style: const TextStyle(
-                        color: Colors.white60,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          // Purple/Indigo "Join" pill button (Image 1)
-          GestureDetector(
-            onTap: onJoin,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF651FFF), Color(0xFF7C4DFF)],
-                ),
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x44651FFF),
-                    blurRadius: 8,
-                    offset: Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: const Text(
-                'Join',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-
-
-  // ===========================================================================
-  // 2: CHAT ROOM LIST (Hosts who are live in chat rooms) - Matching Image 2
-  // ===========================================================================
-  Widget _buildStep2ChatRoomListView() {
-    final liveRooms = [
-      {
-        'host': 'Nila 💕',
-        'title': 'Friends Talk 📢',
-        'tags': ['Friendship', 'Tamil'],
-        'capacity': '8/9',
-        'avatar': AppAssets.avatarDiya,
-      },
-      {
-        'host': 'Priya',
-        'title': 'Open Talk',
-        'tags': ['Casual', 'Talk'],
-        'capacity': '6/9',
-        'avatar': AppAssets.avatarPriya,
-      },
-      {
-        'host': 'Kavi',
-        'title': 'Music Friends',
-        'tags': ['Music', 'Tamil'],
-        'capacity': '5/9',
-        'avatar': AppAssets.avatarSneha,
-      },
-      {
-        'host': 'Divya',
-        'title': 'Fun Chat',
-        'tags': ['Friends', 'Fun'],
-        'capacity': '7/9',
-        'avatar': AppAssets.avatarNeha,
-      },
-    ];
-
-    return Column(
-      children: [
-        // Header: Back Arrow + Live Chat Rooms (Image 2)
-        Padding(
-          padding: const EdgeInsets.fromLTRB(6, 6, 14, 10),
-          child: Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
-                onPressed: () => _setStage(1),
-              ),
-              const SizedBox(width: 4),
-              const Text(
-                'Live Chat Rooms',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.3,
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // List of 4 Host Cards (Image 2)
-        Expanded(
-          child: ListView.builder(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-            itemCount: liveRooms.length,
-            itemBuilder: (context, index) {
-              final room = liveRooms[index];
-              final tags = room['tags'] as List<String>;
-
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF131024),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: index == 0
-                        ? const Color(0xFFE91E63).withValues(alpha: 0.35)
-                        : Colors.white10,
-                  ),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Colors.black45,
-                      blurRadius: 10,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    // Square photo thumbnail with Golden Crown and "Chat Live" pink pill (Image 2)
-                    Stack(
-                      alignment: Alignment.bottomCenter,
-                      clipBehavior: Clip.none,
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
-                          child: Image.asset(
-                            room['avatar'] as String,
-                            width: 66,
-                            height: 66,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-
-                        // Golden Crown 👑 on top-left
-                        Positioned(
-                          top: -3,
-                          left: -3,
-                          child: Container(
-                            padding: const EdgeInsets.all(3),
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Color(0xFF21153B),
-                            ),
-                            child: const Text('👑', style: TextStyle(fontSize: 13)),
-                          ),
-                        ),
-
-                        // Pink "Chat Live" badge at bottom
-                        Positioned(
-                          bottom: -4,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFFFF007F), Color(0xFFFF4081)],
-                              ),
-                              borderRadius: BorderRadius.circular(10),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Color(0x66FF007F),
-                                  blurRadius: 6,
-                                ),
-                              ],
-                            ),
-                            child: const Text(
-                              'Chat Live',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(width: 14),
-
-                    // Middle Column: Host Name, Title, and Tags
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            room['host'] as String,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            room['title'] as String,
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          if (index == 0) ...[
-                            const SizedBox(height: 5),
-                            Row(
-                              children: [
-                                for (final tag in tags) ...[
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                    margin: const EdgeInsets.only(right: 6),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.08),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Text(
-                                      tag,
-                                      style: const TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 10.5,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-
-                    // Right Column: Capacity on top, Royal Blue "Join" pill button below (Image 2)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              index == 3 ? Icons.sync_rounded : Icons.people_alt_rounded,
-                              color: Colors.white70,
-                              size: 13,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              room['capacity'] as String,
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-
-                        // Royal Blue "Join" Button (Image 2)
-                        GestureDetector(
-                          onTap: () => _setStage(3),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF2979FF),
-                              borderRadius: BorderRadius.circular(18),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Color(0x552979FF),
-                                  blurRadius: 8,
-                                  offset: Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: const Text(
-                              'Join',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ),
-
-        // Bottom "+ Create Chat Room" Pink Pill Button (Matching Image 3)
-        _buildCreateChatRoomButton(),
-      ],
-    );
-  }
-
-  // ===========================================================================
-  // 3: VIEWER TAPS JOIN (Room Preview & [ Join Room ]) - Matching Image 3
-  // ===========================================================================
-  Widget _buildStep3RoomPreviewView() {
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Top Nav: Back Arrow + 👥 8/9
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
-                onPressed: () => _setStage(2),
-              ),
-              Row(
-                children: const [
-                  Icon(Icons.people_alt_rounded, color: Colors.white70, size: 16),
-                  SizedBox(width: 5),
-                  Text(
-                    '8/9',
-                    style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-
-          // Large Cover Portrait Photo of Nila
-          Container(
-            width: double.infinity,
-            height: 250,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: const Color(0xFFE91E63).withValues(alpha: 0.35),
-                width: 1.5,
-              ),
-              image: const DecorationImage(
-                image: AssetImage(AppAssets.avatarDiya),
-                fit: BoxFit.cover,
-              ),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black54,
-                  blurRadius: 18,
-                  offset: Offset(0, 8),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Host Name + Crown + Subtitle
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
-              Text('👑', style: TextStyle(fontSize: 18)),
-              SizedBox(width: 6),
-              Text(
-                'Nila 💕',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Friends Talk ✨',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 10),
-
-          // Tags: Friendship & Tamil
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white12),
-                ),
-                child: const Text('Friendship', style: TextStyle(color: Colors.white70, fontSize: 12)),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white12),
-                ),
-                child: const Text('Tamil', style: TextStyle(color: Colors.white70, fontSize: 12)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-
-          // Row of 6 Member Circular Avatars
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildMemberAvatarMini(AppAssets.avatarArun),
-                _buildMemberAvatarMini(AppAssets.avatarPriya),
-                _buildMemberAvatarMini(AppAssets.avatarSneha),
-                _buildMemberAvatarMini(AppAssets.avatarNeha),
-                _buildMemberAvatarMini(AppAssets.avatarVicky),
-                _buildMemberAvatarMini(AppAssets.avatarKarthik),
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
-
-          // Quote: "Nice people 💕 Let's Talk ✨"
-          const Text(
-            'Nice people 💕 Let\'s Talk ✨',
-            style: TextStyle(
-              color: Color(0xFFFFD600),
-              fontSize: 13.5,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Prominent Button: [ Join Room ] with hand pointer indicator
-          GestureDetector(
-            onTap: () => _setStage(4),
-            child: Container(
-              width: double.infinity,
-              height: 52,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF7B1FA2), Color(0xFFE91E63)],
-                ),
-                borderRadius: BorderRadius.circular(26),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x66E91E63),
-                    blurRadius: 18,
-                    offset: Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: const [
-                  Text(
-                    'Join Room',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  Positioned(
-                    right: 20,
-                    child: Text('👆', style: TextStyle(fontSize: 22)),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMemberAvatarMini(String asset) {
-    return Container(
-      padding: const EdgeInsets.all(1.5),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white38, width: 1),
-      ),
-      child: CustomAvatar(radius: 17, assetPath: asset),
-    );
-  }
-
-  // ===========================================================================
-  // 4: JOIN REQUEST SENT (Only host will get notification) - Matching Image 4
-  // ===========================================================================
-  Widget _buildStep4JoinRequestSentView() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Spacer(),
-
-          // Big Glowing Circular Paperplane Icon ✈️
-          Container(
-            width: 90,
-            height: 90,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                colors: [Color(0xFF2979FF), Color(0xFF00B0FF)],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF00B0FF).withValues(alpha: 0.5),
-                  blurRadius: 28,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-            child: const Center(
-              child: Icon(
-                Icons.send_rounded,
-                color: Colors.white,
-                size: 44,
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Title: Join Request Sent
-          const Text(
-            'Join Request Sent',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 22,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 10),
-
-          // Subtitle: Your request has been sent to the host. Please wait for acceptance.
-          const Text(
-            'Your request has been sent to the host. Please wait for acceptance.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 28),
-
-          // Cancel Request Button
-          GestureDetector(
-            onTap: () => _setStage(3),
-            child: Container(
-              width: 170,
-              height: 42,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(21),
-                border: Border.all(color: Colors.white30, width: 1.2),
-                color: Colors.white.withValues(alpha: 0.06),
-              ),
-              child: const Center(
-                child: Text(
-                  'Cancel Request',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 28),
-
-          // Hourglass Icon ⏳ (Tap to immediately simulate host notification)
-          GestureDetector(
-            onTap: () => _setStage(5),
-            child: const Icon(
-              Icons.hourglass_empty_rounded,
-              color: Color(0xFFFFD600),
-              size: 34,
-            ),
-          ),
-
-          const Spacer(),
-        ],
-      ),
-    );
-  }
-
-  // ===========================================================================
-  // 5: HOST GETS NOTIFICATION (Screen 5 & Screen A Host Rejects)
-  // ===========================================================================
-  Widget _buildStep5HostNotificationView() {
-    return Stack(
-      children: [
-        // Live Screen Background (Host Nila's perspective)
-        Column(
-          children: [
-            // Top Bar: Host Nila + 👥 8/9 + +Follow + 👁️ 124
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: Row(
-                children: [
-                  CustomAvatar(radius: 18, assetPath: AppAssets.avatarDiya),
-                  const SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text('Nila 💕', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
-                      Text('Host 👑', style: TextStyle(color: Color(0xFFFFD600), fontSize: 10.5, fontWeight: FontWeight.w600)),
-                    ],
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFF2D55),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Text('+ Follow', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-                  ),
-                  const Spacer(),
-                  Row(
-                    children: const [
-                      Icon(Icons.remove_red_eye_rounded, color: Colors.white70, size: 14),
-                      SizedBox(width: 4),
-                      Text('124', style: TextStyle(color: Colors.white, fontSize: 11.5)),
-                      SizedBox(width: 10),
-                      Icon(Icons.people_alt_rounded, color: Colors.white70, size: 14),
-                      SizedBox(width: 4),
-                      Text('8/9', style: TextStyle(color: Colors.white, fontSize: 11.5)),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            // Live Camera View
-            Expanded(
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white12),
-                  image: const DecorationImage(
-                    image: AssetImage(AppAssets.avatarDiya),
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 190), // Spacing for floating bottom sheet
-          ],
-        ),
-
-        // Floating Bottom Modal: Join Request (1) - Screen 5 & Screen A
-        Positioned(
-          left: 12,
-          right: 12,
-          bottom: 12,
+      color: Colors.black.withValues(alpha: 0.65), // Dimmed background
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
           child: Container(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
             decoration: BoxDecoration(
               color: const Color(0xFF141126),
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(28),
               border: Border.all(
-                color: const Color(0xFFE91E63).withValues(alpha: 0.5),
-                width: 1.4,
+                color: Colors.white.withValues(alpha: 0.12),
+                width: 1.2,
               ),
               boxShadow: const [
                 BoxShadow(
-                  color: Color(0x66E91E63),
-                  blurRadius: 20,
-                  offset: Offset(0, 4),
+                  color: Colors.black87,
+                  blurRadius: 28,
+                  offset: Offset(0, 10),
                 ),
               ],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Header: Join Request (1) + Close button
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Join Request (1)',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
+                // Top Right '✕' close button
+                Align(
+                  alignment: Alignment.topRight,
+                  child: GestureDetector(
+                    onTap: () => _setStage(1), // Back to list
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.08),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.close_rounded,
+                        color: Colors.white70,
+                        size: 18,
                       ),
                     ),
-                    GestureDetector(
-                      onTap: () => _setStage(2),
+                  ),
+                ),
+
+                // Big Circular Host Avatar with Crown Badge on Side (Reference Image 2)
+                Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xFFFF2A6D),
+                          width: 2,
+                        ),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x66FF2A6D),
+                            blurRadius: 14,
+                          ),
+                        ],
+                      ),
+                      child: CustomAvatar(
+                        radius: 44,
+                        assetPath: avatar,
+                      ),
+                    ),
+                    // Gold Crown Icon Badge at side of avatar (Reference Image 2)
+                    Positioned(
+                      right: -4,
+                      bottom: 6,
                       child: Container(
-                        padding: const EdgeInsets.all(4),
+                        width: 32,
+                        height: 32,
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.08),
                           shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.close_rounded, color: Colors.white70, size: 16),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-
-                // Request Item: Karthi avatar + wants to join your room
-                Row(
-                  children: [
-                    CustomAvatar(radius: 22, assetPath: AppAssets.avatarKarthik),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          'Karthi',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          'wants to join your room',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // Action Buttons: [ Reject ] (Red - Screen A) & [ Accept ] (Green - Screen 6)
-                Row(
-                  children: [
-                    // Reject Button (Screen A)
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => _setStage(7), // Triggers Step B Rejected Alert!
-                        child: Container(
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFD32F2F),
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x55D32F2F),
-                                blurRadius: 10,
-                                offset: Offset(0, 3),
-                              ),
+                          gradient: const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Color(0xFFFFEA00),
+                              Color(0xFFFFB300),
+                              Color(0xFFFF8F00),
                             ],
                           ),
-                          child: const Center(
-                            child: Text(
-                              'Reject',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 15,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
+                          border: Border.all(
+                            color: const Color(0xFFFFF9C4),
+                            width: 1.5,
                           ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFFF8F00).withValues(alpha: 0.6),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-
-                    // Accept Button (Screen 6 / D)
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => _setStage(6), // Triggers Step 6 Accepted & User Enters!
-                        child: Container(
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF00C853),
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x5500C853),
-                                blurRadius: 10,
-                                offset: Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: const Center(
-                            child: Text(
-                              'Accept',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 15,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
+                        child: Center(
+                          child: CustomPaint(
+                            size: const Size(18, 15),
+                            painter: const _CrownIconPainter(color: Color(0xFFD84315)),
                           ),
                         ),
                       ),
@@ -3204,2151 +1352,731 @@ class _ChatRoomPartyScreenState extends State<ChatRoomPartyScreen>
                 ),
                 const SizedBox(height: 14),
 
-                // Bottom host controls: Mic, Video, Chat, Gift, More
+                // Host Name (e.g. Diya_Official) with blue tick
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _buildHostBottomBtn(Icons.mic_off_rounded, 'Mic', isRed: true),
-                    _buildHostBottomBtn(Icons.videocam_rounded, 'Video'),
-                    _buildHostBottomBtn(Icons.chat_bubble_outline_rounded, 'Chat'),
-                    _buildHostBottomBtn(Icons.card_giftcard_rounded, 'Gift'),
-                    _buildHostBottomBtn(Icons.more_horiz_rounded, 'More'),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildHostBottomBtn(IconData icon, String label, {bool isRed = false}) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(7),
-          decoration: BoxDecoration(
-            color: isRed ? const Color(0xFFD32F2F) : Colors.white.withValues(alpha: 0.1),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(icon, color: Colors.white, size: 16),
-        ),
-        const SizedBox(height: 3),
-        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 10)),
-      ],
-    );
-  }
-
-  // ===========================================================================
-  // 6: HOST ACCEPTS / D: IF ACCEPTED - USER ENTERS - Matching Image 6 & Screen D
-  // ===========================================================================
-  Widget _buildStep6AcceptedRoomView() {
-    return Stack(
-      children: [
-        Column(
-          children: [
-            // Top Bar: Nila 💕 + 👥 9/9 + +Follow + 👁️ 124
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: Row(
-                children: [
-                  CustomAvatar(radius: 18, assetPath: AppAssets.avatarDiya),
-                  const SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text('Nila 💕', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
-                      Text('Host 👑', style: TextStyle(color: Color(0xFFFFD600), fontSize: 10.5, fontWeight: FontWeight.w600)),
-                    ],
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFF2D55),
-                      borderRadius: BorderRadius.circular(12),
+                    Text(
+                      hostName,
+                      style: GoogleFonts.outfit(
+                        color: Colors.white,
+                        fontSize: 19.5,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.3,
+                      ),
                     ),
-                    child: const Text('+ Follow', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-                  ),
-                  const Spacer(),
-                  Row(
-                    children: [
-                      const Icon(Icons.remove_red_eye_rounded, color: Colors.white70, size: 14),
-                      const SizedBox(width: 4),
-                      const Text('124', style: TextStyle(color: Colors.white, fontSize: 11.5)),
-                      const SizedBox(width: 10),
-                      const Icon(Icons.people_alt_rounded, color: Colors.white70, size: 14),
-                      const SizedBox(width: 4),
-                      const Text('9/9', style: TextStyle(color: Colors.white, fontSize: 11.5)),
-                      const SizedBox(width: 10),
-                      GestureDetector(
-                        onTap: () => _setStage(2),
-                        child: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
+                    if (isVerified) ...[
+                      const SizedBox(width: 5),
+                      const Icon(
+                        Icons.check_circle_rounded,
+                        color: Color(0xFF29B6F6),
+                        size: 16,
                       ),
                     ],
-                  ),
-                ],
-              ),
-            ),
-
-            // 8-Seat Room Grid (Nila, Karthi, Priya, Arun + 4 Invite Seats)
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                child: GridView.count(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 1.15,
-                  children: [
-                    // Seat 1: Host Nila
-                    _buildActiveRoomSeat(
-                      name: 'Nila',
-                      badge: 'Host 👑',
-                      isHost: true,
-                      avatarAsset: AppAssets.avatarDiya,
-                    ),
-
-                    // Seat 2: Karthi (You just entered!)
-                    _buildActiveRoomSeat(
-                      name: 'Karthi (You)',
-                      badge: 'Joined 🟢',
-                      isHost: false,
-                      isYou: true,
-                      avatarAsset: AppAssets.avatarKarthik,
-                    ),
-
-                    // Seat 3: Priya
-                    _buildActiveRoomSeat(
-                      name: 'Priya',
-                      badge: 'Member',
-                      isHost: false,
-                      avatarAsset: AppAssets.avatarPriya,
-                    ),
-
-                    // Seat 4: Arun
-                    _buildActiveRoomSeat(
-                      name: 'Arun',
-                      badge: 'Member',
-                      isHost: false,
-                      avatarAsset: AppAssets.avatarArun,
-                    ),
-
-                    // Seat 5: + Invite
-                    _buildEmptyInviteSeat(),
-                    // Seat 6: + Invite
-                    _buildEmptyInviteSeat(),
                   ],
                 ),
-              ),
-            ),
+                const SizedBox(height: 4),
 
-            // Bottom controls
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildHostBottomBtn(Icons.mic_rounded, 'Mic'),
-                  _buildHostBottomBtn(Icons.videocam_rounded, 'Video'),
-                  _buildHostBottomBtn(Icons.chat_bubble_outline_rounded, 'Chat'),
-                  _buildHostBottomBtn(Icons.card_giftcard_rounded, 'Gift'),
-                  _buildHostBottomBtn(Icons.more_horiz_rounded, 'More'),
-                ],
-              ),
-            ),
-          ],
-        ),
-
-        // Floating Toast Banner: "✓ You joined the room" (Matching Image 6 & D)
-        Positioned(
-          left: 24,
-          right: 24,
-          bottom: 70,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF00C853), Color(0xFF009624)],
-              ),
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x6600C853),
-                  blurRadius: 16,
-                  offset: Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-                SizedBox(width: 8),
+                // Subtitle: "Let's talk & be friends 💕"
                 Text(
-                  'You joined the room',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w900,
+                  tagline,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.outfit(
+                    color: Colors.white.withValues(alpha: 0.75),
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+                const SizedBox(height: 12),
 
-  Widget _buildActiveRoomSeat({
-    required String name,
-    required String badge,
-    required bool isHost,
-    bool isYou = false,
-    required String avatarAsset,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF161228),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: isYou
-              ? const Color(0xFF00E676)
-              : (isHost ? const Color(0xFFFFD600) : Colors.white12),
-          width: isYou || isHost ? 2 : 1,
-        ),
-        boxShadow: isYou
-            ? const [
-                BoxShadow(
-                  color: Color(0x4400E676),
-                  blurRadius: 10,
-                ),
-              ]
-            : null,
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CustomAvatar(radius: 28, assetPath: avatarAsset),
-          const SizedBox(height: 6),
-          Text(
-            name,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: isHost
-                  ? const Color(0xFFFFB300)
-                  : (isYou ? const Color(0xFF00C853) : Colors.white12),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              badge,
-              style: TextStyle(
-                color: isHost ? Colors.black : Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyInviteSeat() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white12, style: BorderStyle.solid),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: const [
-          Icon(Icons.add_rounded, color: Colors.white54, size: 28),
-          SizedBox(height: 4),
-          Text(
-            'Invite',
-            style: TextStyle(color: Colors.white60, fontSize: 12, fontWeight: FontWeight.w600),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ===========================================================================
-  // 7 / B: USER GETS REJECTED ALERT - Matching Image B
-  // ===========================================================================
-  Widget _buildStepBRejectedAlertView() {
-    return Center(
-      child: Container(
-        width: MediaQuery.sizeOf(context).width * 0.84,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
-        decoration: BoxDecoration(
-          color: const Color(0xFF141126),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.white12),
-          boxShadow: const [
-            BoxShadow(
-              color: Colors.black87,
-              blurRadius: 28,
-              offset: Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Big Red Circular ✕ Icon
-            Container(
-              width: 64,
-              height: 64,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Color(0xFFD32F2F),
-                boxShadow: [
-                  BoxShadow(
-                    color: Color(0x66D32F2F),
-                    blurRadius: 18,
-                  ),
-                ],
-              ),
-              child: const Center(
-                child: Icon(Icons.close_rounded, color: Colors.white, size: 38),
-              ),
-            ),
-            const SizedBox(height: 18),
-
-            // Title: Your request was rejected
-            const Text(
-              'Your request was rejected',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            // Subtitle: You will continue watching as a viewer.
-            const Text(
-              'You will continue watching as a viewer.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 13.5,
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // OK Button (Goes to Step C: Viewer Room)
-            GestureDetector(
-              onTap: () => _setStage(8), // Advances to Step C Viewer View!
-              child: Container(
-                width: double.infinity,
-                height: 46,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF2979FF), Color(0xFF7B1FA2)],
-                  ),
-                  borderRadius: BorderRadius.circular(23),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x557B1FA2),
-                      blurRadius: 12,
-                      offset: Offset(0, 3),
+                // 👑 Dream Team Badge
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('👑', style: TextStyle(fontSize: 14)),
+                    const SizedBox(width: 5),
+                    Text(
+                      tag,
+                      style: GoogleFonts.outfit(
+                        color: const Color(0xFFFFD54F),
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ],
                 ),
-                child: const Center(
-                  child: Text(
-                    'OK',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w900,
+                const SizedBox(height: 8),
+
+                // Member capacity: 👥 8/9
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.people_alt_rounded,
+                        color: Colors.white70, size: 16),
+                    const SizedBox(width: 6),
+                    Text(
+                      capacity,
+                      style: GoogleFonts.outfit(
+                        color: Colors.white,
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+                const SizedBox(height: 20),
 
-  // ===========================================================================
-  // 8 / C: USER STAYS AS VIEWER - Matching Image C
-  // ===========================================================================
-  Widget _buildStepCViewerRoomView() {
-    final comments = [
-      {'user': 'Raja', 'msg': 'Nice voice 💕'},
-      {'user': 'Anu', 'msg': 'Super ✨'},
-      {'user': 'Siva', 'msg': 'Hi all 👏'},
-      {'user': 'Meena', 'msg': '👏👏👏'},
-    ];
-
-    return Column(
-      children: [
-        // Top Bar: Nila 💕 + 👥 8/9 + 👁️ 124
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-          child: Row(
-            children: [
-              CustomAvatar(radius: 18, assetPath: AppAssets.avatarDiya),
-              const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text('Nila 💕', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
-                  Text('Friends Talk ✨', style: TextStyle(color: Colors.white70, fontSize: 11)),
-                ],
-              ),
-              const Spacer(),
-              Row(
-                children: [
-                  const Icon(Icons.remove_red_eye_rounded, color: Colors.white70, size: 14),
-                  const SizedBox(width: 4),
-                  const Text('124', style: TextStyle(color: Colors.white, fontSize: 11.5)),
-                  const SizedBox(width: 10),
-                  const Icon(Icons.people_alt_rounded, color: Colors.white70, size: 14),
-                  const SizedBox(width: 4),
-                  const Text('8/9', style: TextStyle(color: Colors.white, fontSize: 11.5)),
-                  const SizedBox(width: 10),
-                  GestureDetector(
-                    onTap: () => _setStage(2),
-                    child: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-
-        // Member Avatar Strip
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-          child: Row(
-            children: [
-              _buildMemberAvatarMini(AppAssets.avatarArun),
-              const SizedBox(width: 6),
-              _buildMemberAvatarMini(AppAssets.avatarPriya),
-              const SizedBox(width: 6),
-              _buildMemberAvatarMini(AppAssets.avatarSneha),
-              const SizedBox(width: 6),
-              _buildMemberAvatarMini(AppAssets.avatarNeha),
-              const SizedBox(width: 6),
-              _buildMemberAvatarMini(AppAssets.avatarVicky),
-              const SizedBox(width: 6),
-              _buildMemberAvatarMini(AppAssets.avatarKarthik),
-            ],
-          ),
-        ),
-        const SizedBox(height: 6),
-
-        // Status banner: Nice people 💕 Let's Talk ✨
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 14),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.05),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: const [
-              Text('✨', style: TextStyle(fontSize: 14)),
-              SizedBox(width: 6),
-              Text(
-                'Nice people 💕 Let\'s Talk ✨',
-                style: TextStyle(color: Color(0xFFFFD600), fontSize: 12, fontWeight: FontWeight.w700),
-              ),
-            ],
-          ),
-        ),
-
-        // Live Chat Comments Stream
-        Expanded(
-          child: Stack(
-            children: [
-              ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                itemCount: comments.length,
-                itemBuilder: (context, index) {
-                  final c = comments[index];
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                // Pill Button: "Join" (Matching Home Screen Live Button Design)
+                GestureDetector(
+                  onTap: () {
+                    _handleJoinRequestFromModal();
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    height: 48,
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.35),
-                      borderRadius: BorderRadius.circular(14),
+                      color: const Color(0xFF211D32),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: const Color(0xFFFF2D55),
+                        width: 1.8,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFFF2D55).withValues(alpha: 0.35),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
                     ),
                     child: Row(
-                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(
-                          '${c['user']}: ',
-                          style: const TextStyle(
-                            color: Color(0xFFFFD600),
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w800,
+                        Container(
+                          padding: const EdgeInsets.all(5),
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Color(0xFFFF2D55),
+                          ),
+                          child: const Icon(
+                            Icons.videocam_rounded,
+                            color: Colors.white,
+                            size: 14,
                           ),
                         ),
+                        const SizedBox(width: 8),
                         Text(
-                          c['msg'] as String,
-                          style: const TextStyle(
+                          'Join',
+                          style: GoogleFonts.outfit(
                             color: Colors.white,
-                            fontSize: 12.5,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.3,
                           ),
                         ),
                       ],
                     ),
-                  );
-                },
-              ),
-
-              // Floating Hearts indicator on right
-              Positioned(
-                right: 16,
-                bottom: 20,
-                child: Column(
-                  children: const [
-                    Text('💕', style: TextStyle(fontSize: 22)),
-                    SizedBox(height: 6),
-                    Text('💖', style: TextStyle(fontSize: 26)),
-                    SizedBox(height: 6),
-                    Text('💗', style: TextStyle(fontSize: 20)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // Bottom Chat Input Bar
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: const BoxDecoration(
-            color: Color(0xFF141126),
-            border: Border(top: BorderSide(color: Colors.white10)),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Container(
-                  height: 38,
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(19),
-                  ),
-                  child: Row(
-                    children: const [
-                      Text(
-                        'Say something...',
-                        style: TextStyle(color: Colors.white54, fontSize: 13),
-                      ),
-                      Spacer(),
-                      Icon(Icons.sentiment_satisfied_alt_rounded, color: Colors.white54, size: 18),
-                    ],
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                icon: const Icon(Icons.card_giftcard_rounded, color: Color(0xFFFFD600), size: 22),
-                onPressed: _openGiftSheet,
-              ),
-              IconButton(
-                icon: const Icon(Icons.favorite_rounded, color: Color(0xFFFF2D55), size: 22),
-                onPressed: () => _heartsKey.currentState?.addHeart(),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
+                const SizedBox(height: 12),
 
-  // ===========================================================================
-  // 9 / E: FLOW SUMMARY (USER SIDE) - Matching Image Section E
-  // ===========================================================================
-  Widget _buildStepEFlowSummaryView() {
-    final summaryItems = [
-      {'step': '1', 'title': 'Open App → Tap Chat Room', 'target': 1},
-      {'step': '2', 'title': 'See live chat rooms list', 'target': 2},
-      {'step': '3', 'title': 'Tap Join on any host room', 'target': 3},
-      {'step': '4', 'title': 'Request sent (only host sees)', 'target': 4},
-      {'step': '5', 'title': 'Wait for host to accept', 'target': 5},
-      {'step': '6', 'title': 'If accepted → Enter room', 'target': 6},
-      {'step': '7', 'title': 'If rejected → Remain as viewer', 'target': 7},
-    ];
-
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header Badge + Title
-          Row(
-            children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [Color(0xFFFF2D55), Color(0xFF9C27B0)],
-                  ),
-                ),
-                child: const Center(
-                  child: Text(
-                    'E',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              const Text(
-                'Flow Summary (User Side)',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 19,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // 7 Numbered Steps List
-          for (final item in summaryItems) ...[
-            Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                color: const Color(0xFF151128),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white10),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 28,
-                    height: 28,
+                // Pill Button: "Cancel" (Matching Reference Image 2 Dark Slate Style, Stadium Shape)
+                GestureDetector(
+                  onTap: () => _setStage(1),
+                  child: Container(
+                    width: double.infinity,
+                    height: 48,
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF2979FF), Color(0xFF7B1FA2)],
+                      color: const Color(0xFF162136),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: const Color(0xFF2C3959),
+                        width: 1.4,
                       ),
-                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.35),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: Center(
                       child: Text(
-                        item['step'] as String,
-                        style: const TextStyle(
+                        'Cancel',
+                        style: GoogleFonts.outfit(
                           color: Colors.white,
-                          fontSize: 13,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Triggered after user clicks "Join" in Step 2:
+  /// Directly transitions into the chatroom screen (no popup!)
+  void _handleJoinRequestFromModal() {
+    _setStage(3); // Enter chat room directly
+  }
+
+  // ===========================================================================
+  // NOTIFICATION PAGE / DIALOG: ACCEPT OR REJECT JOIN REQUEST
+  // (User requested: "If anyone gives a request the notification page where
+  // the user can accept join and reject the request")
+  // ===========================================================================
+  void _showHostJoinRequestNotificationDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: const Color(0xFF16122C),
+            borderRadius: BorderRadius.circular(26),
+            border: Border.all(
+              color: const Color(0xFFFF2A6D).withValues(alpha: 0.5),
+              width: 1.5,
+            ),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x77FF2A6D),
+                blurRadius: 24,
+                offset: Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header: 🔔 Join Request (1)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: const Color(0xFFFF2A6D).withValues(alpha: 0.2),
+                        ),
+                        child: const Icon(Icons.notifications_active_rounded,
+                            color: Color(0xFFFF2A6D), size: 18),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Join Request (1)',
+                        style: GoogleFonts.outfit(
+                          color: Colors.white,
+                          fontSize: 17.5,
                           fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(ctx),
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.08),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.close_rounded,
+                          color: Colors.white70, size: 16),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Requester Profile: Karthi wants to join audio seat
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E1A36),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white10),
+                ),
+                child: Row(
+                  children: [
+                    Stack(
+                      alignment: Alignment.bottomRight,
+                      children: [
+                        CustomAvatar(
+                          radius: 24,
+                          assetPath: AppAssets.avatarKarthik,
+                        ),
+                        Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Color(0xFF00E676),
+                          ),
+                          child: const Icon(Icons.mic,
+                              color: Colors.black, size: 10),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'Karthi',
+                                style: GoogleFonts.outfit(
+                                  color: Colors.white,
+                                  fontSize: 15.5,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 1.5),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFD54F)
+                                      .withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  'Lv.12',
+                                  style: GoogleFonts.outfit(
+                                    color: const Color(0xFFFFD54F),
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'wants to join your room as speaker',
+                            style: GoogleFonts.outfit(
+                              color: Colors.white70,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Action Buttons: [ Reject ] & [ Accept & Join ]
+              Row(
+                children: [
+                  // Reject Button
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        setState(() {
+                          _pendingRequests.clear();
+                        });
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                                '❌ Join request rejected. User stays as listener.'),
+                            backgroundColor: Color(0xFFD32F2F),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF261D2E),
+                          borderRadius: BorderRadius.circular(22),
+                          border: Border.all(
+                            color: const Color(0xFFD32F2F).withValues(alpha: 0.6),
+                            width: 1.2,
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            'Reject',
+                            style: GoogleFonts.outfit(
+                              color: const Color(0xFFFF5252),
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(width: 12),
+
+                  // Accept & Join Button
                   Expanded(
-                    child: Text(
-                      item['title'] as String,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () => _setStage(item['target'] as int),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE91E63).withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFE91E63)),
-                      ),
-                      child: const Text(
-                        'Try',
-                        style: TextStyle(
-                          color: Color(0xFFFF4081),
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-          const SizedBox(height: 16),
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        // Accept user: Fill Seat 9 (replacing "+ Invite" with Karthi!)
+                        setState(() {
+                          _seats[8] = {
+                            'seat': 9,
+                            'name': 'Karthi',
+                            'isHost': false,
+                            'isInvite': false,
+                            'avatar': AppAssets.avatarKarthik,
+                            'isSpeaking': true,
+                            'isMicOn': true,
+                          };
+                          _selectedRoom['capacity'] = '9/9';
+                          _pendingRequests.clear();
+                        });
 
-          // Restart Entire Flow from Step 1 Button
-          GestureDetector(
-            onTap: () => _setStage(1),
-            child: Container(
-              width: double.infinity,
-              height: 48,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF7B1FA2), Color(0xFFE91E63)],
-                ),
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x66E91E63),
-                    blurRadius: 14,
-                    offset: Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.refresh_rounded, color: Colors.white, size: 20),
-                  SizedBox(width: 8),
-                  Text(
-                    'Restart Flow from Step 1 (Home Page)',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 14.5,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+                        _heartsKey.currentState?.addHeart();
+                        _starsKey.currentState?.addStars(4);
 
-  // ===========================================================================
-  // STEP 1: CHAT ROOM LIST SCREEN (Matching Reference Image Step 1)
-  // ===========================================================================
-  Widget _buildRoomListView() {
-    final filter = _filters[_selectedFilterIndex];
-    final filteredRooms = _roomsList.where((room) {
-      if (filter == '🎙️ Audio') return !(room['isVideo'] as bool);
-      if (filter == '📹 Video') return room['isVideo'] as bool;
-      if (filter == 'Friends') return room['tag'] == 'Friends';
-      if (filter == 'Trending') return (room['viewers'] as String).compareTo('100') >= 0;
-      return true;
-    }).toList();
-
-    return Stack(
-      children: [
-        Column(
-          children: [
-            // Screen 1 Header: Left Back Arrow ←, Title "Chat Room", Right Search Icon 🔍
-            Padding(
-              padding: const EdgeInsets.fromLTRB(10, 8, 14, 8),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(
-                      Icons.arrow_back_ios_new_rounded,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                    onPressed: () {
-                      if (widget.onBack != null) {
-                        widget.onBack!();
-                      } else if (Navigator.of(context).canPop()) {
-                        Navigator.of(context).pop();
-                      }
-                    },
-                  ),
-                  const SizedBox(width: 4),
-                  const Text(
-                    'Chat Room',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(
-                      Icons.search_rounded,
-                      color: Color(0xFFFFD600),
-                      size: 24,
-                    ),
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Search chat rooms...'),
-                          backgroundColor: Color(0xFFFFD600),
-                          duration: Duration(seconds: 1),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-
-            // Horizontal Filter Chips: All, Audio, Video, Trending, Friends
-            SizedBox(
-              height: 38,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                itemCount: _filters.length,
-                itemBuilder: (context, index) {
-                  final isSel = _selectedFilterIndex == index;
-                  return GestureDetector(
-                    onTap: () => setState(() => _selectedFilterIndex = index),
-                    child: Container(
-                      margin: const EdgeInsets.only(right: 8),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 7,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isSel
-                            ? const Color(0xFFFFD600)
-                            : const Color(0xFF1B182E),
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(
-                          color: isSel
-                              ? const Color(0xFFFFD600)
-                              : Colors.white10,
-                        ),
-                        boxShadow: isSel
-                            ? const [
-                                BoxShadow(
-                                  color: Color(0x44FFD600),
-                                  blurRadius: 8,
-                                ),
-                              ]
-                            : null,
-                      ),
-                      child: Center(
-                        child: Text(
-                          _filters[index],
-                          style: TextStyle(
-                            color: isSel ? Colors.black : Colors.white70,
-                            fontWeight: isSel ? FontWeight.w900 : FontWeight.w600,
-                            fontSize: 12.5,
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                                '🎉 Accepted! Karthi joined audio seat 9.'),
+                            backgroundColor: Color(0xFF00C853),
+                            duration: Duration(seconds: 2),
                           ),
+                        );
+                      },
+                      child: Container(
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF211D32),
+                          borderRadius: BorderRadius.circular(22),
+                          border: Border.all(
+                            color: const Color(0xFFFF2D55),
+                            width: 1.6,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFFF2D55).withValues(alpha: 0.35),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 10),
-
-            // Room Cards List
-            Expanded(
-              child: ListView.builder(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(14, 4, 14, 90),
-                itemCount: filteredRooms.length,
-                itemBuilder: (context, index) {
-                  final room = filteredRooms[index];
-                  final isVideo = room['isVideo'] as bool;
-
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF141224),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: const Color(0xFFFFD600).withValues(alpha: 0.22),
-                        width: 1,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.35),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Stack(
-                          clipBehavior: Clip.none,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Container(
-                              decoration: BoxDecoration(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
                                 shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: const Color(0xFFFFD600).withValues(alpha: 0.6),
-                                  width: 1.5,
-                                ),
+                                color: Color(0xFFFF2D55),
                               ),
-                              child: CustomAvatar(
-                                radius: 26,
-                                assetPath: room['avatar'] as String,
+                              child: const Icon(
+                                Icons.videocam_rounded,
+                                color: Colors.white,
+                                size: 12,
                               ),
                             ),
-                            Positioned(
-                              bottom: -2,
-                              right: -2,
-                              child: Container(
-                                padding: const EdgeInsets.all(3),
-                                decoration: BoxDecoration(
-                                  color: isVideo
-                                      ? const Color(0xFFE040FB)
-                                      : const Color(0xFFFFB300),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  isVideo ? Icons.videocam_rounded : Icons.mic_rounded,
-                                  color: Colors.black,
-                                  size: 11,
-                                ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Accept & Join',
+                              style: GoogleFonts.outfit(
+                                color: Colors.white,
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w800,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Flexible(
-                                    child: Text(
-                                      room['hostName'] as String,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  if (room['isVerified'] == true) ...[
-                                    const SizedBox(width: 4),
-                                    const Icon(
-                                      Icons.verified_rounded,
-                                      color: Color(0xFF29B6F6),
-                                      size: 14,
-                                    ),
-                                  ],
-                                ],
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                room['tagline'] as String,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              const SizedBox(height: 5),
-                              Row(
-                                children: [
-                                  Text(
-                                    room['tagIcon'] as String,
-                                    style: const TextStyle(fontSize: 11),
-                                  ),
-                                  const SizedBox(width: 3),
-                                  Text(
-                                    room['tag'] as String,
-                                    style: const TextStyle(
-                                      color: Color(0xFFFFD600),
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  const Icon(
-                                    Icons.person_outline_rounded,
-                                    color: Colors.white54,
-                                    size: 12,
-                                  ),
-                                  const SizedBox(width: 2),
-                                  Text(
-                                    room['capacity'] as String,
-                                    style: const TextStyle(
-                                      color: Colors.white60,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () => _showJoinPreviewModal(room),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFFFFEA00), Color(0xFFFF9100)],
-                              ),
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Color(0x44FFD600),
-                                  blurRadius: 8,
-                                  offset: Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: const Text(
-                              'Join',
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-
-        // Bottom Floating "+ Create Chat Room" button
-        Positioned(
-          bottom: 16,
-          left: 20,
-          right: 20,
-          child: GestureDetector(
-            onTap: _showCreateRoomSheet,
-            child: Container(
-              height: 52,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFFF007F), Color(0xFFFF2D78)],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
-                borderRadius: BorderRadius.circular(26),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFFF007F).withValues(alpha: 0.50),
-                    blurRadius: 18,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.add_rounded, color: Colors.white, size: 26),
-                  SizedBox(width: 8),
-                  Text(
-                    'Create Chat Room',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16.5,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0.3,
+                      ),
                     ),
                   ),
                 ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ===========================================================================
-  // STEP 3: INSIDE CHAT ROOM (Matching Viewer Poster & PK Battle Input Bar)
-  // 9 People Live Together | See • Talk • Send Gifts • Enjoy
-  // ===========================================================================
-  Widget _buildInsideChatRoomView() {
-    final selectedIndex = _selectedMemberIndex;
-    final hasSelectedMember = selectedIndex != null &&
-        selectedIndex >= 0 &&
-        selectedIndex < _seats.length;
-    final selectedMember = hasSelectedMember ? _seats[selectedIndex] : null;
-
-    return Column(
-      children: [
-        // Screen 3 Header (Exact Match to User Reference Image 1):
-        // Left: 🎙️ in purple circle + Diya + "Host" badge (NO "Chat Room" text)
-        // Right: Video/Mic status + ⭐ 520 (star count) + ✕ close button
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          child: Row(
-            children: [
-              // Purple mic circle icon
-              Container(
-                width: 30,
-                height: 30,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [Color(0xFFAB47BC), Color(0xFF7B1FA2)],
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Color(0x55AB47BC),
-                      blurRadius: 6,
-                    ),
-                  ],
-                ),
-                child: const Center(
-                  child: Icon(
-                    Icons.mic_rounded,
-                    color: Colors.white,
-                    size: 16,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-
-              // Host Name (Diya)
-              Text(
-                _selectedRoom['hostName'] as String? ?? 'Diya',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 15.5,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.2,
-                ),
-              ),
-              const SizedBox(width: 6),
-
-              // "Host" Pink/Red Badge
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFF2D55),
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x44FF2D55),
-                      blurRadius: 4,
-                    ),
-                  ],
-                ),
-                child: const Text(
-                  'Host',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-
-              const Spacer(),
-
-              // Audio / Video Toggle Pill
-              GestureDetector(
-                onTap: () {
-                  setState(() => _isVideoRoom = !_isVideoRoom);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        _isVideoRoom
-                            ? 'Switched to 📹 Video Room Mode'
-                            : 'Switched to 🎙️ Audio Room Mode',
-                      ),
-                      backgroundColor: const Color(0xFFFFD600),
-                      duration: const Duration(seconds: 1),
-                    ),
-                  );
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: _isVideoRoom
-                        ? const Color(0xFF3B1D54)
-                        : const Color(0xFF18283E),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: _isVideoRoom
-                          ? const Color(0xFFE040FB)
-                          : const Color(0xFF40C4FF),
-                      width: 0.8,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        _isVideoRoom
-                            ? Icons.videocam_rounded
-                            : Icons.mic_rounded,
-                        color: _isVideoRoom
-                            ? const Color(0xFFE040FB)
-                            : const Color(0xFF40C4FF),
-                        size: 11,
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
-                        _isVideoRoom ? 'Video' : 'Audio',
-                        style: TextStyle(
-                          color: _isVideoRoom
-                              ? const Color(0xFFE040FB)
-                              : const Color(0xFF40C4FF),
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 6),
-
-              // Mic Mute / Unmute Toggle
-              GestureDetector(
-                onTap: () {
-                  setState(() => _isMicMuted = !_isMicMuted);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(_isMicMuted ? 'Mic Muted 🔇' : 'Mic On 🎙️'),
-                      duration: const Duration(seconds: 1),
-                    ),
-                  );
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(4.5),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _isMicMuted
-                        ? const Color(0x33FF2D55)
-                        : const Color(0x3300E676),
-                    border: Border.all(
-                      color: _isMicMuted
-                          ? const Color(0xFFFF2D55)
-                          : const Color(0xFF00E676),
-                      width: 0.8,
-                    ),
-                  ),
-                  child: Icon(
-                    _isMicMuted ? Icons.mic_off_rounded : Icons.mic_rounded,
-                    color: _isMicMuted
-                        ? const Color(0xFFFF2D55)
-                        : const Color(0xFF00E676),
-                    size: 11,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 6),
-
-              // Stars Counter Pill (Matching ⭐ 520 in Image 1)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0x9918142A),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: const Color(0xFFFFD600).withValues(alpha: 0.4),
-                    width: 0.8,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('⭐', style: TextStyle(fontSize: 12)),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${_totalStarsCount > 1000 ? "${(_totalStarsCount / 1000).toStringAsFixed(1)}K" : _totalStarsCount}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-
-              // ✕ Close Button (Matching Image 1, triggers Step 4 confirmation modal)
-              GestureDetector(
-                onTap: _showEndRoomDialog,
-                child: Container(
-                  width: 30,
-                  height: 30,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white.withValues(alpha: 0.12),
-                  ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.close_rounded,
-                      color: Colors.white,
-                      size: 19,
-                    ),
-                  ),
-                ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
 
-        // 3x3 Grid of 9 Seats:
-        // Elongated portrait cards (childAspectRatio: 0.72) to eliminate the empty gap,
-        // prominent profiles, crisp studio portraits, clear numbers/Host tag, bottom names & mic badges!
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          child: _buildNineSeatsLayout(),
+  // ===========================================================================
+  // STEP 3: INSIDE CHAT ROOM (Matching Reference Image 2)
+  // ===========================================================================
+  Widget _buildStep3InsideChatRoomView() {
+    final hostName = _selectedRoom['hostName'] as String;
+    final tag = _selectedRoom['tag'] as String;
+    final capacity = _selectedRoom['capacity'] as String;
+
+    return Stack(
+      children: [
+        // Botanical glow foliage at bottom corners (Reference Image 2)
+        Positioned(
+          bottom: 0,
+          left: 0,
+          child: IgnorePointer(
+            child: _buildBotanicalLeaves(isLeft: true),
+          ),
         ),
-
-        // Step 2 Member Selection Popup (if tapped a member like Priya)
-        if (hasSelectedMember && selectedMember != null)
-          _buildMemberProfilePopup(selectedMember, selectedIndex),
-
-        // Live Chat Messages Stream:
-        // Uniform sizing ("chat room la konjma length iruku yellathu ora mathiri panni kudu different illama"),
-        // Bottom 2 comments clearly visible and solid (nalla theriyanu),
-        // Older messages moving upwards are transparent/lite (lite theriyu)!
-        Expanded(
-          child: ShaderMask(
-            shaderCallback: (bounds) => const LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Colors.transparent, Colors.white, Colors.white],
-              stops: [0.0, 0.12, 1.0],
-            ).createShader(bounds),
-            blendMode: BlendMode.dstIn,
-            child: ListView.builder(
-              reverse: true, // Anchor to bottom
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              itemCount: _chatMessages.length,
-              itemBuilder: (context, index) {
-                final itemIndex = _chatMessages.length - 1 - index;
-                if (itemIndex < 0 || itemIndex >= _chatMessages.length) {
-                  return const SizedBox.shrink();
-                }
-                final msg = _chatMessages[itemIndex];
-                return _buildUnifiedCommentCapsule(msg, index);
-              },
-            ),
+        Positioned(
+          bottom: 0,
+          right: 0,
+          child: IgnorePointer(
+            child: _buildBotanicalLeaves(isLeft: false),
           ),
         ),
 
-        // Bottom Action Area:
-        // If a member is selected -> Step 2 "Send Gift to [Name]" panel ([Stars] [Flowers] [Special])
-        // Else -> PK-style comment input capsule with 😊 + Type a message... + ⭐, 🌹, 🎁 buttons!
-        if (hasSelectedMember && selectedMember != null)
-          _buildViewerGiftBar(selectedMember, selectedIndex)
-        else
-          _buildPKStyleCommentInputBar(),
+        // Main Chat Room Content
+        Column(
+          children: [
+            const SizedBox(height: 6),
+
+            // 1. Top Bar: Back Arrow | Crowned Mic Avatar | Diya_Official 👑 | 👑 Dream Team 👥 8/9 | [Leave] | ⋮
+            _buildChatRoomHeader(hostName: hostName, tag: tag, capacity: capacity),
+
+            // 2. Room Tagline Banner: 👑 Good Vibes • Great People • Better Conversations 💜 ♡
+            _buildTaglineBanner(),
+
+            // 3. 3x3 Grid of 9 Seats (Filling Screen dynamically)
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                child: _buildNineSeatsGrid(),
+              ),
+            ),
+
+            // 4. Unified Rounded Bottom Dock: 5 Action Buttons + Capsule Chat Input
+            _buildUnifiedBottomDock(),
+          ],
+        ),
       ],
     );
   }
 
-  /// 9 Seats Layout matching Poster:
-  /// Large profiles ("profile nalla theriyanu athu chinna tha iruku"),
-  /// filling the upper half handsomely, clear studio portraits for all 9 people!
-  Widget _buildNineSeatsLayout() {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: _seats.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 6,
-        mainAxisSpacing: 6,
-        childAspectRatio: 0.72, // Elongated portrait cards to eliminate empty space and fill screen properly
-      ),
-      itemBuilder: (context, index) {
-        final seat = _seats[index];
-        final isHost = seat['isHost'] as bool;
-        final isSpeaking = seat['isSpeaking'] as bool;
-        final isMicOn = seat['isMicOn'] as bool;
-        final isSelected = _selectedMemberIndex == index;
-        final floatingBadge = _memberFloatingGifts[index];
-
-        return GestureDetector(
-          onTap: () {
-            setState(() {
-              if (_selectedMemberIndex == index) {
-                _selectedMemberIndex = null; // Toggle off if tapped again
+  /// Top Bar matching Reference Image 2 (Smooth & Responsive, No Overflow)
+  Widget _buildChatRoomHeader({
+    required String hostName,
+    required String tag,
+    required String capacity,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      child: Row(
+        children: [
+          // 1. Back Chevron Button
+          GestureDetector(
+            onTap: () {
+              if (widget.onBack != null) {
+                widget.onBack!();
               } else {
-                _selectedMemberIndex = index;
-                _isFollowingSelectedMember = false;
-                _showCommentInput = false;
+                _setStage(1);
               }
-            });
-          },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOutCubic,
+            },
+            child: Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.06),
+              ),
+              child: const Center(
+                child: Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: Colors.white,
+                  size: 16,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+
+          // 2. Crowned Microphone Room Avatar (with vibrant outer glow ring)
+          Container(
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
-              color: const Color(0xFF161326),
-              borderRadius: BorderRadius.circular(16),
-              border: isSelected
-                  ? Border.all(
-                      color: const Color(0xFFFF2D55),
-                      width: 2.2,
-                    )
-                  : isSpeaking
-                      ? Border.all(
-                          color: const Color(0xFF00E676),
-                          width: 1.4,
-                        )
-                      : Border.all(
-                          color: Colors.white.withValues(alpha: 0.10),
-                          width: 0.8,
-                        ),
+              shape: BoxShape.circle,
+              gradient: const SweepGradient(
+                colors: [
+                  Color(0xFFFFD54F),
+                  Color(0xFFFF2A6D),
+                  Color(0xFFBA68C8),
+                  Color(0xFFFFD54F),
+                ],
+              ),
               boxShadow: [
-                if (isSelected)
-                  const BoxShadow(
-                    color: Color(0x99FF2D55),
-                    blurRadius: 12,
-                    spreadRadius: 1,
-                  )
-                else if (isSpeaking)
-                  const BoxShadow(
-                    color: Color(0x3300E676),
-                    blurRadius: 6,
-                  )
-                else
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.45),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
+                BoxShadow(
+                  color: const Color(0xFFFF2A6D).withValues(alpha: 0.40),
+                  blurRadius: 8,
+                  spreadRadius: 1,
+                ),
               ],
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(15),
-              child: Stack(
-                fit: StackFit.expand,
+            padding: const EdgeInsets.all(2.0),
+            child: Container(
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Color(0xFF1B0F33),
+              ),
+              child: const Stack(
+                alignment: Alignment.center,
                 children: [
-                  // High-Res Studio Portrait Photo
-                  Image.asset(
-                    seat['avatar'] as String,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      color: const Color(0xFF221E36),
-                      child: const Icon(Icons.person, color: Colors.white30, size: 36),
-                    ),
+                  // Purple glowing mic icon
+                  Icon(
+                    Icons.mic_rounded,
+                    color: Color(0xFFCE93D8),
+                    size: 20,
                   ),
-
-                  // Bottom gradient for text legibility
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withValues(alpha: 0.85),
-                        ],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        stops: const [0.52, 1.0],
-                      ),
-                    ),
-                  ),
-
-                  // Top-Left Number/Host Badge (Matching Poster)
+                  // Golden crown on top
                   Positioned(
-                    top: 5,
-                    left: 5,
-                    child: isHost
-                        ? Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFF2D55),
-                              borderRadius: BorderRadius.circular(6),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Color(0x55FF2D55),
-                                  blurRadius: 4,
-                                ),
-                              ],
-                            ),
-                            child: const Text(
-                              'Host',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                          )
-                        : Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.60),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              '${seat['seat']}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                          ),
+                    top: 1,
+                    child: Text('👑', style: TextStyle(fontSize: 9.5)),
                   ),
-
-                  // Bottom Row: Person's Name on left, Mic badge on right (Matching Poster)
-                  Positioned(
-                    bottom: 5,
-                    left: 6,
-                    right: 6,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            '${seat['seat']} ${seat['name']}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.bold,
-                              shadows: [
-                                Shadow(color: Colors.black, blurRadius: 4),
-                              ],
-                            ),
-                          ),
-                        ),
-                        isSpeaking
-                            ? ScaleTransition(
-                                scale: _waveAnimation,
-                                child: _buildMicBadge(isMicOn),
-                              )
-                            : _buildMicBadge(isMicOn),
-                      ],
-                    ),
-                  ),
-
-                  // Floating Gift Animation Badge over this specific member (Poster Step 3 & 4)
-                  if (floatingBadge != null)
-                    Positioned.fill(
-                      child: Center(
-                        child: TweenAnimationBuilder<double>(
-                          tween: Tween(begin: 0.6, end: 1.0),
-                          duration: const Duration(milliseconds: 320),
-                          curve: Curves.elasticOut,
-                          builder: (context, val, child) {
-                            return Transform.scale(
-                              scale: val,
-                              child: child,
-                            );
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xEE120A1E),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: const Color(0xFFFF2D55),
-                                width: 1.5,
-                              ),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Color(0x88FF2D55),
-                                  blurRadius: 10,
-                                ),
-                              ],
-                            ),
-                            child: Text(
-                              floatingBadge,
-                              style: const TextStyle(
-                                color: Color(0xFFFFD600),
-                                fontSize: 13,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
                 ],
               ),
             ),
           ),
-        );
-      },
-    );
-  }
+          const SizedBox(width: 8),
 
-  /// Step 2 Member Profile Popup Card (Poster Step 2: "Select a Member")
-  Widget _buildMemberProfilePopup(Map<String, dynamic> member, int memberIndex) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xEE1A132C),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: const Color(0xFFFF2D55).withValues(alpha: 0.8),
-          width: 1.2,
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x55FF2D55),
-            blurRadius: 12,
-            spreadRadius: 1,
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: const Color(0xFFFF2D55),
-                width: 1.8,
-              ),
-            ),
-            child: CustomAvatar(
-              radius: 18,
-              assetPath: member['avatar'] as String,
-            ),
-          ),
-          const SizedBox(width: 10),
+          // 3. Room Host Title & Details (Smooth Responsive Layout)
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  member['name'] as String,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  member['isHost'] == true ? 'Host • Live Creator' : 'Live Member #${member['seat']}',
-                  style: const TextStyle(
-                    color: Colors.white60,
-                    fontSize: 11,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Follow Button
-          GestureDetector(
-            onTap: () {
-              setState(() {
-                _isFollowingSelectedMember = !_isFollowingSelectedMember;
-              });
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: _isFollowingSelectedMember
-                      ? [const Color(0xFF00E676), const Color(0xFF00B0FF)]
-                      : [const Color(0xFFFF2D55), const Color(0xFFE040FB)],
-                ),
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: (_isFollowingSelectedMember
-                            ? const Color(0xFF00E676)
-                            : const Color(0xFFFF2D55))
-                        .withValues(alpha: 0.4),
-                    blurRadius: 6,
-                  ),
-                ],
-              ),
-              child: Text(
-                _isFollowingSelectedMember ? '✓ Following' : '+ Follow',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 6),
-          // Close button
-          GestureDetector(
-            onTap: () => setState(() => _selectedMemberIndex = null),
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.12),
-              ),
-              child: const Icon(
-                Icons.close_rounded,
-                color: Colors.white70,
-                size: 16,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Step 2 "Send Gift to [Name]" Bottom Bar (Poster Step 2: [Stars] [Flowers] [Special])
-  Widget _buildViewerGiftBar(Map<String, dynamic> member, int memberIndex) {
-    final memberName = member['name'] as String;
-
-    return Container(
-      padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFA120E22),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
-        border: Border(
-          top: BorderSide(
-            color: const Color(0xFFFF2D55).withValues(alpha: 0.5),
-            width: 1.2,
-          ),
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x33FF2D55),
-            blurRadius: 10,
-            offset: Offset(0, -3),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Header: "Send Gift to Priya"
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Send Gift to $memberName',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              GestureDetector(
-                onTap: _openGiftSheet,
-                child: Row(
-                  children: const [
-                    Text(
-                      'More Gifts',
-                      style: TextStyle(
-                        color: Color(0xFFFFD600),
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        hostName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.outfit(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.1,
+                        ),
                       ),
                     ),
-                    Icon(
-                      Icons.arrow_forward_ios_rounded,
-                      color: Color(0xFFFFD600),
-                      size: 11,
-                    ),
+                    const SizedBox(width: 4),
+                    const Text('👑', style: TextStyle(fontSize: 13)),
                   ],
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          // Tabs: [Stars] [Flowers] [Special]
-          Row(
-            children: [
-              _buildGiftCategoryTab(0, 'Stars'),
-              const SizedBox(width: 8),
-              _buildGiftCategoryTab(1, 'Flowers'),
-              const SizedBox(width: 8),
-              _buildGiftCategoryTab(2, 'Special'),
-            ],
-          ),
-          const SizedBox(height: 10),
-
-          // 4 Quick Gifts: Star ⭐ (1), Rose 🌹 (10), Tulip 🌷 (50), Bouquet 💐 (100)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildQuickGiftTile(
-                icon: '⭐',
-                name: 'Star',
-                cost: 1,
-                badge: '+100',
-                onTap: () => _sendQuickGiftToMember(memberIndex, 'Star', '⭐', 1, '+100'),
-              ),
-              _buildQuickGiftTile(
-                icon: '🌹',
-                name: 'Rose',
-                cost: 10,
-                badge: '+1',
-                onTap: () => _sendQuickGiftToMember(memberIndex, 'Rose', '🌹', 10, '+1'),
-              ),
-              _buildQuickGiftTile(
-                icon: '🌷',
-                name: 'Tulip',
-                cost: 50,
-                badge: '+50',
-                onTap: () => _sendQuickGiftToMember(memberIndex, 'Tulip', '🌷', 50, '+50'),
-              ),
-              _buildQuickGiftTile(
-                icon: '💐',
-                name: 'Bouquet',
-                cost: 100,
-                badge: '+100',
-                onTap: () => _sendQuickGiftToMember(memberIndex, 'Bouquet', '💐', 100, '+100'),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGiftCategoryTab(int index, String title) {
-    final isSelected = _selectedGiftTab == index;
-    return GestureDetector(
-      onTap: () => setState(() => _selectedGiftTab = index),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFFF2D55) : const Color(0xFF221B35),
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: isSelected
-              ? const [
-                  BoxShadow(
-                    color: Color(0x66FF2D55),
-                    blurRadius: 6,
-                  ),
-                ]
-              : null,
-        ),
-        child: Text(
-          title,
-          style: TextStyle(
-            color: isSelected ? Colors.white : Colors.white60,
-            fontSize: 11.5,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuickGiftTile({
-    required String icon,
-    required String name,
-    required int cost,
-    required String badge,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 76,
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1E1730),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.10),
-            width: 0.8,
-          ),
-        ),
-        child: Column(
-          children: [
-            Text(icon, style: const TextStyle(fontSize: 26)),
-            const SizedBox(height: 2),
-            Text(
-              name,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 1),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.diamond_rounded,
-                  color: Color(0xFFFFD600),
-                  size: 10,
-                ),
-                const SizedBox(width: 2),
-                Text(
-                  '$cost',
-                  style: const TextStyle(
-                    color: Color(0xFFFFD600),
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w800,
+                const SizedBox(height: 2),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('👑', style: TextStyle(fontSize: 10)),
+                      const SizedBox(width: 3),
+                      Text(
+                        tag,
+                        style: GoogleFonts.outfit(
+                          color: const Color(0xFFFFD54F),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      const Icon(
+                        Icons.people_alt_rounded,
+                        color: Colors.white70,
+                        size: 11.5,
+                      ),
+                      const SizedBox(width: 2.5),
+                      Text(
+                        capacity,
+                        style: GoogleFonts.outfit(
+                          color: Colors.white70,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// PK-Style Comment Capsule & Bottom Bar (Matching User Reference Image 2)
-  /// Rounded capsule: height 44, Color(0xCC121018), border: Border.all(color: Color(0xFFFFD600), width: 1.4),
-  /// glow: BoxShadow(color: Color(0x33FFD600), blurRadius: 8), left: 😊 emoji + "Type a message...",
-  /// Right icons: ⭐, 🌹, 🎁
-  Widget _buildPKStyleCommentInputBar() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
-      child: Row(
-        children: [
-          // Capsule Input Box (Matching PK Screen & User Screenshot)
-          Expanded(
-            child: _showCommentInput
-                ? Container(
-                    height: 44,
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xCC121018),
-                      borderRadius: BorderRadius.circular(22),
-                      border: Border.all(
-                        color: const Color(0xFFFFD600),
-                        width: 1.4,
-                      ),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x33FFD600),
-                          blurRadius: 8,
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        const Text('😊', style: TextStyle(fontSize: 18)),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: TextField(
-                            controller: _commentInputController,
-                            focusNode: _commentFocusNode,
-                            autofocus: true,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            onSubmitted: _handleSendComment,
-                            decoration: const InputDecoration(
-                              hintText: 'Type a message...',
-                              hintStyle: TextStyle(
-                                color: Colors.white60,
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              border: InputBorder.none,
-                              isDense: true,
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(
-                            Icons.send_rounded,
-                            color: Color(0xFFFFD600),
-                            size: 22,
-                          ),
-                          onPressed: () =>
-                              _handleSendComment(_commentInputController.text),
-                        ),
-                      ],
-                    ),
-                  )
-                : GestureDetector(
-                    onTap: () {
-                      setState(() => _showCommentInput = true);
-                      Future.delayed(const Duration(milliseconds: 100), () {
-                        if (mounted) _commentFocusNode.requestFocus();
-                      });
-                    },
-                    child: Container(
-                      height: 44,
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xCC121018),
-                        borderRadius: BorderRadius.circular(22),
-                        border: Border.all(
-                          color: const Color(0xFFFFD600),
-                          width: 1.4,
-                        ),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x33FFD600),
-                            blurRadius: 8,
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: const [
-                          Text('😊', style: TextStyle(fontSize: 18)),
-                          SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Type a message...',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: Colors.white60,
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
           ),
           const SizedBox(width: 6),
 
-          // Star ⭐ Button
+          // 4. Leave Button: Outline Pink Pill with Logout Icon (Compact & Sleek)
           GestureDetector(
-            onTap: _tapStarButton,
+            onTap: () {
+              _setStage(4); // Triggers Step 4 Host Ends Room modal
+            },
             child: Container(
-              width: 38,
-              height: 38,
+              height: 30,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xDD1A132C),
+                color: const Color(0xFF2E0C22).withValues(alpha: 0.55),
+                borderRadius: BorderRadius.circular(15),
                 border: Border.all(
-                  color: const Color(0xFFFFD600).withValues(alpha: 0.8),
-                  width: 1.2,
+                  color: const Color(0xFFFF2A6D),
+                  width: 1.3,
                 ),
-                boxShadow: const [
+                boxShadow: [
                   BoxShadow(
-                    color: Color(0x44FFD600),
+                    color: const Color(0xFFFF2A6D).withValues(alpha: 0.22),
                     blurRadius: 6,
                   ),
                 ],
               ),
-              child: const Center(
-                child: Text('⭐', style: TextStyle(fontSize: 18)),
-              ),
-            ),
-          ),
-          const SizedBox(width: 5),
-
-          // Rose 🌹 Button
-          GestureDetector(
-            onTap: _sendQuickRose,
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xDD1A132C),
-                border: Border.all(
-                  color: const Color(0xFFFF2D55).withValues(alpha: 0.8),
-                  width: 1.2,
-                ),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x44FF2D55),
-                    blurRadius: 6,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.logout_rounded,
+                    color: Color(0xFFFF2A6D),
+                    size: 14,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Leave',
+                    style: GoogleFonts.outfit(
+                      color: Colors.white,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ],
               ),
-              child: const Center(
-                child: Text('🌹', style: TextStyle(fontSize: 18)),
-              ),
             ),
           ),
-          const SizedBox(width: 5),
+          const SizedBox(width: 4),
 
-          // Gift 🎁 Button
+          // 5. Vertical Three Dots Menu
           GestureDetector(
-            onTap: _openGiftSheet,
+            onTap: _showMoreOptionsMenu,
             child: Container(
-              width: 38,
-              height: 38,
+              width: 28,
+              height: 28,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFFF2D55), Color(0xFFE040FB)],
-                ),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x55FF2D55),
-                    blurRadius: 8,
-                  ),
-                ],
+                color: Colors.white.withValues(alpha: 0.05),
               ),
               child: const Center(
                 child: Icon(
-                  Icons.card_giftcard_rounded,
-                  color: Colors.white,
-                  size: 19,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 5),
-
-          // More Options Button (...) - Matching User Reference Image 1
-          GestureDetector(
-            onTap: _showMoreOptionsSheet,
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xDD1A132C),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.28),
-                  width: 1.2,
-                ),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x33000000),
-                    blurRadius: 6,
-                  ),
-                ],
-              ),
-              child: const Center(
-                child: Icon(
-                  Icons.more_horiz_rounded,
-                  color: Colors.white,
+                  Icons.more_vert_rounded,
+                  color: Colors.white70,
                   size: 20,
                 ),
               ),
@@ -5359,296 +2087,463 @@ class _ChatRoomPartyScreenState extends State<ChatRoomPartyScreen>
     );
   }
 
-  /// More Options Modal Sheet (Matching User Reference Image 1: Design 2 - List Style)
-  /// Features: Share Room, Invite Friends, Room Settings, Background, Effects, Report, Room Info, Help & Support, Leave Room
-  void _showMoreOptionsSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return Container(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.sizeOf(context).height * 0.78,
+  /// Tagline Banner matching Reference Image 2 (Smooth Scale-Down, No Overflow)
+  Widget _buildTaglineBanner() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 1, 12, 6),
+      child: Row(
+        children: [
+          // Doodle crown on the left
+          const Text(
+            '👑',
+            style: TextStyle(fontSize: 15, color: Color(0xFFC7923E)),
           ),
-          decoration: BoxDecoration(
-            color: const Color(0xFB0D1527),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
-            border: Border.all(
-              color: const Color(0x3340C4FF),
-              width: 1.2,
+          const SizedBox(width: 6),
+          Expanded(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.center,
+              child: Text(
+                'Good Vibes  •  Great People  •  Better Conversations',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.outfit(
+                  color: const Color(0xFFD1C4E9),
+                  fontSize: 11,
+                  fontStyle: FontStyle.italic,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.1,
+                ),
+              ),
             ),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x99000000),
-                blurRadius: 24,
-                spreadRadius: 2,
-              ),
-            ],
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Top drag indicator
-              Container(
-                margin: const EdgeInsets.only(top: 10, bottom: 4),
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-
-              // Title Row: "More Options" + ✕ Close
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 6, 14, 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'More Options',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.close_rounded,
-                        color: Colors.white70,
-                        size: 20,
-                      ),
-                      onPressed: () => Navigator.pop(ctx),
-                    ),
-                  ],
-                ),
-              ),
-
-              const Divider(color: Colors.white12, height: 1),
-
-              // 9 List Items with Descriptions (Matching Image 1)
-              Expanded(
-                child: ListView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  children: [
-                    _buildMoreOptionItem(
-                      icon: Icons.share_rounded,
-                      iconBg: const Color(0xFF1E88E5),
-                      title: 'Share Room',
-                      subtitle: 'Share link to invite',
-                      onTap: () {
-                        Navigator.pop(ctx);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Room link copied! Share with friends 🔗'),
-                            backgroundColor: Color(0xFFFFD600),
-                            duration: Duration(seconds: 2),
-                          ),
-                        );
-                      },
-                    ),
-                    _buildMoreOptionItem(
-                      icon: Icons.person_add_alt_1_rounded,
-                      iconBg: const Color(0xFFE91E63),
-                      title: 'Invite Friends',
-                      subtitle: 'Invite from contacts',
-                      onTap: () {
-                        Navigator.pop(ctx);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Inviting friends from contacts... 👥'),
-                            backgroundColor: Color(0xFFFF2D55),
-                            duration: Duration(seconds: 2),
-                          ),
-                        );
-                      },
-                    ),
-                    _buildMoreOptionItem(
-                      icon: Icons.settings_rounded,
-                      iconBg: const Color(0xFF546E7A),
-                      title: 'Room Settings',
-                      subtitle: 'Manage room controls',
-                      onTap: () {
-                        Navigator.pop(ctx);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Room controls and audio settings ⚙️'),
-                            backgroundColor: Color(0xFFFFD600),
-                            duration: Duration(seconds: 2),
-                          ),
-                        );
-                      },
-                    ),
-                    _buildMoreOptionItem(
-                      icon: Icons.image_rounded,
-                      iconBg: const Color(0xFF7E57C2),
-                      title: 'Background',
-                      subtitle: 'Change background',
-                      onTap: () {
-                        Navigator.pop(ctx);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Atmosphere background changed ✨'),
-                            backgroundColor: Color(0xFF7E57C2),
-                            duration: Duration(seconds: 2),
-                          ),
-                        );
-                      },
-                    ),
-                    _buildMoreOptionItem(
-                      icon: Icons.auto_fix_high_rounded,
-                      iconBg: const Color(0xFFFF9800),
-                      title: 'Effects',
-                      subtitle: 'Filters, beauty, stickers',
-                      onTap: () {
-                        Navigator.pop(ctx);
-                        _heartsKey.currentState?.addHeart();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Filters and effects enabled 🪄'),
-                            backgroundColor: Color(0xFFFF9800),
-                            duration: Duration(seconds: 2),
-                          ),
-                        );
-                      },
-                    ),
-                    _buildMoreOptionItem(
-                      icon: Icons.flag_rounded,
-                      iconBg: const Color(0xFFD32F2F),
-                      title: 'Report',
-                      subtitle: 'Report user or content',
-                      onTap: () {
-                        Navigator.pop(ctx);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Report submitted. Our moderators are reviewing 🚩'),
-                            backgroundColor: Color(0xFFD32F2F),
-                            duration: Duration(seconds: 2),
-                          ),
-                        );
-                      },
-                    ),
-                    _buildMoreOptionItem(
-                      icon: Icons.info_outline_rounded,
-                      iconBg: const Color(0xFF00ACC1),
-                      title: 'Room Info',
-                      subtitle: 'See room details',
-                      onTap: () {
-                        Navigator.pop(ctx);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Room Host: ${_selectedRoom['hostName']} • 9 Live Members • 12.4K Watching'),
-                            backgroundColor: const Color(0xFF00ACC1),
-                            duration: const Duration(seconds: 2),
-                          ),
-                        );
-                      },
-                    ),
-                    _buildMoreOptionItem(
-                      icon: Icons.help_outline_rounded,
-                      iconBg: const Color(0xFF43A047),
-                      title: 'Help & Support',
-                      subtitle: 'Get help',
-                      onTap: () {
-                        Navigator.pop(ctx);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Connecting to Tivoo Live Support 💬'),
-                            backgroundColor: Color(0xFF43A047),
-                            duration: Duration(seconds: 2),
-                          ),
-                        );
-                      },
-                    ),
-                    _buildMoreOptionItem(
-                      icon: Icons.logout_rounded,
-                      iconBg: const Color(0xFFFF2D55),
-                      title: 'Leave Room',
-                      subtitle: '',
-                      isDestructive: true,
-                      onTap: () {
-                        Navigator.pop(ctx);
-                        _showEndRoomDialog();
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                ),
-              ),
-            ],
+          const SizedBox(width: 6),
+          // Outline doodle hearts on the right
+          const Text(
+            '💜  ♡',
+            style: TextStyle(fontSize: 12, color: Color(0xFFCE93D8)),
           ),
+        ],
+      ),
+    );
+  }
+
+  /// 9-Seat Grid (3x3) dynamically sizing to fill the screen (Reference Image 2):
+  /// Seat 1: Host Diya (pink border, 👑 Host badge, pink equalizer ılıı, Active, purple mic button)
+  /// Seats 2 to 8: Arun, Sneha, Karthik, Neha (🌿), Vicky (👑), Saran (✨), Meena (💜) with Listening status & mic
+  /// Seat 9: "+ Invite" empty seat card with dashed purple border & radiating sunburst
+  Widget _buildNineSeatsGrid() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const crossAxisSpacing = 9.0;
+        const mainAxisSpacing = 9.0;
+        final totalWidth = constraints.maxWidth;
+        final totalHeight = constraints.maxHeight;
+        final itemWidth = (totalWidth - (crossAxisSpacing * 2)) / 3;
+        final itemHeight = (totalHeight - (mainAxisSpacing * 2)) / 3;
+        final aspectRatio = (itemHeight > 0) ? (itemWidth / itemHeight) : 0.72;
+
+        return GridView.builder(
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: 9,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            crossAxisSpacing: crossAxisSpacing,
+            mainAxisSpacing: mainAxisSpacing,
+            childAspectRatio: aspectRatio.clamp(0.60, 0.88),
+          ),
+          itemBuilder: (context, index) {
+            final seat = _seats[index];
+            final isHost = seat['isHost'] as bool? ?? false;
+            final isInvite = seat['isInvite'] as bool? ?? false;
+            final name = seat['name'] as String;
+            final avatar = seat['avatar'] as String;
+            final status = (seat['status'] as String?) ?? (isHost ? 'Active' : 'Listening');
+
+            if (isInvite) {
+              // Seat 9: Frosted Invite Slot with dashed border and radiating + (Reference Image 2)
+              return GestureDetector(
+                onTap: _showHostJoinRequestNotificationDialog,
+                child: CustomPaint(
+                  painter: _DashedBorderPainter(
+                    color: const Color(0xFF7C4DFF).withValues(alpha: 0.55),
+                    borderRadius: 18,
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF100E26).withValues(alpha: 0.90),
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Sunburst Radiating Add Icon
+                        _buildRadiatingAddIcon(),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Invite',
+                          style: GoogleFonts.outfit(
+                            color: Colors.white,
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          'Bring your friends\ninto the room',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.outfit(
+                            color: const Color(0xFFB39DDB),
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w500,
+                            height: 1.25,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            // Occupied Seat (Studio Portrait Photo + Name + Status + Mic + Doodles)
+            return GestureDetector(
+              onTap: () => _showSeatMemberDetails(seat, index),
+              child: AnimatedBuilder(
+                animation: _waveAnimation,
+                builder: (context, child) {
+                  final glowScale = isHost ? _waveAnimation.value : 1.0;
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF141126),
+                      borderRadius: BorderRadius.circular(18),
+                      border: isHost
+                          ? Border.all(color: const Color(0xFFFF2A6D), width: 1.8)
+                          : Border.all(
+                              color: Colors.white.withValues(alpha: 0.12),
+                              width: 1.2,
+                            ),
+                      boxShadow: [
+                        if (isHost)
+                          BoxShadow(
+                            color: const Color(0xFFFF2A6D)
+                                .withValues(alpha: 0.38 * glowScale),
+                            blurRadius: 10 * glowScale,
+                            spreadRadius: 1,
+                          ),
+                      ],
+                    ),
+                    child: child,
+                  );
+                },
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16.5),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // Studio Portrait Photo
+                      Image.asset(
+                        avatar,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          color: const Color(0xFF221E36),
+                          child: const Icon(
+                            Icons.person,
+                            color: Colors.white30,
+                            size: 36,
+                          ),
+                        ),
+                      ),
+
+                      // Bottom Dark Gradient Shade
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.transparent,
+                              Colors.black.withValues(alpha: 0.88),
+                            ],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            stops: const [0.45, 1.0],
+                          ),
+                        ),
+                      ),
+
+                      // Top-Left: Host Badge (👑 Host) for Diya
+                      if (isHost)
+                        Positioned(
+                          top: 6,
+                          left: 6,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFF2A6D),
+                              borderRadius: BorderRadius.circular(8),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFFFF2A6D).withValues(alpha: 0.5),
+                                  blurRadius: 4,
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text('👑', style: TextStyle(fontSize: 9.5)),
+                                const SizedBox(width: 2.5),
+                                Text(
+                                  'Host',
+                                  style: GoogleFonts.outfit(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                      // Top-Right: Animated Audio Equalizer Bars for Diya (Reference Image 2)
+                      if (isHost)
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: _buildEqualizerBars(),
+                        ),
+
+                      // Bottom: Name + Status (Active/Listening) + Circular Mic Button
+                      Positioned(
+                        left: 7,
+                        right: 6,
+                        bottom: 6,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            // Name + Status
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.outfit(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 1),
+                                  Row(
+                                    children: [
+                                      Container(
+                                        width: 5.5,
+                                        height: 5.5,
+                                        decoration: const BoxDecoration(
+                                          color: Color(0xFF00E676),
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 3.5),
+                                      Text(
+                                        status,
+                                        style: GoogleFonts.outfit(
+                                          color: isHost ? const Color(0xFF00E676) : Colors.white70,
+                                          fontSize: 9.5,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // Circular Mic Icon Badge
+                            Container(
+                              width: 28,
+                              height: 28,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: isHost
+                                    ? const LinearGradient(
+                                        colors: [Color(0xFF8E24AA), Color(0xFFE91E63)],
+                                      )
+                                    : null,
+                                color: isHost ? null : const Color(0xFF19162D).withValues(alpha: 0.85),
+                                border: Border.all(
+                                  color: isHost
+                                      ? Colors.white.withValues(alpha: 0.3)
+                                      : Colors.white.withValues(alpha: 0.20),
+                                  width: 1,
+                                ),
+                                boxShadow: [
+                                  if (isHost)
+                                    BoxShadow(
+                                      color: const Color(0xFFE91E63).withValues(alpha: 0.45),
+                                      blurRadius: 6,
+                                    ),
+                                ],
+                              ),
+                              child: const Center(
+                                child: Icon(
+                                  Icons.mic_rounded,
+                                  color: Colors.white,
+                                  size: 15,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
         );
       },
     );
   }
 
-  Widget _buildMoreOptionItem({
-    required IconData icon,
-    required Color iconBg,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-    bool isDestructive = false,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-        child: Row(
+  /// Animated Pink Equalizer Bars for Diya (Reference Image 2)
+  Widget _buildEqualizerBars() {
+    return AnimatedBuilder(
+      animation: _waveController,
+      builder: (context, child) {
+        final v = _waveController.value;
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Container(
-              width: 38,
-              height: 38,
+              width: 2.2,
+              height: 5 + (v * 7),
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: iconBg,
-                boxShadow: [
-                  BoxShadow(
-                    color: iconBg.withValues(alpha: 0.35),
-                    blurRadius: 6,
-                  ),
-                ],
-              ),
-              child: Center(
-                child: Icon(icon, color: Colors.white, size: 18),
+                color: const Color(0xFFFF2A6D),
+                borderRadius: BorderRadius.circular(1.5),
               ),
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      color: isDestructive ? const Color(0xFFFF2D55) : Colors.white,
-                      fontSize: 14.5,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  if (subtitle.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(
-                        color: Colors.white54,
-                        fontSize: 11.5,
-                      ),
-                    ),
-                  ],
-                ],
+            const SizedBox(width: 2),
+            Container(
+              width: 2.2,
+              height: 12 - (v * 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF2A6D),
+                borderRadius: BorderRadius.circular(1.5),
               ),
             ),
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: Colors.white38,
-              size: 20,
+            const SizedBox(width: 2),
+            Container(
+              width: 2.2,
+              height: 4 + ((1.0 - v) * 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF2A6D),
+                borderRadius: BorderRadius.circular(1.5),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Radiating Sunburst Add Icon for Invite Slot (Reference Image 2)
+  Widget _buildRadiatingAddIcon() {
+    return SizedBox(
+      width: 46,
+      height: 46,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          CustomPaint(
+            size: const Size(46, 46),
+            painter: _RadiatingTicksPainter(),
+          ),
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: const Color(0xFF221A44),
+              border: Border.all(
+                color: const Color(0xFF9C27B0).withValues(alpha: 0.8),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF9C27B0).withValues(alpha: 0.4),
+                  blurRadius: 8,
+                ),
+              ],
+            ),
+            child: const Center(
+              child: Icon(Icons.add_rounded, color: Colors.white, size: 20),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Tapping a seat opens interactive member dialog (profile / gifts / mute)
+  void _showSeatMemberDetails(Map<String, dynamic> seat, int index) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(20),
+        decoration: const BoxDecoration(
+          color: Color(0xFF141126),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CustomAvatar(radius: 36, assetPath: seat['avatar'] as String),
+            const SizedBox(height: 10),
+            Text(
+              seat['name'] as String,
+              style: GoogleFonts.outfit(
+                color: Colors.white,
+                fontSize: 18.5,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              seat['isHost'] == true ? '👑 Room Host' : '🎙️ Audio Speaker',
+              style: GoogleFonts.outfit(
+                  color: const Color(0xFFFFD54F),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 18),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildSeatActionIcon(Icons.card_giftcard_rounded, 'Send Gift',
+                    () {
+                  Navigator.pop(ctx);
+                  _openGiftSheet();
+                }),
+                _buildSeatActionIcon(Icons.star_rounded, 'Give Star', () {
+                  Navigator.pop(ctx);
+                  _sendStar();
+                }),
+                _buildSeatActionIcon(
+                    seat['isMicOn'] == true ? Icons.mic_off : Icons.mic,
+                    seat['isMicOn'] == true ? 'Mute' : 'Unmute', () {
+                  setState(() {
+                    _seats[index]['isMicOn'] = !(_seats[index]['isMicOn'] as bool);
+                  });
+                  Navigator.pop(ctx);
+                }),
+              ],
             ),
           ],
         ),
@@ -5656,187 +2551,584 @@ class _ChatRoomPartyScreenState extends State<ChatRoomPartyScreen>
     );
   }
 
-  /// Uniform Comment Capsule matching PK screen
-  /// ("chat room la konjma length iruku yellathu ora mathiri panni kudu different illama")
-  Widget _buildUnifiedCommentCapsule(LiveComment msg, int index) {
-    // User Requirement: First 2 comments from bottom are solid (nalla theriyanu)
-    // Older comments moving upwards are lite/transparent (lite theriyu)!
-    final bool isBottom2 = index < 2;
-    final double opacity = isBottom2 ? 1.0 : 0.44;
-    final bool isGift = msg.type == LiveCommentType.gift ||
-        msg.message.contains('sent a ') ||
-        msg.message.contains('sent ');
-
-    return Opacity(
-      opacity: opacity,
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 5),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
-          decoration: BoxDecoration(
-            color: isBottom2
-                ? const Color(0x99100E20)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isBottom2
-                  ? const Color(0xCCFFD600)
-                  : const Color(0x18FFD600),
-              width: isBottom2 ? 1.0 : 0.5,
+  Widget _buildSeatActionIcon(IconData icon, String label, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.08),
+              shape: BoxShape.circle,
             ),
-            boxShadow: isBottom2
-                ? const [
-                    BoxShadow(
-                      color: Color(0x20FFD600),
-                      blurRadius: 5,
-                      spreadRadius: 0.5,
-                    ),
-                  ]
-                : null,
+            child: Icon(icon, color: const Color(0xFFFF2A6D), size: 22),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
+          const SizedBox(height: 6),
+          Text(
+            label,
+            style: GoogleFonts.outfit(
+              color: Colors.white70,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ===========================================================================
+  // UNIFIED BOTTOM DOCK (Reference Image 2)
+  // 5 Action Buttons + Capsule Chat Input inside Sleek Rounded Dock
+  // ===========================================================================
+  Widget _buildUnifiedBottomDock() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(14, 2, 14, 10),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F0E24).withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.08),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.5),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Row 1: 5 Circular Action Buttons (Mic, Sound, Gift, Star, More)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              CustomAvatar(
-                radius: isBottom2 ? 12 : 10,
-                assetPath: msg.userAssetPath ?? AppAssets.avatarArun,
+              // 1. Mic
+              _buildDockActionButton(
+                icon: _isMicMuted ? Icons.mic_off_rounded : Icons.mic_rounded,
+                label: 'Mic',
+                isHighlighted: true,
+                iconColor: Colors.white,
+                borderColor: const Color(0xFFFF2A6D),
+                onTap: () {
+                  setState(() => _isMicMuted = !_isMicMuted);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(_isMicMuted ? 'Mic Muted 🔇' : 'Mic Active 🎙️'),
+                      duration: const Duration(seconds: 1),
+                    ),
+                  );
+                },
               ),
-              const SizedBox(width: 7),
-              Flexible(
-                child: isGift
-                    ? RichText(
-                        text: TextSpan(
-                          children: [
-                            TextSpan(
-                              text: '${msg.userName} ',
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: isBottom2 ? 1.0 : 0.88),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 11.5,
-                                shadows: const [
-                                  Shadow(color: Colors.black87, blurRadius: 2.5),
-                                ],
-                              ),
-                            ),
-                            TextSpan(
-                              text: msg.message,
-                              style: const TextStyle(
-                                color: Color(0xFFFFD600),
-                                fontWeight: FontWeight.w700,
-                                fontSize: 11.0,
-                                shadows: [
-                                  Shadow(color: Colors.black87, blurRadius: 2.5),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : RichText(
-                        text: TextSpan(
-                          children: [
-                            TextSpan(
-                              text: '${msg.userName}: ',
-                              style: TextStyle(
-                                color: isBottom2
-                                    ? const Color(0xFFFFD600)
-                                    : const Color(0xDDFFD600),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 11.5,
-                                shadows: const [
-                                  Shadow(color: Colors.black87, blurRadius: 2.5),
-                                ],
-                              ),
-                            ),
-                            TextSpan(
-                              text: msg.message,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 11.5,
-                                shadows: [
-                                  Shadow(color: Colors.black87, blurRadius: 2.5),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+
+              // 2. Sound
+              _buildDockActionButton(
+                icon: _isSoundMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+                label: 'Sound',
+                iconColor: const Color(0xFFFF4081),
+                borderColor: const Color(0xFF7C4DFF).withValues(alpha: 0.4),
+                onTap: () {
+                  setState(() => _isSoundMuted = !_isSoundMuted);
+                },
+              ),
+
+              // 3. Gift
+              _buildDockActionButton(
+                icon: Icons.card_giftcard_rounded,
+                label: 'Gift',
+                iconColor: const Color(0xFFFF4081),
+                borderColor: const Color(0xFFFF2A6D).withValues(alpha: 0.4),
+                onTap: _openGiftSheet,
+              ),
+
+              // 4. Star
+              _buildDockActionButton(
+                icon: Icons.star_rounded,
+                label: 'Star',
+                iconColor: const Color(0xFFFFD54F),
+                borderColor: const Color(0xFF7C4DFF).withValues(alpha: 0.4),
+                onTap: _sendStar,
+              ),
+
+              // 5. More
+              _buildDockActionButton(
+                icon: Icons.more_horiz_rounded,
+                label: 'More',
+                iconColor: Colors.white,
+                borderColor: const Color(0xFF7C4DFF).withValues(alpha: 0.4),
+                onTap: _showMoreOptionsMenu,
               ),
             ],
+          ),
+          const SizedBox(height: 12),
+
+          // Row 2: Capsule Chat Input + Smiley + Gradient Paper Airplane Send Button
+          Container(
+            height: 48,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              color: const Color(0xFF141328),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.12),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                // Smiley Icon
+                GestureDetector(
+                  onTap: () {
+                    _chatInputController.text += ' 😊';
+                  },
+                  child: const Icon(
+                    Icons.sentiment_satisfied_alt_rounded,
+                    color: Colors.white70,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 10),
+
+                // Text Input
+                Expanded(
+                  child: TextField(
+                    controller: _chatInputController,
+                    style: GoogleFonts.outfit(color: Colors.white, fontSize: 13.5),
+                    decoration: InputDecoration(
+                      hintText: 'Type a message...',
+                      hintStyle: GoogleFonts.outfit(
+                        color: Colors.white38,
+                        fontSize: 13.5,
+                      ),
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                    onSubmitted: (_) => _sendMessage(),
+                  ),
+                ),
+
+                // Purple/Indigo Gradient Send Button with Paper Plane
+                GestureDetector(
+                  onTap: _sendMessage,
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF7C4DFF), Color(0xFF536DFE)],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF7C4DFF).withValues(alpha: 0.4),
+                          blurRadius: 6,
+                        ),
+                      ],
+                    ),
+                    child: const Center(
+                      child: Icon(
+                        Icons.send_rounded,
+                        color: Colors.white,
+                        size: 17,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDockActionButton({
+    required IconData icon,
+    required String label,
+    required Color iconColor,
+    required Color borderColor,
+    required VoidCallback onTap,
+    bool isHighlighted = false,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isHighlighted ? const Color(0xFF1B0E27) : const Color(0xFF15122B),
+              border: Border.all(
+                color: borderColor,
+                width: isHighlighted ? 1.8 : 1.3,
+              ),
+              boxShadow: [
+                if (isHighlighted)
+                  BoxShadow(
+                    color: borderColor.withValues(alpha: 0.35),
+                    blurRadius: 10,
+                  ),
+              ],
+            ),
+            child: Center(
+              child: Icon(icon, color: iconColor, size: 24),
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            label,
+            style: GoogleFonts.outfit(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Botanical foliage widget for bottom corners (Reference Image 2)
+  Widget _buildBotanicalLeaves({required bool isLeft}) {
+    return SizedBox(
+      width: 140,
+      height: 90,
+      child: CustomPaint(
+        painter: _BotanicalLeavesPainter(isLeft: isLeft),
+      ),
+    );
+  }
+
+  /// Star action: spawns floating stars & increments counter
+  void _sendStar() {
+    _starsKey.currentState?.addStars(3);
+    setState(() {
+      _totalStarsCount += 10;
+      _chatMessages.add(
+        LiveComment(
+          id: 'c_${DateTime.now().millisecondsSinceEpoch}',
+          userName: 'You',
+          userAssetPath: AppAssets.avatarDiya,
+          message: 'sent a Star ⭐ to Diya',
+          type: LiveCommentType.gift,
+          timestamp: DateTime.now(),
+        ),
+      );
+    });
+  }
+
+  /// Gift Sheet opener
+  void _openGiftSheet() {
+    GiftBottomSheet.show(
+      context,
+      (GiftItem gift) {
+        _activeGiftKey.currentState?.playGift(gift);
+        setState(() {
+          _chatMessages.add(
+            LiveComment(
+              id: 'c_${DateTime.now().millisecondsSinceEpoch}',
+              userName: 'You',
+              userAssetPath: AppAssets.avatarDiya,
+              message: 'sent a ${gift.name} 🎁 to Diya',
+              type: LiveCommentType.gift,
+              timestamp: DateTime.now(),
+            ),
+          );
+        });
+      },
+      recipients: ['Diya', 'Arun', 'Sneha', 'Karthik', 'All'],
+      initialRecipient: 'Diya',
+    );
+  }
+
+  /// More options bottom sheet
+  void _showMoreOptionsMenu() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: const BoxDecoration(
+          color: Color(0xFF141126),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.share_rounded, color: Colors.white),
+              title: Text('Share Room',
+                  style: GoogleFonts.outfit(
+                      color: Colors.white, fontWeight: FontWeight.w600)),
+              onTap: () {
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Room link copied! 🔗')),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(
+                _isVideoRoom ? Icons.mic_rounded : Icons.videocam_rounded,
+                color: const Color(0xFFFF2A6D),
+              ),
+              title: Text(
+                _isVideoRoom ? 'Switch to Audio Mode' : 'Switch to Video Mode',
+                style: GoogleFonts.outfit(
+                    color: Colors.white, fontWeight: FontWeight.w600),
+              ),
+              onTap: () {
+                setState(() => _isVideoRoom = !_isVideoRoom);
+                Navigator.pop(ctx);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.report_problem_outlined,
+                  color: Colors.white70),
+              title: Text('Room Rules & Help',
+                  style: GoogleFonts.outfit(
+                      color: Colors.white70, fontWeight: FontWeight.w500)),
+              onTap: () => Navigator.pop(ctx),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+
+  void _sendMessage() {
+    final text = _chatInputController.text.trim();
+    if (text.isEmpty) return;
+
+    setState(() {
+      _chatMessages.add(
+        LiveComment(
+          id: 'c_${DateTime.now().millisecondsSinceEpoch}',
+          userName: 'You',
+          userAssetPath: AppAssets.avatarDiya,
+          message: text,
+          timestamp: DateTime.now(),
+        ),
+      );
+      _chatInputController.clear();
+    });
+  }
+
+  // ===========================================================================
+  // STEP 4: HOST ENDS ROOM MODAL (Matching Phone 4 in Reference Poster)
+  // "End Chat Room? All members will be removed and the room will end."
+  // [Cancel] [End Room]
+  // ===========================================================================
+  Widget _buildStep4HostEndsRoomModal() {
+    return Container(
+      color: Colors.black.withValues(alpha: 0.70), // Dimmed background
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(22, 28, 22, 24),
+            decoration: BoxDecoration(
+              color: const Color(0xFF141126),
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.12),
+                width: 1.2,
+              ),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black87,
+                  blurRadius: 30,
+                  offset: Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Circular Red Glowing Power Icon (⏻) (Phone 4)
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFFD32F2F).withValues(alpha: 0.15),
+                    border: Border.all(
+                      color: const Color(0xFFFF1744),
+                      width: 2,
+                    ),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x66FF1744),
+                        blurRadius: 18,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.power_settings_new_rounded,
+                      color: Color(0xFFFF1744),
+                      size: 34,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Title: "End Chat Room?" (Phone 4)
+                Text(
+                  'End Chat Room?',
+                  style: GoogleFonts.outfit(
+                    color: Colors.white,
+                    fontSize: 20.5,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // Subtitle: "All members will be removed and the room will end."
+                Text(
+                  'All members will be removed\nand the room will end.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.outfit(
+                    color: Colors.white70,
+                    fontSize: 13.5,
+                    height: 1.4,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Two Action Buttons: [Cancel] & [End Room] (Phone 4)
+                Row(
+                  children: [
+                    // [Cancel] Button (Dark/Grey rounded)
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => _setStage(3), // Stay in room
+                        child: Container(
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF231F38),
+                            borderRadius: BorderRadius.circular(22),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.15),
+                            ),
+                          ),
+                          child: Center(
+                            child: Text(
+                              'Cancel',
+                              style: GoogleFonts.outfit(
+                                color: Colors.white,
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+
+                    // [End Room] Button (Pink gradient rounded)
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          // Transition to Step 5: Room Ended Final Page!
+                          _setStage(5);
+                        },
+                        child: Container(
+                          height: 44,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFFF2A6D), Color(0xFFFF5E8A)],
+                            ),
+                            borderRadius: BorderRadius.circular(22),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x66FF2A6D),
+                                blurRadius: 10,
+                                offset: Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: Text(
+                              'End Room',
+                              style: GoogleFonts.outfit(
+                                color: Colors.white,
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildMicBadge(bool isMicOn) {
-    return Container(
-      padding: const EdgeInsets.all(3.5),
-      decoration: BoxDecoration(
-        color: isMicOn ? const Color(0xFF00E676) : const Color(0xFFFF2D55),
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: (isMicOn ? const Color(0xFF00E676) : const Color(0xFFFF2D55))
-                .withValues(alpha: 0.45),
-            blurRadius: 4,
-          ),
-        ],
-      ),
-      child: Icon(
-        isMicOn ? Icons.mic_rounded : Icons.mic_off_rounded,
-        color: Colors.white,
-        size: 9.5,
-      ),
-    );
-  }
-
   // ===========================================================================
   // STEP 5: ROOM ENDED (FINAL PAGE - SAME FOR EVERYONE)
+  // Official TIVOO Home Branding with GoogleFonts.outfit
   // ===========================================================================
-  Widget _buildRoomEndedView() {
+  Widget _buildStep5RoomEndedView() {
+    final hostName = _selectedRoom['hostName'] as String;
+    final isVerified = _selectedRoom['isVerified'] as bool? ?? true;
+    final tag = _selectedRoom['tag'] as String;
+    final tagline = _selectedRoom['tagline'] as String;
+    final avatar = _selectedRoom['avatar'] as String;
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 10, 18, 16),
+      padding: const EdgeInsets.fromLTRB(18, 8, 18, 14),
       child: Column(
         children: [
-          // 1. Top Tiki/Tivoo Logo
+          // 1. Official TIVOO Home Page Logo (Replacing Tiki)
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                width: 28,
-                height: 28,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [Color(0xFFFFEA00), Color(0xFFFF9100)],
-                  ),
-                ),
-                child: const Center(
-                  child: Icon(
-                    Icons.play_arrow_rounded,
-                    color: Colors.black,
-                    size: 20,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              const Text(
-                'Tiki',
-                style: TextStyle(
+              Text(
+                'Tiv',
+                style: GoogleFonts.outfit(
                   color: Colors.white,
-                  fontSize: 22,
+                  fontSize: 28,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 0.5,
                 ),
               ),
+              Text(
+                'oo',
+                style: GoogleFonts.outfit(
+                  color: const Color(0xFF00E676),
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(width: 3),
+              const Text('🌿', style: TextStyle(fontSize: 18)),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
 
-          // 2. Celebratory 3D Microphone with golden crown & floating sparkles
+          // 2. Celebratory 3D "Chat Room Ended" Illustration with Golden Crown & Ribbon (endchat.png)
           AnimatedBuilder(
             animation: _celebrationAnimation,
             builder: (context, child) {
@@ -5845,212 +3137,140 @@ class _ChatRoomPartyScreenState extends State<ChatRoomPartyScreen>
                 child: child,
               );
             },
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Container(
-                  width: 90,
-                  height: 90,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFFFD600).withValues(alpha: 0.35),
-                        blurRadius: 36,
-                        spreadRadius: 8,
-                      ),
-                    ],
-                  ),
-                ),
-                const Positioned(
-                  top: 0,
-                  right: 14,
-                  child: Text('✨', style: TextStyle(fontSize: 16)),
-                ),
-                const Positioned(
-                  bottom: 6,
-                  left: 10,
-                  child: Text('🎉', style: TextStyle(fontSize: 14)),
-                ),
-                const Positioned(
-                  top: 8,
-                  left: 16,
-                  child: Text('⭐', style: TextStyle(fontSize: 13)),
-                ),
-                Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF8A2BE2), Color(0xFF4A148C)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    border: Border.all(
-                      color: const Color(0xFFFFD600),
-                      width: 2,
-                    ),
-                  ),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: const [
-                      Positioned(
-                        top: 4,
-                        child: Text('👑', style: TextStyle(fontSize: 12)),
-                      ),
-                      Icon(Icons.mic_rounded, color: Colors.white, size: 34),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          // 3. Ribbon Banner: "Chat Room Ended"
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFFF2D55), Color(0xFFE040FB)],
-              ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x66FF2D55),
-                  blurRadius: 12,
-                  offset: Offset(0, 3),
-                ),
-              ],
-            ),
-            child: const Text(
-              'Chat Room Ended',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 14.5,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0.5,
+            child: Image.asset(
+              AppAssets.endChat,
+              height: 145,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => Image.asset(
+                'assets/endchat.jpg',
+                height: 145,
+                fit: BoxFit.contain,
               ),
             ),
           ),
           const SizedBox(height: 6),
 
-          // Subtitle
-          const Text(
+          // Subtitle: "Thank you everyone for being part of this room!"
+          Text(
             'Thank you everyone\nfor being part of this room!',
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: GoogleFonts.outfit(
               color: Colors.white70,
-              fontSize: 12.5,
-              height: 1.3,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              height: 1.35,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
 
-          // 4. Host Summary Card (Matching reference image Step 5)
+          // 4. Host Info Card: Avatar with pink Host badge, Diya_Official, Dream Team, Tagline, Date/Time
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFF141224),
-              borderRadius: BorderRadius.circular(18),
+              color: const Color(0xFF141126),
+              borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: const Color(0xFFFFD600).withValues(alpha: 0.35),
+                color: Colors.white.withValues(alpha: 0.10),
               ),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x33000000),
+                  blurRadius: 10,
+                  offset: Offset(0, 4),
+                ),
+              ],
             ),
             child: Row(
               children: [
+                // Host Avatar with "Host" badge
                 Stack(
                   alignment: Alignment.bottomCenter,
+                  clipBehavior: Clip.none,
                   children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: const Color(0xFFFFD600),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: CustomAvatar(
-                        radius: 24,
-                        assetPath: _selectedRoom['avatar'] as String,
-                      ),
-                    ),
+                    CustomAvatar(radius: 26, assetPath: avatar),
                     Positioned(
-                      bottom: -2,
+                      bottom: -4,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 1,
-                        ),
+                            horizontal: 6, vertical: 1.5),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFF2D55),
-                          borderRadius: BorderRadius.circular(6),
+                          color: const Color(0xFFFF2A6D),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Text(
+                        child: Text(
                           'Host',
-                          style: TextStyle(
+                          style: GoogleFonts.outfit(
                             color: Colors.white,
-                            fontSize: 7.5,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w900,
                           ),
                         ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 14),
+
+                // Host info column
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          Text(
-                            _selectedRoom['hostName'] as String,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
+                          Flexible(
+                            child: Text(
+                              hostName,
+                              style: GoogleFonts.outfit(
+                                color: Colors.white,
+                                fontSize: 15.5,
+                                fontWeight: FontWeight.w900,
+                              ),
                             ),
                           ),
-                          const SizedBox(width: 4),
-                          const Icon(
-                            Icons.verified_rounded,
-                            color: Color(0xFF29B6F6),
-                            size: 13,
-                          ),
+                          if (isVerified) ...[
+                            const SizedBox(width: 4),
+                            const Icon(
+                              Icons.check_circle_rounded,
+                              color: Color(0xFF29B6F6),
+                              size: 14,
+                            ),
+                          ],
                         ],
                       ),
                       const SizedBox(height: 2),
                       Row(
                         children: [
-                          const Text('👑', style: TextStyle(fontSize: 10)),
+                          const Text('👑', style: TextStyle(fontSize: 11)),
                           const SizedBox(width: 3),
                           Text(
-                            _selectedRoom['tag'] as String,
-                            style: const TextStyle(
-                              color: Color(0xFFFFD600),
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
+                            tag,
+                            style: GoogleFonts.outfit(
+                              color: const Color(0xFFFFD54F),
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        _selectedRoom['tagline'] as String,
-                        style: const TextStyle(
+                        tagline,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.outfit(
                           color: Colors.white70,
-                          fontSize: 11,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                       const SizedBox(height: 2),
-                      const Text(
-                        'Sep 22, 2026  10:45 PM',
-                        style: TextStyle(
-                          color: Colors.white38,
-                          fontSize: 10,
+                      Text(
+                        'Sep 16, 2026 10:45 PM',
+                        style: GoogleFonts.outfit(
+                          color: Colors.white.withValues(alpha: 0.45),
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w400,
                         ),
                       ),
                     ],
@@ -6059,74 +3279,99 @@ class _ChatRoomPartyScreenState extends State<ChatRoomPartyScreen>
               ],
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
 
-          // 5. 2x2 Stats Grid (Matching reference image Step 5)
+          // 5. Four Stats Cards in 2x2 Grid (12,560 Total Stars | 2h 35m Duration | 128 Members | 3,620 Views)
           Expanded(
             child: GridView.count(
               crossAxisCount: 2,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-              childAspectRatio: 1.45,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 1.32,
               physics: const NeverScrollableScrollPhysics(),
               children: [
-                _buildStatTile(
-                  icon: Icons.star_rounded,
-                  iconColor: const Color(0xFFFFD600),
-                  value: '$_totalStarsCount',
+                _buildStatMetricCard(
+                  iconWidget: const Icon(
+                    Icons.star_rounded,
+                    color: Color(0xFFFFB300),
+                    size: 38,
+                  ),
+                  value: _totalStarsCount.toString().replaceAllMapped(
+                      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+                      (Match m) => '${m[1]},'),
                   label: 'Total Stars',
+                  accentColor: const Color(0xFFFFB300),
                 ),
-                _buildStatTile(
-                  icon: Icons.schedule_rounded,
-                  iconColor: const Color(0xFF00E676),
+                _buildStatMetricCard(
+                  iconWidget: const Icon(
+                    Icons.access_time_filled_rounded,
+                    color: Color(0xFF00E676),
+                    size: 36,
+                  ),
                   value: '2h 35m',
                   label: 'Total Duration',
+                  accentColor: const Color(0xFF00E676),
                 ),
-                _buildStatTile(
-                  icon: Icons.groups_rounded,
-                  iconColor: const Color(0xFFFF2D55),
-                  value: _selectedRoom['viewers'] as String,
+                _buildStatMetricCard(
+                  iconWidget: const Icon(
+                    Icons.groups_rounded,
+                    color: Color(0xFFFF2A6D),
+                    size: 38,
+                  ),
+                  value: '128',
                   label: 'Total Members',
+                  accentColor: const Color(0xFFFF2A6D),
                 ),
-                _buildStatTile(
-                  icon: Icons.visibility_rounded,
-                  iconColor: const Color(0xFF00E5FF),
+                _buildStatMetricCard(
+                  iconWidget: const Icon(
+                    Icons.remove_red_eye_rounded,
+                    color: Color(0xFF00E5FF),
+                    size: 38,
+                  ),
                   value: '3,620',
                   label: 'Total Views',
+                  accentColor: const Color(0xFF00E5FF),
                 ),
               ],
             ),
           ),
 
-          // 6. Bottom "Back to Home" Button
-          GestureDetector(
-            onTap: () {
-              _setStage(1); // Return to Step 1: Chat Room List
-            },
-            child: Container(
-              width: double.infinity,
-              height: 48,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFFFEA00), Color(0xFFFF9100)],
-                ),
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x66FFD600),
-                    blurRadius: 14,
-                    offset: Offset(0, 4),
+          // 6. Full-Width Pink Pill Button: "Back to Home"
+          Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 4),
+            child: GestureDetector(
+              onTap: () {
+                if (widget.onBack != null) {
+                  widget.onBack!();
+                } else {
+                  _setStage(1); // Return to Chat Room List
+                }
+              },
+              child: Container(
+                width: double.infinity,
+                height: 50,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFF2A6D), Color(0xFFFF5E8A)],
                   ),
-                ],
-              ),
-              child: const Center(
-                child: Text(
-                  'Back to Home',
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.5,
+                  borderRadius: BorderRadius.circular(25),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x66FF2A6D),
+                      blurRadius: 12,
+                      offset: Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    'Back to Home',
+                    style: GoogleFonts.outfit(
+                      color: Colors.white,
+                      fontSize: 16.5,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.3,
+                    ),
                   ),
                 ),
               ),
@@ -6137,45 +3382,272 @@ class _ChatRoomPartyScreenState extends State<ChatRoomPartyScreen>
     );
   }
 
-  Widget _buildStatTile({
-    required IconData icon,
-    required Color iconColor,
+  Widget _buildStatMetricCard({
+    required Widget iconWidget,
     required String value,
     required String label,
+    required Color accentColor,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFF141224),
-        borderRadius: BorderRadius.circular(16),
+        color: const Color(0xFF141126),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: const Color(0xFFFFD600).withValues(alpha: 0.2),
+          color: accentColor.withValues(alpha: 0.28),
+          width: 1.2,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: accentColor.withValues(alpha: 0.10),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+          const BoxShadow(
+            color: Color(0x33000000),
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: iconColor, size: 24),
-          const SizedBox(height: 4),
+          iconWidget,
+          const SizedBox(height: 6),
           Text(
             value,
-            style: const TextStyle(
+            style: GoogleFonts.outfit(
               color: Colors.white,
-              fontSize: 16,
+              fontSize: 18.5,
               fontWeight: FontWeight.w900,
+              letterSpacing: 0.2,
             ),
           ),
           const SizedBox(height: 2),
           Text(
             label,
-            style: const TextStyle(
+            style: GoogleFonts.outfit(
               color: Colors.white60,
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
       ),
     );
   }
+}
+
+/// Custom vector painter for the 3-point royal crown badge (Reference Image 2)
+class _CrownIconPainter extends CustomPainter {
+  final Color color;
+  const _CrownIconPainter({this.color = const Color(0xFFD84315)});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+
+    final w = size.width;
+    final h = size.height;
+
+    // Base horizontal bar
+    final baseRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(w * 0.10, h * 0.78, w * 0.80, h * 0.16),
+      const Radius.circular(1.5),
+    );
+    canvas.drawRRect(baseRect, paint);
+
+    // Crown peaks body
+    final path = Path()
+      ..moveTo(w * 0.14, h * 0.74)
+      ..lineTo(w * 0.86, h * 0.74)
+      ..lineTo(w * 0.88, h * 0.35) // right peak top
+      ..lineTo(w * 0.65, h * 0.52) // right valley
+      ..lineTo(w * 0.50, h * 0.18) // middle peak top
+      ..lineTo(w * 0.35, h * 0.52) // left valley
+      ..lineTo(w * 0.12, h * 0.35) // left peak top
+      ..close();
+    canvas.drawPath(path, paint);
+
+    // 3 Jewels/Spheres on peak tips
+    final spherePaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+
+    final ballRadius = w * 0.085;
+    canvas.drawCircle(Offset(w * 0.12, h * 0.32), ballRadius, spherePaint);
+    canvas.drawCircle(Offset(w * 0.50, h * 0.16), ballRadius * 1.1, spherePaint);
+    canvas.drawCircle(Offset(w * 0.88, h * 0.32), ballRadius, spherePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// Custom painter for glowing botanical foliage in the bottom corners (Reference Image 2)
+class _BotanicalLeavesPainter extends CustomPainter {
+  final bool isLeft;
+
+  const _BotanicalLeavesPainter({required this.isLeft});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..style = PaintingStyle.fill
+      ..shader = LinearGradient(
+        colors: isLeft
+            ? [
+                const Color(0xFFFF2A6D).withValues(alpha: 0.65),
+                const Color(0xFF9C27B0).withValues(alpha: 0.45),
+                const Color(0xFFBA68C8).withValues(alpha: 0.18),
+              ]
+            : [
+                const Color(0xFF9C27B0).withValues(alpha: 0.65),
+                const Color(0xFFFF2A6D).withValues(alpha: 0.45),
+                const Color(0xFFFF80AB).withValues(alpha: 0.18),
+              ],
+        begin: Alignment.bottomCenter,
+        end: Alignment.topCenter,
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+
+    canvas.save();
+    if (!isLeft) {
+      canvas.translate(size.width, 0);
+      canvas.scale(-1, 1);
+    }
+
+    // Stem / branch
+    final stemPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0
+      ..strokeCap = StrokeCap.round
+      ..color = const Color(0xFFFF2A6D).withValues(alpha: 0.45);
+
+    final stemPath = Path();
+    stemPath.moveTo(0, size.height);
+    stemPath.quadraticBezierTo(size.width * 0.4, size.height * 0.6, size.width * 0.85, 10);
+    canvas.drawPath(stemPath, stemPaint);
+
+    // Leaves along the branch
+    _drawLeaf(canvas, paint, Offset(size.width * 0.22, size.height * 0.74), -0.6, 26, 12);
+    _drawLeaf(canvas, paint, Offset(size.width * 0.44, size.height * 0.54), 0.4, 30, 14);
+    _drawLeaf(canvas, paint, Offset(size.width * 0.64, size.height * 0.34), -0.5, 28, 13);
+    _drawLeaf(canvas, paint, Offset(size.width * 0.84, 14), 0.2, 24, 11);
+    _drawLeaf(canvas, paint, Offset(size.width * 0.14, size.height * 0.88), 0.5, 22, 10);
+
+    canvas.restore();
+  }
+
+  void _drawLeaf(Canvas canvas, Paint paint, Offset center, double angle, double length, double width) {
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.rotate(angle);
+
+    final leafPath = Path();
+    leafPath.moveTo(0, 0);
+    leafPath.quadraticBezierTo(width * 1.3, -length * 0.5, 0, -length);
+    leafPath.quadraticBezierTo(-width * 1.3, -length * 0.5, 0, 0);
+    leafPath.close();
+
+    canvas.drawPath(leafPath, paint);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// Custom painter for rounded dashed border for the Invite slot (Reference Image 2)
+class _DashedBorderPainter extends CustomPainter {
+  final Color color;
+  final double borderRadius;
+
+  static const double strokeWidth = 1.4;
+  static const double dashLength = 6.0;
+  static const double dashGap = 4.0;
+
+  const _DashedBorderPainter({
+    required this.color,
+    this.borderRadius = 18.0,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    final rrect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(
+        strokeWidth / 2,
+        strokeWidth / 2,
+        size.width - strokeWidth,
+        size.height - strokeWidth,
+      ),
+      Radius.circular(borderRadius),
+    );
+
+    final path = Path()..addRRect(rrect);
+    final metrics = path.computeMetrics();
+
+    for (final metric in metrics) {
+      double distance = 0.0;
+      while (distance < metric.length) {
+        final length = math.min(dashLength, metric.length - distance);
+        final extractPath = metric.extractPath(distance, distance + length);
+        canvas.drawPath(extractPath, paint);
+        distance += dashLength + dashGap;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// Custom painter for the 6 radiating tick marks sunburst around the Invite + icon (Reference Image 2)
+class _RadiatingTicksPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final paint = Paint()
+      ..strokeWidth = 2.0
+      ..strokeCap = StrokeCap.round;
+
+    final colors = [
+      const Color(0xFFE040FB),
+      const Color(0xFF00E5FF),
+      const Color(0xFFE040FB),
+      const Color(0xFF7C4DFF),
+      const Color(0xFF00E5FF),
+      const Color(0xFFE040FB),
+    ];
+
+    const count = 6;
+    const innerRadius = 20.0;
+    const outerRadius = 25.0;
+
+    for (int i = 0; i < count; i++) {
+      final angle = (i * (2 * math.pi / count)) - (math.pi / 6);
+      paint.color = colors[i % colors.length];
+      final p1 = Offset(
+        center.dx + innerRadius * math.cos(angle),
+        center.dy + innerRadius * math.sin(angle),
+      );
+      final p2 = Offset(
+        center.dx + outerRadius * math.cos(angle),
+        center.dy + outerRadius * math.sin(angle),
+      );
+      canvas.drawLine(p1, p2, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
