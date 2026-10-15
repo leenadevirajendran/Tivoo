@@ -30,12 +30,10 @@ class LuxuryAtmosphereBackground extends StatefulWidget {
   });
 
   @override
-  State<LuxuryAtmosphereBackground> createState() =>
-      _LuxuryAtmosphereBackgroundState();
+  State<LuxuryAtmosphereBackground> createState() => _LuxuryAtmosphereBackgroundState();
 }
 
-class _LuxuryAtmosphereBackgroundState extends State<LuxuryAtmosphereBackground>
-    with TickerProviderStateMixin {
+class _LuxuryAtmosphereBackgroundState extends State<LuxuryAtmosphereBackground> with TickerProviderStateMixin {
   late final AnimationController _auroraController;
   late final AnimationController _twinkleController;
   late final AnimationController _beamController;
@@ -45,22 +43,14 @@ class _LuxuryAtmosphereBackgroundState extends State<LuxuryAtmosphereBackground>
     super.initState();
 
     // 1. Slow rhythmic aurora motion
-    _auroraController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 8),
-    )..repeat(reverse: true);
+    _auroraController = AnimationController(vsync: this, duration: const Duration(seconds: 8))..repeat(reverse: true);
 
     // 2. Sparkling stardust twinkle
-    _twinkleController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2200),
-    )..repeat(reverse: true);
+    _twinkleController = AnimationController(vsync: this, duration: const Duration(milliseconds: 2200))
+      ..repeat(reverse: true);
 
     // 3. Sweeping concert / stadium stage light beams
-    _beamController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 12),
-    )..repeat(reverse: true);
+    _beamController = AnimationController(vsync: this, duration: const Duration(seconds: 12))..repeat(reverse: true);
   }
 
   @override
@@ -243,9 +233,7 @@ class _LuxuryAtmosphereBackgroundState extends State<LuxuryAtmosphereBackground>
                   angle: angle,
                   alignment: Alignment.topCenter,
                   child: CustomPaint(
-                    painter: _LightBeamsPainter(
-                      beamColor: widget.primaryGlowColor.withValues(alpha: 0.11),
-                    ),
+                    painter: _LightBeamsPainter(beamColor: widget.primaryGlowColor.withValues(alpha: 0.11)),
                     size: Size.infinite,
                   ),
                 );
@@ -260,9 +248,7 @@ class _LuxuryAtmosphereBackgroundState extends State<LuxuryAtmosphereBackground>
               animation: _twinkleController,
               builder: (context, child) {
                 return CustomPaint(
-                  painter: _VibrantStardustPainter(
-                    twinkleProgress: _twinkleController.value,
-                  ),
+                  painter: _VibrantStardustPainter(twinkleProgress: _twinkleController.value),
                   size: Size.infinite,
                 );
               },
@@ -275,11 +261,7 @@ class _LuxuryAtmosphereBackgroundState extends State<LuxuryAtmosphereBackground>
             gradient: RadialGradient(
               center: Alignment.center,
               radius: 1.18,
-              colors: [
-                Colors.transparent,
-                Colors.black.withValues(alpha: 0.12),
-                Colors.black.withValues(alpha: 0.50),
-              ],
+              colors: [Colors.transparent, Colors.black.withValues(alpha: 0.12), Colors.black.withValues(alpha: 0.50)],
               stops: const [0.0, 0.65, 1.0],
             ),
           ),
@@ -304,11 +286,7 @@ class _LightBeamsPainter extends CustomPainter {
       ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [
-          beamColor,
-          beamColor.withValues(alpha: 0.02),
-          Colors.transparent,
-        ],
+        colors: [beamColor, beamColor.withValues(alpha: 0.02), Colors.transparent],
         stops: const [0.0, 0.6, 1.0],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
 
@@ -330,8 +308,7 @@ class _LightBeamsPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _LightBeamsPainter oldDelegate) =>
-      oldDelegate.beamColor != beamColor;
+  bool shouldRepaint(covariant _LightBeamsPainter oldDelegate) => oldDelegate.beamColor != beamColor;
 }
 
 /// Painter for twinkling golden particles and cyber stardust
@@ -385,8 +362,7 @@ class _VibrantStardustPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _VibrantStardustPainter oldDelegate) =>
-      oldDelegate.twinkleProgress != twinkleProgress;
+  bool shouldRepaint(covariant _VibrantStardustPainter oldDelegate) => oldDelegate.twinkleProgress != twinkleProgress;
 }
 
 class _StarParticle {

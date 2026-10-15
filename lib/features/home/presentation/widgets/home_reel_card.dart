@@ -18,20 +18,13 @@ class HomeReelCard extends StatefulWidget {
   final VoidCallback? onCardTap;
   final VoidCallback? onFollowTap;
 
-  const HomeReelCard({
-    super.key,
-    required this.stream,
-    this.isActive = true,
-    this.onCardTap,
-    this.onFollowTap,
-  });
+  const HomeReelCard({super.key, required this.stream, this.isActive = true, this.onCardTap, this.onFollowTap});
 
   @override
   State<HomeReelCard> createState() => _HomeReelCardState();
 }
 
-class _HomeReelCardState extends State<HomeReelCard>
-    with SingleTickerProviderStateMixin {
+class _HomeReelCardState extends State<HomeReelCard> with SingleTickerProviderStateMixin {
   final GlobalKey<FloatingHeartsOverlayState> _heartsKey = GlobalKey();
   bool _isLiked = false;
   bool _isMuted = true;
@@ -46,23 +39,16 @@ class _HomeReelCardState extends State<HomeReelCard>
     _commentsScrollController = ScrollController();
     _comments = List<LiveComment>.from(MockLiveComments.initialComments);
 
-    _likeAnimController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 260),
-    );
+    _likeAnimController = AnimationController(vsync: this, duration: const Duration(milliseconds: 260));
     _likeScaleAnimation = TweenSequence<double>([
       TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.35), weight: 50),
       TweenSequenceItem(tween: Tween(begin: 1.35, end: 1.0), weight: 50),
-    ]).animate(
-      CurvedAnimation(parent: _likeAnimController, curve: Curves.easeInOut),
-    );
+    ]).animate(CurvedAnimation(parent: _likeAnimController, curve: Curves.easeInOut));
 
     // Initial scroll to bottom of comments after frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_commentsScrollController.hasClients) {
-        _commentsScrollController.jumpTo(
-          _commentsScrollController.position.maxScrollExtent,
-        );
+        _commentsScrollController.jumpTo(_commentsScrollController.position.maxScrollExtent);
       }
     });
   }
@@ -187,17 +173,10 @@ class _HomeReelCardState extends State<HomeReelCard>
       context: context,
       backgroundColor: const Color(0xF5141420),
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-      ),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
       builder: (ctx) {
         return Padding(
-          padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
-            top: 14,
-            bottom: MediaQuery.viewInsetsOf(ctx).bottom + 14,
-          ),
+          padding: EdgeInsets.only(left: 16, right: 16, top: 14, bottom: MediaQuery.viewInsetsOf(ctx).bottom + 14),
           child: Row(
             children: [
               Expanded(
@@ -210,14 +189,8 @@ class _HomeReelCardState extends State<HomeReelCard>
                     hintStyle: const TextStyle(color: Colors.white54, fontSize: 13),
                     filled: true,
                     fillColor: const Color(0x33FFFFFF),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 10,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(20),
-                      borderSide: BorderSide.none,
-                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
                   ),
                   onSubmitted: (val) {
                     if (val.trim().isNotEmpty) {
@@ -296,21 +269,14 @@ class _HomeReelCardState extends State<HomeReelCard>
           fit: StackFit.expand,
           children: [
             // 1. Full-Bleed Live Video / Image Media
-            Positioned.fill(
-              child: _buildCoverMedia(),
-            ),
+            Positioned.fill(child: _buildCoverMedia()),
 
             // 2. Cinematic Vignette Gradient Overlay
             Positioned.fill(
               child: Container(
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [
-                      Color(0x88000000),
-                      Colors.transparent,
-                      Colors.transparent,
-                      Color(0xCC000000),
-                    ],
+                    colors: [Color(0x88000000), Colors.transparent, Colors.transparent, Color(0xCC000000)],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     stops: [0.0, 0.2, 0.50, 1.0],
@@ -335,17 +301,10 @@ class _HomeReelCardState extends State<HomeReelCard>
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (widget.stream.isLive) ...[
-                            const LiveBadge(),
-                            const SizedBox(width: 5),
-                          ],
+                          if (widget.stream.isLive) ...[const LiveBadge(), const SizedBox(width: 5)],
                           MetricBadge(
                             text: widget.stream.viewersCount,
-                            icon: const Icon(
-                              Icons.visibility_outlined,
-                              color: Colors.white,
-                              size: 14,
-                            ),
+                            icon: const Icon(Icons.visibility_outlined, color: Colors.white, size: 14),
                           ),
                           const SizedBox(width: 5),
                           // Upside Active Viewers' Profile Photos ("malla yaru yella pakuragalo avuga photo varanu")
@@ -374,15 +333,10 @@ class _HomeReelCardState extends State<HomeReelCard>
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: Colors.black.withValues(alpha: 0.55),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.2),
-                              width: 1,
-                            ),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 1),
                           ),
                           child: Icon(
-                            _isMuted
-                                ? Icons.volume_off_rounded
-                                : Icons.volume_up_rounded,
+                            _isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
                             color: Colors.white,
                             size: 16,
                           ),
@@ -399,11 +353,7 @@ class _HomeReelCardState extends State<HomeReelCard>
               child: ScaleTransition(
                 scale: _likeScaleAnimation,
                 child: _likeAnimController.isAnimating
-                    ? const Icon(
-                        Icons.favorite_rounded,
-                        color: Color(0xFFFF2D55),
-                        size: 96,
-                      )
+                    ? const Icon(Icons.favorite_rounded, color: Color(0xFFFF2D55), size: 96)
                     : const SizedBox.shrink(),
               ),
             ),
@@ -417,12 +367,8 @@ class _HomeReelCardState extends State<HomeReelCard>
                 children: [
                   // Like Button
                   _buildActionButton(
-                    icon: _isLiked
-                        ? Icons.favorite_rounded
-                        : Icons.favorite_border_rounded,
-                    iconColor: _isLiked
-                        ? const Color(0xFFFF2D55)
-                        : Colors.white,
+                    icon: _isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                    iconColor: _isLiked ? const Color(0xFFFF2D55) : Colors.white,
                     label: widget.stream.diamondsCount,
                     onTap: _handleLikeToggle,
                   ),
@@ -483,26 +429,14 @@ class _HomeReelCardState extends State<HomeReelCard>
                         key: const Key('streamer_avatar_button'),
                         behavior: HitTestBehavior.opaque,
                         onTap: () {
-                          StreamerIdProfileSheet.show(
-                            context,
-                            stream: widget.stream,
-                          );
+                          StreamerIdProfileSheet.show(context, stream: widget.stream);
                         },
                         child: Container(
                           padding: const EdgeInsets.all(2.5),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            border: Border.all(
-                              color: const Color(0xFFFFDF00),
-                              width: 2.0,
-                            ),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Colors.black54,
-                                blurRadius: 10,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
+                            border: Border.all(color: const Color(0xFFFFDF00), width: 2.0),
+                            boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 10, offset: Offset(0, 2))],
                           ),
                           child: CustomAvatar(
                             radius: 20,
@@ -518,31 +452,16 @@ class _HomeReelCardState extends State<HomeReelCard>
                         key: const Key('live_chat_open_button'),
                         onTap: _handleCommentTap,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 5,
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFFFF2D55), Color(0xFFFF5252)],
-                            ),
+                            gradient: const LinearGradient(colors: [Color(0xFFFF2D55), Color(0xFFFF5252)]),
                             borderRadius: BorderRadius.circular(16),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x66FF2D55),
-                                blurRadius: 8,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
+                            boxShadow: const [BoxShadow(color: Color(0x66FF2D55), blurRadius: 8, offset: Offset(0, 2))],
                           ),
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(
-                                Icons.chat_bubble_rounded,
-                                color: Colors.white,
-                                size: 13,
-                              ),
+                              Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 13),
                               SizedBox(width: 5),
                               Text(
                                 'LIVE Chat',
@@ -575,11 +494,7 @@ class _HomeReelCardState extends State<HomeReelCard>
 
   /// Top Viewers Profile Photos Stack ("malla yaru yella pakuragalo avuga photo varanu")
   Widget _buildViewersAvatarStack() {
-    const viewerAssets = [
-      AppAssets.status1,
-      AppAssets.status2,
-      AppAssets.status4,
-    ];
+    const viewerAssets = [AppAssets.status1, AppAssets.status2, AppAssets.status4];
 
     return SizedBox(
       height: 22,
@@ -592,17 +507,9 @@ class _HomeReelCardState extends State<HomeReelCard>
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.white, width: 1.2),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black45,
-                    blurRadius: 3,
-                  ),
-                ],
+                boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 3)],
               ),
-              child: CustomAvatar(
-                radius: 8.5,
-                assetPath: viewerAssets[i],
-              ),
+              child: CustomAvatar(radius: 8.5, assetPath: viewerAssets[i]),
             ),
           );
         }),
@@ -618,11 +525,7 @@ class _HomeReelCardState extends State<HomeReelCard>
         shaderCallback: (bounds) => const LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            Colors.transparent,
-            Colors.black,
-            Colors.black,
-          ],
+          colors: [Colors.transparent, Colors.black, Colors.black],
           stops: [0.0, 0.25, 1.0],
         ).createShader(bounds),
         blendMode: BlendMode.dstIn,
@@ -643,23 +546,14 @@ class _HomeReelCardState extends State<HomeReelCard>
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0x99FFDF00), Color(0x66E65100)],
-                      ),
+                      gradient: const LinearGradient(colors: [Color(0x99FFDF00), Color(0x66E65100)]),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: const Color(0xFFFFDF00),
-                        width: 1,
-                      ),
+                      border: Border.all(color: const Color(0xFFFFDF00), width: 1),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
-                          Icons.star_rounded,
-                          color: Color(0xFFFFDF00),
-                          size: 15,
-                        ),
+                        const Icon(Icons.star_rounded, color: Color(0xFFFFDF00), size: 15),
                         const SizedBox(width: 5),
                         Flexible(
                           child: RichText(
@@ -705,19 +599,12 @@ class _HomeReelCardState extends State<HomeReelCard>
                     decoration: BoxDecoration(
                       color: const Color(0x66FF2D55),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: const Color(0x99FF2D55),
-                        width: 0.8,
-                      ),
+                      border: Border.all(color: const Color(0x99FF2D55), width: 0.8),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
-                          Icons.favorite_rounded,
-                          color: Color(0xFFFF2D55),
-                          size: 13,
-                        ),
+                        const Icon(Icons.favorite_rounded, color: Color(0xFFFF2D55), size: 13),
                         const SizedBox(width: 5),
                         Flexible(
                           child: RichText(
@@ -762,19 +649,12 @@ class _HomeReelCardState extends State<HomeReelCard>
                   decoration: BoxDecoration(
                     color: Colors.black.withValues(alpha: 0.45),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.1),
-                      width: 0.8,
-                    ),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 0.8),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      CustomAvatar(
-                        radius: 10,
-                        imageUrl: comment.userAvatarUrl,
-                        assetPath: comment.userAssetPath,
-                      ),
+                      CustomAvatar(radius: 10, imageUrl: comment.userAvatarUrl, assetPath: comment.userAssetPath),
                       const SizedBox(width: 6),
                       Flexible(
                         child: RichText(
@@ -796,12 +676,7 @@ class _HomeReelCardState extends State<HomeReelCard>
                                   color: Colors.white,
                                   fontSize: 11.5,
                                   fontWeight: FontWeight.w500,
-                                  shadows: [
-                                    Shadow(
-                                      color: Colors.black87,
-                                      blurRadius: 3,
-                                    ),
-                                  ],
+                                  shadows: [Shadow(color: Colors.black87, blurRadius: 3)],
                                 ),
                               ),
                             ],
@@ -846,16 +721,9 @@ class _HomeReelCardState extends State<HomeReelCard>
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: Colors.black.withValues(alpha: 0.45),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.12),
-                width: 1,
-              ),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.12), width: 1),
             ),
-            child: Icon(
-              icon,
-              color: iconColor,
-              size: 20,
-            ),
+            child: Icon(icon, color: iconColor, size: 20),
           ),
           const SizedBox(height: 3),
           Text(
@@ -864,12 +732,7 @@ class _HomeReelCardState extends State<HomeReelCard>
               color: Colors.white,
               fontSize: 10,
               fontWeight: FontWeight.w600,
-              shadows: [
-                Shadow(
-                  color: Colors.black,
-                  blurRadius: 4,
-                ),
-              ],
+              shadows: [Shadow(color: Colors.black, blurRadius: 4)],
             ),
           ),
         ],

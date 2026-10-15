@@ -49,8 +49,7 @@ class GlassContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final radius = borderRadius ?? BorderRadius.circular(20);
-    final effectiveColor =
-        color ?? AppColors.glassBackground.withValues(alpha: opacity);
+    final effectiveColor = color ?? AppColors.glassBackground.withValues(alpha: opacity);
 
     Widget content;
     if (enableBlur && blur > 0) {
@@ -58,30 +57,20 @@ class GlassContainer extends StatelessWidget {
         borderRadius: radius,
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-          child: Container(
-            padding: padding,
-            color: effectiveColor,
-            child: child,
-          ),
+          child: Container(padding: padding, color: effectiveColor, child: child),
         ),
       );
     } else {
       content = Container(
         padding: padding,
-        decoration: BoxDecoration(
-          borderRadius: radius,
-          color: effectiveColor,
-        ),
+        decoration: BoxDecoration(borderRadius: radius, color: effectiveColor),
         child: child,
       );
     }
 
     if (gradientBorder != null) {
       content = Container(
-        decoration: BoxDecoration(
-          borderRadius: radius,
-          gradient: gradientBorder,
-        ),
+        decoration: BoxDecoration(borderRadius: radius, gradient: gradientBorder),
         padding: EdgeInsets.all(gradientBorderWidth),
         child: ClipRRect(borderRadius: radius, child: content),
       );
@@ -93,18 +82,10 @@ class GlassContainer extends StatelessWidget {
       margin: margin,
       decoration: BoxDecoration(
         borderRadius: radius,
-        border: gradientBorder == null
-            ? (border ?? Border.all(color: AppColors.borderSubtle, width: 0.8))
-            : null,
+        border: gradientBorder == null ? (border ?? Border.all(color: AppColors.borderSubtle, width: 0.8)) : null,
         boxShadow: glowColor == null
             ? null
-            : [
-                BoxShadow(
-                  color: glowColor!.withValues(alpha: 0.45),
-                  blurRadius: glowBlur,
-                  spreadRadius: glowSpread,
-                ),
-              ],
+            : [BoxShadow(color: glowColor!.withValues(alpha: 0.45), blurRadius: glowBlur, spreadRadius: glowSpread)],
       ),
       child: content,
     );

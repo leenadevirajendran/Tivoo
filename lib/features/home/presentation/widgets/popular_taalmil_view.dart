@@ -1,81 +1,64 @@
 import 'package:flutter/material.dart';
+
 import '../../../live_stream/presentation/screens/live_stream_screen.dart';
+import '../../../pk_battle/pk_battle_live_screen.dart';
 import '../../domain/models/live_stream_card_model.dart';
-import '../screens/pk_battle_live_screen.dart';
 import 'home_grid_stream_card.dart';
 
-/// Popular view strictly matching the reference design in Screenshot 1 (TaalMil style):
-/// - Mini Broadcasters row (`aashi 🔥140`, `payal 🔥133`)
-/// - WEEKLY ALL-STARS gold crown event banner with indicator dots
-/// - 2-Column Live Stream cards grid (no Star/Gift on cards)
-/// - Floating live broadcast circle button on the bottom right
+/// Responsive grid of live cards (2 / 3 / 4 columns), as a sliver for the home screen's scroll view.
 class PopularTaalmilView extends StatelessWidget {
   final List<LiveStreamCardModel> streams;
-  final VoidCallback? onBroadcastTap;
+  final ValueChanged<LiveStreamCardModel>? onFollowTap;
 
-  const PopularTaalmilView({
-    super.key,
-    required this.streams,
-    this.onBroadcastTap,
-  });
+  const PopularTaalmilView({super.key, required this.streams, this.onFollowTap});
 
   @override
   Widget build(BuildContext context) {
-    final topPadding = MediaQuery.paddingOf(context).top + 112;
-    // Main Virtualized 2-Column Live Stream Grid directly below header tabs
-    return _buildLiveGrid(context, topPadding);
-  }
-
-  /// 2-Column Live Streams Grid matching Screenshot 1
-  Widget _buildLiveGrid(BuildContext context, double topPadding) {
     if (streams.isEmpty) {
-      return Center(
+      return const SliverToBoxAdapter(
         child: Padding(
-          padding: EdgeInsets.only(top: topPadding + 40, left: 40, right: 40),
-          child: const Text(
-            'No live broadcasts right now',
-            style: TextStyle(color: Colors.white54),
+          padding: EdgeInsets.all(40),
+          child: Center(
+            child: Text('No live broadcasts right now', style: TextStyle(color: Colors.white54)),
           ),
         ),
       );
     }
-
-    return GridView.builder(
-      physics: const BouncingScrollPhysics(),
-      padding: EdgeInsets.fromLTRB(12, topPadding, 12, 110),
-      itemCount: streams.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.72, // Tall portrait aspect ratio matching Screenshot 1
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
+    // 2 columns on phones, 3 on small tablets / landscape, 4 on large screens.
+    final width = MediaQuery.sizeOf(context).width;
+    final columns = width >= 1000 ? 4 : (width >= 600 ? 3 : 2);
+    final gap = width < 360 ? 10.0 : 12.0;
+    return SliverPadding(
+      padding: EdgeInsets.fromLTRB(14, 4, 14, 120 + MediaQuery.paddingOf(context).bottom),
+      sliver: SliverGrid(
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: columns,
+          // Portrait cards suit the photos; a little squarer on wide layouts.
+          childAspectRatio: columns == 2 ? 0.8 : 0.86,
+          crossAxisSpacing: gap,
+          mainAxisSpacing: gap,
+        ),
+        delegate: SliverChildBuilderDelegate(childCount: streams.length, (context, index) {
+          final stream = streams[index];
+          return HomeGridStreamCard(
+            stream: stream,
+            index: index,
+            onFollowTap: onFollowTap == null ? null : () => onFollowTap!(stream),
+            onTap: () => _open(context, index),
+          );
+        }),
       ),
-      itemBuilder: (context, index) {
-        final stream = streams[index];
-        return HomeGridStreamCard(
-          stream: stream,
-          onTap: () {
-            if (stream.isPk) {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => PkBattleLiveScreen(
-                    onBack: () => Navigator.of(context).pop(),
-                  ),
-                ),
-              );
-              return;
-            }
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => LiveStreamScreen(
-                  streams: streams,
-                  initialIndex: index,
-                ),
-              ),
-            );
-          },
-        );
-      },
+    );
+  }
+
+  void _open(BuildContext context, int index) {
+    final stream = streams[index];
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => stream.isPk
+            ? PkBattleLiveScreen(onBack: () => Navigator.of(context).pop())
+            : LiveStreamScreen(streams: streams, initialIndex: index),
+      ),
     );
   }
 }

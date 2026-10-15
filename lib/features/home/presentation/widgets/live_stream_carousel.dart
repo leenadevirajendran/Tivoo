@@ -9,12 +9,7 @@ class LiveStreamCarousel extends StatefulWidget {
   final Function(LiveStreamCardModel stream, int index) onCardTap;
   final Function(String streamId) onFollowTap;
 
-  const LiveStreamCarousel({
-    super.key,
-    required this.streams,
-    required this.onCardTap,
-    required this.onFollowTap,
-  });
+  const LiveStreamCarousel({super.key, required this.streams, required this.onCardTap, required this.onFollowTap});
 
   @override
   State<LiveStreamCarousel> createState() => _LiveStreamCarouselState();
@@ -56,18 +51,11 @@ class _LiveStreamCarouselState extends State<LiveStreamCarousel> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.live_tv_rounded,
-              size: 48,
-              color: Colors.white.withValues(alpha: 0.3),
-            ),
+            Icon(Icons.live_tv_rounded, size: 48, color: Colors.white.withValues(alpha: 0.3)),
             const SizedBox(height: 12),
             Text(
               'No live streams in this category',
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.6),
-                fontSize: 14,
-              ),
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 14),
             ),
           ],
         ),
@@ -112,33 +100,23 @@ class _LiveStreamCarouselState extends State<LiveStreamCarousel> {
         if (widget.streams.length > 1)
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(
-              widget.streams.length,
-              (idx) {
-                final isSelected = idx == _currentIndex;
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 250),
-                  curve: Curves.easeOutCubic,
-                  margin: const EdgeInsets.symmetric(horizontal: 3.5),
-                  width: isSelected ? 18 : 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(3),
-                    color: isSelected
-                        ? AppColors.primaryYellow
-                        : Colors.white.withValues(alpha: 0.25),
-                    boxShadow: isSelected
-                        ? [
-                            BoxShadow(
-                              color: AppColors.primaryYellow.withValues(alpha: 0.6),
-                              blurRadius: 6,
-                            ),
-                          ]
-                        : null,
-                  ),
-                );
-              },
-            ),
+            children: List.generate(widget.streams.length, (idx) {
+              final isSelected = idx == _currentIndex;
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOutCubic,
+                margin: const EdgeInsets.symmetric(horizontal: 3.5),
+                width: isSelected ? 18 : 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(3),
+                  color: isSelected ? AppColors.primaryYellow : Colors.white.withValues(alpha: 0.25),
+                  boxShadow: isSelected
+                      ? [BoxShadow(color: AppColors.primaryYellow.withValues(alpha: 0.6), blurRadius: 6)]
+                      : null,
+                ),
+              );
+            }),
           ),
       ],
     );

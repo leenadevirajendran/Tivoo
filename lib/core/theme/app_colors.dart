@@ -12,15 +12,21 @@ class AppColors {
 
   // Brand & Accents - Electric Cyber Yellow & Golden Amber
   static const Color primaryYellow = Color(0xFFFFD600); // Electric Cyber Yellow
-  static const Color primaryAmber = Color(0xFFFFAB00);  // Warm Amber Gold
+  static const Color primaryAmber = Color(0xFFFFAB00); // Warm Amber Gold
   static const Color primaryYellowLight = Color(0xFFFFEA00); // Bright Neon Yellow
+  static const Color vipGold = Color(0xFFFFD700);
+  static const Color vipAmber = Color(0xFFFFA000);
+  static const Color vipDeepGold = Color(0xFFFF8F00);
+  static const Color vipDarkCard = Color(0xFF101322);
+  static const Color vipDarkBase = Color(0xFF070810);
+  static const Color vipBorderGold = Color(0x66FFD700);
 
   // Aliases for seamless compatibility
   static const Color primaryPink = primaryYellow;
   static const Color primaryPurple = primaryAmber;
   static const Color primaryCyan = primaryYellowLight;
   static const Color liveRed = Color(0xFFFF3B30); // Kept for live broadcast alerts
-  static const Color verifiedBlue = Color(0xFFFFD600); // Golden verified badge
+  static const Color verifiedBlue = Color(0xFF2196F3); // Golden/Blue verified badge
 
   // Text
   static const Color textPrimary = Color(0xFFFFFFFF);
@@ -70,90 +76,67 @@ class AppColors {
   );
 
   static const LinearGradient brandLogoGradient = LinearGradient(
-    colors: [
-      Color(0xFFFFF9C4),
-      Color(0xFFFFEA00),
-      Color(0xFFFFD600),
-      Color(0xFFFF9800),
-    ],
+    colors: [Color(0xFFFFF9C4), Color(0xFFFFEA00), Color(0xFFFFD600), Color(0xFFFF9800)],
     begin: Alignment.centerLeft,
     end: Alignment.centerRight,
   );
 
   static const LinearGradient getStartedButtonGradient = LinearGradient(
-    colors: [
-      Color(0xFFFFEA00),
-      Color(0xFFFFD600),
-      Color(0xFFFF9800),
-    ],
+    colors: [Color(0xFFFFEA00), Color(0xFFFFD600), Color(0xFFFF9800)],
     begin: Alignment.centerLeft,
     end: Alignment.centerRight,
   );
 
   static const LinearGradient popularTabGradient = LinearGradient(
-    colors: [
-      Color(0xFFFFF59D),
-      Color(0xFFFFD600),
-      Color(0xFFFFAB00),
-    ],
+    colors: [Color(0xFFFFF59D), Color(0xFFFFD600), Color(0xFFFFAB00)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const LinearGradient storyRingGradient = LinearGradient(
-    colors: [
-      Color(0xFFFFEA00),
-      Color(0xFFFFD600),
-      Color(0xFFFF9100),
-      Color(0xFFFF6D00),
-    ],
+    colors: [Color(0xFFFFEA00), Color(0xFFFFD600), Color(0xFFFF9100), Color(0xFFFF6D00)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const LinearGradient followButtonGradient = LinearGradient(
-    colors: [
-      Color(0xFFFFEA00),
-      Color(0xFFFFB300),
-    ],
+    colors: [Color(0xFFFFEA00), Color(0xFFFFB300)],
     begin: Alignment.centerLeft,
     end: Alignment.centerRight,
   );
 
   static const LinearGradient liveCenterButtonGradient = LinearGradient(
-    colors: [
-      Color(0xFFFFEA00),
-      Color(0xFFFF9800),
-    ],
+    colors: [Color(0xFFFFEA00), Color(0xFFFF9800)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const LinearGradient neonAuroraGradient = LinearGradient(
-    colors: [
-      Color(0xFFFFF9C4),
-      Color(0xFFFFD600),
-      Color(0xFFFF9100),
-    ],
+    colors: [Color(0xFFFFF9C4), Color(0xFFFFD600), Color(0xFFFF9100)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const LinearGradient neonSunsetGradient = LinearGradient(
-    colors: [
-      Color(0xFFFFEA00),
-      Color(0xFFFFAB00),
-      Color(0xFFFF6D00),
-    ],
+    colors: [Color(0xFFFFEA00), Color(0xFFFFAB00), Color(0xFFFF6D00)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static const LinearGradient vipGoldGradient = LinearGradient(
+    colors: [Color(0xFFFFF1A8), Color(0xFFFFD700), Color(0xFFFFA000)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static const LinearGradient vipMetallicGradient = LinearGradient(
+    colors: [Color(0xFFFFEA00), Color(0xFFFFB300), Color(0xFFFF8F00)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const LinearGradient yellowBlackGradient = LinearGradient(
-    colors: [
-      Color(0xFFFFD600),
-      Color(0xFF101012),
-    ],
+    colors: [Color(0xFFFFD600), Color(0xFF101012)],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );

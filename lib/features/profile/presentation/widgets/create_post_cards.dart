@@ -7,12 +7,7 @@ class CreatePostCards extends StatelessWidget {
   final VoidCallback onUploadImage;
   final VoidCallback? onViewAll;
 
-  const CreatePostCards({
-    super.key,
-    required this.onUploadVideo,
-    required this.onUploadImage,
-    this.onViewAll,
-  });
+  const CreatePostCards({super.key, required this.onUploadVideo, required this.onUploadImage, this.onViewAll});
 
   @override
   Widget build(BuildContext context) {
@@ -46,11 +41,7 @@ class CreatePostCards extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 3),
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    size: 16,
-                    color: isDark ? Colors.white70 : const Color(0xFF6B6B78),
-                  ),
+                  Icon(Icons.chevron_right_rounded, size: 16, color: isDark ? Colors.white70 : const Color(0xFF6B6B78)),
                 ],
               ),
             ),
@@ -122,9 +113,7 @@ class CreatePostCards extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
             color: isDark ? const Color(0xFF13131E) : Colors.white,
             border: Border.all(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.08)
-                  : Colors.black.withValues(alpha: 0.05),
+              color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05),
               width: 0.8,
             ),
             boxShadow: [
@@ -145,18 +134,10 @@ class CreatePostCards extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   gradient: gradient,
                   boxShadow: [
-                    BoxShadow(
-                      color: (gradient as LinearGradient).colors.first
-                          .withValues(alpha: 0.5),
-                      blurRadius: 12,
-                    ),
+                    BoxShadow(color: (gradient as LinearGradient).colors.first.withValues(alpha: 0.5), blurRadius: 12),
                   ],
                 ),
-                child: Icon(
-                  icon,
-                  color: AppColors.textOnPrimary,
-                  size: 20,
-                ),
+                child: Icon(icon, color: AppColors.textOnPrimary, size: 20),
               ),
 
               const SizedBox(width: 10),
@@ -182,9 +163,7 @@ class CreatePostCards extends StatelessWidget {
                       subtitle,
                       style: TextStyle(
                         fontSize: 10.5,
-                        color: isDark
-                            ? AppColors.textSecondary
-                            : const Color(0xFF6B6B78),
+                        color: isDark ? AppColors.textSecondary : const Color(0xFF6B6B78),
                         fontWeight: FontWeight.w400,
                       ),
                       maxLines: 1,

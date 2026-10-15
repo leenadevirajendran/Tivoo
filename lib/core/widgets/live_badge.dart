@@ -26,13 +26,7 @@ class LiveBadge extends StatelessWidget {
         color: backgroundColor ?? (isLive ? AppColors.liveRed : AppColors.surfaceColor),
         borderRadius: BorderRadius.circular(16),
         boxShadow: isLive
-            ? [
-                BoxShadow(
-                  color: AppColors.liveRed.withValues(alpha: 0.4),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ]
+            ? [BoxShadow(color: AppColors.liveRed.withValues(alpha: 0.4), blurRadius: 10, offset: const Offset(0, 2))]
             : null,
       ),
       child: Row(
@@ -47,11 +41,7 @@ class LiveBadge extends StatelessWidget {
           ],
           Text(
             text,
-            style: AppTextStyles.badgeText.copyWith(
-              color: Colors.white,
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-            ),
+            style: AppTextStyles.badgeText.copyWith(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800),
           ),
         ],
       ),
@@ -66,11 +56,7 @@ class _LiveWaveIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Padding(
       padding: EdgeInsets.only(right: 2),
-      child: Icon(
-        Icons.podcasts_rounded,
-        color: Colors.white,
-        size: 14,
-      ),
+      child: Icon(Icons.podcasts_rounded, color: Colors.white, size: 14),
     );
   }
 }
@@ -96,10 +82,7 @@ class MetricBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.12),
-          width: 0.6,
-        ),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12), width: 0.6),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -109,10 +92,7 @@ class MetricBadge extends StatelessWidget {
           Flexible(
             child: Text(
               text,
-              style: AppTextStyles.badgeText.copyWith(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w700,
-              ),
+              style: AppTextStyles.badgeText.copyWith(fontSize: 11.5, fontWeight: FontWeight.w700),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),

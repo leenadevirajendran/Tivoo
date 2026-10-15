@@ -8,13 +8,7 @@ class LiveToolsBottomSheet extends StatelessWidget {
   final VoidCallback? onRankingTap;
   final VoidCallback? onGuestsTap;
 
-  const LiveToolsBottomSheet({
-    super.key,
-    this.onPkSettingsTap,
-    this.onInviteTap,
-    this.onRankingTap,
-    this.onGuestsTap,
-  });
+  const LiveToolsBottomSheet({super.key, this.onPkSettingsTap, this.onInviteTap, this.onRankingTap, this.onGuestsTap});
 
   static Future<void> show(
     BuildContext context, {
@@ -26,6 +20,7 @@ class LiveToolsBottomSheet extends StatelessWidget {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (_) => LiveToolsBottomSheet(
         onPkSettingsTap: onPkSettingsTap,
@@ -38,28 +33,22 @@ class LiveToolsBottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF13151D),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        border: Border.all(
-          color: const Color(0x33448AFF),
-          width: 1.2,
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black87,
-            blurRadius: 36,
-            offset: Offset(0, -6),
-          ),
-        ],
+        border: Border.all(color: const Color(0x33448AFF), width: 1.2),
+        boxShadow: const [BoxShadow(color: Colors.black87, blurRadius: 36, offset: Offset(0, -6))],
       ),
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+      padding: EdgeInsets.fromLTRB(20, 14, 20, 24 + (bottomInset > 0 ? bottomInset : 0)),
       child: SafeArea(
         top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Top Bar: Live Tools Title + Close ✕ Button
             Row(
@@ -80,11 +69,7 @@ class LiveToolsBottomSheet extends StatelessWidget {
                     SizedBox(height: 2),
                     Text(
                       'Manage your Live room, PK and more',
-                      style: TextStyle(
-                        color: Colors.white54,
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w500,
-                      ),
+                      style: TextStyle(color: Colors.white54, fontSize: 11.5, fontWeight: FontWeight.w500),
                     ),
                   ],
                 ),
@@ -93,15 +78,8 @@ class LiveToolsBottomSheet extends StatelessWidget {
                   child: Container(
                     width: 32,
                     height: 32,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withValues(alpha: 0.1),
-                    ),
-                    child: const Icon(
-                      Icons.close_rounded,
-                      color: Colors.white70,
-                      size: 18,
-                    ),
+                    decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: 0.1)),
+                    child: const Icon(Icons.close_rounded, color: Colors.white70, size: 18),
                   ),
                 ),
               ],
@@ -124,9 +102,9 @@ class LiveToolsBottomSheet extends StatelessWidget {
                   subtitle: 'Room settings,\nmic, camera, effects',
                   onTap: () {
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Opening Live Tools settings...')),
-                    );
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(const SnackBar(content: Text('Opening Live Tools settings...')));
                   },
                 ),
                 _buildToolCard(
@@ -166,9 +144,9 @@ class LiveToolsBottomSheet extends StatelessWidget {
                   subtitle: 'Live room rules,\ncommunity guidelines',
                   onTap: () {
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('PK Battle & Live room rules active.')),
-                    );
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(const SnackBar(content: Text('PK Battle & Live room rules active.')));
                   },
                 ),
                 _buildToolCard(
@@ -178,9 +156,9 @@ class LiveToolsBottomSheet extends StatelessWidget {
                   subtitle: 'Report user,\nblock, safety tools',
                   onTap: () {
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Safety tools & Report panel opened.')),
-                    );
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(const SnackBar(content: Text('Safety tools & Report panel opened.')));
                   },
                 ),
               ],
@@ -217,6 +195,7 @@ class LiveToolsBottomSheet extends StatelessWidget {
           ],
         ),
       ),
+      ),
     );
   }
 
@@ -237,16 +216,9 @@ class LiveToolsBottomSheet extends StatelessWidget {
           decoration: BoxDecoration(
             color: const Color(0xFF1E212D),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.08),
-              width: 1,
-            ),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1),
             boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.3),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              ),
+              BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 6, offset: const Offset(0, 2)),
             ],
           ),
           child: Column(
@@ -257,22 +229,13 @@ class LiveToolsBottomSheet extends StatelessWidget {
               const SizedBox(height: 5),
               Text(
                 title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w800,
-                ),
+                style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 2),
               Text(
                 subtitle,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white54,
-                  fontSize: 9.5,
-                  height: 1.2,
-                  fontWeight: FontWeight.w500,
-                ),
+                style: const TextStyle(color: Colors.white54, fontSize: 9.5, height: 1.2, fontWeight: FontWeight.w500),
               ),
             ],
           ),
@@ -296,11 +259,7 @@ class LiveToolsBottomSheet extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             text,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-            ),
+            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600),
           ),
         ],
       ),

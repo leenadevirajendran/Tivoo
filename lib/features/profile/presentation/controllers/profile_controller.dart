@@ -16,10 +16,8 @@ class ProfileState {
   });
 
   List<ProfileMediaPost> get currentPosts {
-    final targetType =
-        selectedTab == 0 ? ProfileMediaType.video : ProfileMediaType.image;
-    final list =
-        profile.posts.where((p) => p.type == targetType).toList();
+    final targetType = selectedTab == 0 ? ProfileMediaType.video : ProfileMediaType.image;
+    final list = profile.posts.where((p) => p.type == targetType).toList();
 
     if (selectedSort == 'Recent') {
       list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -27,12 +25,7 @@ class ProfileState {
     return list;
   }
 
-  ProfileState copyWith({
-    UserProfileModel? profile,
-    int? selectedTab,
-    String? selectedSort,
-    bool? isUploading,
-  }) {
+  ProfileState copyWith({UserProfileModel? profile, int? selectedTab, String? selectedSort, bool? isUploading}) {
     return ProfileState(
       profile: profile ?? this.profile,
       selectedTab: selectedTab ?? this.selectedTab,
@@ -43,8 +36,7 @@ class ProfileState {
 }
 
 class ProfileController extends StateNotifier<ProfileState> {
-  ProfileController()
-      : super(ProfileState(profile: MockProfileData.defaultProfile));
+  ProfileController() : super(ProfileState(profile: MockProfileData.defaultProfile));
 
   void selectTab(int index) {
     if (state.selectedTab != index) {
@@ -96,13 +88,10 @@ class ProfileController extends StateNotifier<ProfileState> {
     );
 
     final updatedPosts = [newPost, ...state.profile.posts];
-    state = state.copyWith(
-      profile: state.profile.copyWith(posts: updatedPosts),
-    );
+    state = state.copyWith(profile: state.profile.copyWith(posts: updatedPosts));
   }
 }
 
-final profileControllerProvider =
-    StateNotifierProvider<ProfileController, ProfileState>((ref) {
+final profileControllerProvider = StateNotifierProvider<ProfileController, ProfileState>((ref) {
   return ProfileController();
 });

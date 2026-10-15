@@ -47,19 +47,10 @@ class _GlowTextFieldState extends State<GlowTextField> {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: _isFocused
-              ? AppColors.glowPink.withValues(alpha: 0.8)
-              : Colors.transparent,
+          color: _isFocused ? AppColors.glowPink.withValues(alpha: 0.8) : Colors.transparent,
           width: 1.2,
         ),
-        boxShadow: _isFocused
-            ? [
-                BoxShadow(
-                  color: AppColors.glowPink.withValues(alpha: 0.25),
-                  blurRadius: 14,
-                ),
-              ]
-            : null,
+        boxShadow: _isFocused ? [BoxShadow(color: AppColors.glowPink.withValues(alpha: 0.25), blurRadius: 14)] : null,
       ),
       child: TextField(
         controller: widget.controller,
@@ -72,14 +63,8 @@ class _GlowTextFieldState extends State<GlowTextField> {
           hintStyle: const TextStyle(color: Colors.white38),
           filled: true,
           fillColor: const Color(0x66181824),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide.none,
-          ),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 12,
-          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
       ),
     );

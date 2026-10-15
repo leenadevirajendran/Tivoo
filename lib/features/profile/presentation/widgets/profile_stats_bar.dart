@@ -6,10 +6,7 @@ import '../../domain/models/user_profile_model.dart';
 class ProfileStatsBar extends StatelessWidget {
   final UserProfileModel profile;
 
-  const ProfileStatsBar({
-    super.key,
-    required this.profile,
-  });
+  const ProfileStatsBar({super.key, required this.profile});
 
   @override
   Widget build(BuildContext context) {
@@ -48,9 +45,7 @@ class ProfileStatsBar extends StatelessWidget {
         borderRadius: BorderRadius.circular(22),
         color: isDark ? const Color(0xFF13131E) : Colors.white,
         border: Border.all(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.08)
-              : Colors.black.withValues(alpha: 0.05),
+          color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05),
           width: 0.8,
         ),
         boxShadow: [
@@ -74,18 +69,9 @@ class ProfileStatsBar extends StatelessWidget {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: stat.iconColor.withValues(alpha: 0.12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: stat.iconColor.withValues(alpha: 0.35),
-                        blurRadius: 10,
-                      ),
-                    ],
+                    boxShadow: [BoxShadow(color: stat.iconColor.withValues(alpha: 0.35), blurRadius: 10)],
                   ),
-                  child: Icon(
-                    stat.icon,
-                    color: stat.iconColor,
-                    size: 20,
-                  ),
+                  child: Icon(stat.icon, color: stat.iconColor, size: 20),
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -101,9 +87,7 @@ class ProfileStatsBar extends StatelessWidget {
                   stat.label,
                   style: TextStyle(
                     fontSize: 11,
-                    color: isDark
-                        ? AppColors.textSecondary
-                        : const Color(0xFF6B6B78),
+                    color: isDark ? AppColors.textSecondary : const Color(0xFF6B6B78),
                     fontWeight: FontWeight.w500,
                   ),
                   textAlign: TextAlign.center,
@@ -125,10 +109,5 @@ class _StatItem {
   final String count;
   final String label;
 
-  _StatItem({
-    required this.icon,
-    required this.iconColor,
-    required this.count,
-    required this.label,
-  });
+  _StatItem({required this.icon, required this.iconColor, required this.count, required this.label});
 }

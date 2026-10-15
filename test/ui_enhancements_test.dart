@@ -92,9 +92,8 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 200));
 
-    // Verify popular/discover/new tabs are removed
+    // Old popular/discover category tabs are gone
     expect(find.text('Discover'), findsNothing);
-    expect(find.text('New'), findsNothing);
 
     // Verify story row (You, Khalid, Maya, Leo) is removed per user instruction
     expect(find.text('You'), findsNothing);
@@ -113,10 +112,12 @@ void main() {
     expect(find.text('PK Battle'), findsWidgets);
     expect(find.text('Chat Room'), findsWidgets);
 
-    // Verify search bar and header action icons
+    // Header: tagline, search pill, favorites and notifications buttons, hero banner
+    expect(find.textContaining('CONNECT', findRichText: true), findsOneWidget);
     expect(find.text('Search'), findsOneWidget);
-    expect(find.byIcon(Icons.favorite_border_rounded), findsOneWidget);
-    expect(find.byIcon(Icons.access_time_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.favorite_border_rounded), findsWidgets); // header + banner heart
+    expect(find.byIcon(Icons.notifications_none_rounded), findsOneWidget);
+    expect(find.text('Real People'), findsOneWidget);
 
     // Verify Mini Broadcasters & Weekly All-Stars banner are REMOVED per user request
     expect(find.text('aashi'), findsNothing);
@@ -156,12 +157,14 @@ void main() {
     GiftItem? selectedGift;
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: GiftBottomSheet(
-            onGiftSelected: (gift) {
-              selectedGift = gift;
-            },
+      ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: GiftBottomSheet(
+              onGiftSelected: (gift) {
+                selectedGift = gift;
+              },
+            ),
           ),
         ),
       ),
@@ -177,7 +180,8 @@ void main() {
     final images = find.byType(Image);
     expect(images, findsWidgets);
 
-    // Verify Flowers gift exists and tap it to enter Preview & Send
+    // Scroll the grid to Flowers (premium 3D gifts come first), then open Preview & Send
+    await tester.scrollUntilVisible(find.text('Flowers'), 200, scrollable: find.byType(Scrollable).last);
     expect(find.text('Flowers'), findsWidgets);
     await tester.tap(find.text('Flowers').first);
     await tester.pumpAndSettle();

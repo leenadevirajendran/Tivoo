@@ -11,12 +11,7 @@ class StoryListView extends StatelessWidget {
   final Function(StreamerStory story)? onStoryTap;
   final VoidCallback? onAddStoryTap;
 
-  const StoryListView({
-    super.key,
-    required this.stories,
-    this.onStoryTap,
-    this.onAddStoryTap,
-  });
+  const StoryListView({super.key, required this.stories, this.onStoryTap, this.onAddStoryTap});
 
   @override
   Widget build(BuildContext context) {
@@ -37,11 +32,7 @@ class StoryListView extends StatelessWidget {
     );
   }
 
-  Widget _buildTrendingStoryItem(
-    BuildContext context,
-    StreamerStory story,
-    double avatarSize,
-  ) {
+  Widget _buildTrendingStoryItem(BuildContext context, StreamerStory story, double avatarSize) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return GestureDetector(
@@ -66,14 +57,10 @@ class StoryListView extends StatelessWidget {
                 padding: const EdgeInsets.all(2.5),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(22),
-                  gradient: story.isUser
-                      ? null
-                      : AppColors.storyRingGradient,
+                  gradient: story.isUser ? null : AppColors.storyRingGradient,
                   border: story.isUser
                       ? Border.all(
-                          color: isDark
-                              ? Colors.white.withValues(alpha: 0.2)
-                              : Colors.black.withValues(alpha: 0.12),
+                          color: isDark ? Colors.white.withValues(alpha: 0.2) : Colors.black.withValues(alpha: 0.12),
                           width: 1.5,
                         )
                       : null,
@@ -93,10 +80,7 @@ class StoryListView extends StatelessWidget {
                     borderRadius: BorderRadius.circular(19.5),
                     color: Theme.of(context).scaffoldBackgroundColor,
                   ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(18),
-                    child: _buildImage(story),
-                  ),
+                  child: ClipRRect(borderRadius: BorderRadius.circular(18), child: _buildImage(story)),
                 ),
               ),
 
@@ -111,22 +95,10 @@ class StoryListView extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: AppColors.followButtonGradient,
-                      border: Border.all(
-                        color: Theme.of(context).scaffoldBackgroundColor,
-                        width: 2,
-                      ),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x66FF2D68),
-                          blurRadius: 6,
-                        ),
-                      ],
+                      border: Border.all(color: Theme.of(context).scaffoldBackgroundColor, width: 2),
+                      boxShadow: const [BoxShadow(color: Color(0x66FF2D68), blurRadius: 6)],
                     ),
-                    child: const Icon(
-                      Icons.add,
-                      size: 13,
-                      color: Colors.white,
-                    ),
+                    child: const Icon(Icons.add, size: 13, color: Colors.white),
                   ),
                 ),
 
@@ -142,16 +114,8 @@ class StoryListView extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: AppColors.liveRed,
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: Theme.of(context).scaffoldBackgroundColor,
-                          width: 1.5,
-                        ),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x55FF2D55),
-                            blurRadius: 4,
-                          ),
-                        ],
+                        border: Border.all(color: Theme.of(context).scaffoldBackgroundColor, width: 1.5),
+                        boxShadow: const [BoxShadow(color: Color(0x55FF2D55), blurRadius: 4)],
                       ),
                       child: const Text(
                         'LIVE',
@@ -201,12 +165,8 @@ class StoryListView extends StatelessWidget {
         fit: BoxFit.cover,
         cacheWidth: 160,
         cacheHeight: 160,
-        errorBuilder: (context, error, stackTrace) => Image.asset(
-          AppAssets.liveCard1,
-          fit: BoxFit.cover,
-          cacheWidth: 160,
-          cacheHeight: 160,
-        ),
+        errorBuilder: (context, error, stackTrace) =>
+            Image.asset(AppAssets.liveCard1, fit: BoxFit.cover, cacheWidth: 160, cacheHeight: 160),
       );
     }
     if (story.avatarUrl != null && story.avatarUrl!.isNotEmpty) {
@@ -215,25 +175,11 @@ class StoryListView extends StatelessWidget {
         fit: BoxFit.cover,
         memCacheWidth: 160,
         memCacheHeight: 160,
-        placeholder: (context, url) => Image.asset(
-          fallbackAsset,
-          fit: BoxFit.cover,
-          cacheWidth: 160,
-          cacheHeight: 160,
-        ),
-        errorWidget: (context, url, error) => Image.asset(
-          fallbackAsset,
-          fit: BoxFit.cover,
-          cacheWidth: 160,
-          cacheHeight: 160,
-        ),
+        placeholder: (context, url) => Image.asset(fallbackAsset, fit: BoxFit.cover, cacheWidth: 160, cacheHeight: 160),
+        errorWidget: (context, url, error) =>
+            Image.asset(fallbackAsset, fit: BoxFit.cover, cacheWidth: 160, cacheHeight: 160),
       );
     }
-    return Image.asset(
-      fallbackAsset,
-      fit: BoxFit.cover,
-      cacheWidth: 160,
-      cacheHeight: 160,
-    );
+    return Image.asset(fallbackAsset, fit: BoxFit.cover, cacheWidth: 160, cacheHeight: 160);
   }
 }

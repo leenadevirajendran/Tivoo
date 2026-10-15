@@ -4,6 +4,7 @@ import '../../../../core/services/reel_video_manager.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../home/domain/models/live_stream_card_model.dart';
+import '../../../home/presentation/controllers/home_controller.dart';
 import '../../../live_stream/presentation/screens/live_stream_screen.dart';
 import '../../domain/models/explore_stream_model.dart';
 import '../controllers/explore_controller.dart';
@@ -91,6 +92,15 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     super.dispose();
   }
 
+  /// Back arrow: pop if Explore was pushed, otherwise switch to the Home tab.
+  void _goHome() {
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    } else {
+      ref.read(bottomNavIndexProvider.notifier).state = 0;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(exploreControllerProvider);
@@ -105,12 +115,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   }
 
   /// Instagram Reels-Style Vertical Snap-Scroll Feed
-  Widget _buildReelsFeedView(
-    BuildContext context,
-    WidgetRef ref,
-    ExploreState state,
-    ExploreController controller,
-  ) {
+  Widget _buildReelsFeedView(BuildContext context, WidgetRef ref, ExploreState state, ExploreController controller) {
     final filtered = state.filteredStreams;
 
     return Stack(
@@ -119,48 +124,44 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
         if (filtered.isNotEmpty)
           Positioned.fill(
             child: PageView.builder(
-                controller: _pageController,
-                scrollDirection: Axis.vertical,
-                physics: const PageScrollPhysics(),
-                onPageChanged: (newIndex) {
-                  if (_currentIndex != newIndex) {
-                    setState(() {
-                      _currentIndex = newIndex;
-                    });
-                    _onPageSettled(newIndex);
-                  }
-                },
-                itemCount: filtered.length,
-                itemBuilder: (context, index) {
-                  final stream = filtered[index];
-                  return Center(
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxWidth: context.isTablet ? 480 : double.infinity,
-                      ),
-                      child: ExploreReelCard(
-                        key: ValueKey(stream.id),
-                        stream: stream,
-                        isActive: index == _currentIndex,
-                        onEnterLiveRoom: () {
-                          _openLiveRoom(context, filtered, index);
-                        },
-                        onLikeTap: () {
-                          controller.toggleLike(stream.id);
-                        },
-                        onCommentTap: () {
-                          _openLiveRoom(context, filtered, index);
-                        },
-                      ),
+              controller: _pageController,
+              scrollDirection: Axis.vertical,
+              physics: const PageScrollPhysics(),
+              onPageChanged: (newIndex) {
+                if (_currentIndex != newIndex) {
+                  setState(() {
+                    _currentIndex = newIndex;
+                  });
+                  _onPageSettled(newIndex);
+                }
+              },
+              itemCount: filtered.length,
+              itemBuilder: (context, index) {
+                final stream = filtered[index];
+                return Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: context.isTablet ? 480 : double.infinity),
+                    child: ExploreReelCard(
+                      key: ValueKey(stream.id),
+                      stream: stream,
+                      isActive: index == _currentIndex,
+                      onEnterLiveRoom: () {
+                        _openLiveRoom(context, filtered, index);
+                      },
+                      onLikeTap: () {
+                        controller.toggleLike(stream.id);
+                      },
+                      onCommentTap: () {
+                        _openLiveRoom(context, filtered, index);
+                      },
                     ),
-                  );
-                },
-              ),
-            )
+                  ),
+                );
+              },
+            ),
+          )
         else
-          Positioned.fill(
-            child: _buildEmptyState(context, controller),
-          ),
+          Positioned.fill(child: _buildEmptyState(context, controller)),
 
         // 2. Floating Top Header & Category Tabs (Overlayed with gradient scrim)
         Positioned(
@@ -170,11 +171,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
           child: Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [
-                  Color(0xD9000000),
-                  Color(0x99000000),
-                  Colors.transparent,
-                ],
+                colors: [Color(0xD9000000), Color(0x99000000), Colors.transparent],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 stops: [0.0, 0.65, 1.0],
@@ -187,6 +184,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                 child: ExploreHeader(
                   isReelsView: true,
                   onViewModeToggle: controller.toggleViewMode,
+                  onBackTap: _goHome,
                   onSearchTap: () => _showSearchDialog(context, ref),
                   onFilterTap: () => _showFilterInfo(context),
                 ),
@@ -199,12 +197,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   }
 
   /// Classic 2-Column Responsive Grid View
-  Widget _buildGridView(
-    BuildContext context,
-    WidgetRef ref,
-    ExploreState state,
-    ExploreController controller,
-  ) {
+  Widget _buildGridView(BuildContext context, WidgetRef ref, ExploreState state, ExploreController controller) {
     return SafeArea(
       bottom: false,
       child: CustomScrollView(
@@ -215,6 +208,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
             child: ExploreHeader(
               isReelsView: false,
               onViewModeToggle: controller.toggleViewMode,
+              onBackTap: _goHome,
               onSearchTap: () => _showSearchDialog(context, ref),
               onFilterTap: () => _showFilterInfo(context),
             ),
@@ -226,9 +220,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
           if (state.filteredStreams.isNotEmpty)
             SliverPadding(
               padding: EdgeInsets.symmetric(
-                horizontal: context.isTablet
-                    ? ((context.screenWidth - 800) / 2).clamp(16.0, 200.0)
-                    : 16.0,
+                horizontal: context.isTablet ? ((context.screenWidth - 800) / 2).clamp(16.0, 200.0) : 16.0,
               ),
               sliver: SliverGrid(
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -237,29 +229,23 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 14,
                 ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final stream = state.filteredStreams[index];
-                    return ExploreStreamCard(
-                      stream: stream,
-                      onCardTap: () {
-                        _openLiveRoom(context, state.filteredStreams, index);
-                      },
-                      onLikeTap: () {
-                        controller.toggleLike(stream.id);
-                      },
-                    );
-                  },
-                  childCount: state.filteredStreams.length,
-                ),
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  final stream = state.filteredStreams[index];
+                  return ExploreStreamCard(
+                    stream: stream,
+                    onCardTap: () {
+                      _openLiveRoom(context, state.filteredStreams, index);
+                    },
+                    onLikeTap: () {
+                      controller.toggleLike(stream.id);
+                    },
+                  );
+                }, childCount: state.filteredStreams.length),
               ),
             )
           else
             SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.only(top: 80),
-                child: _buildEmptyState(context, controller),
-              ),
+              child: Padding(padding: const EdgeInsets.only(top: 80), child: _buildEmptyState(context, controller)),
             ),
 
           // Bottom space for floating bottom navigation bar
@@ -269,26 +255,16 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     );
   }
 
-  void _openLiveRoom(
-    BuildContext context,
-    List<ExploreStreamModel> streams,
-    int initialIndex,
-  ) {
+  void _openLiveRoom(BuildContext context, List<ExploreStreamModel> streams, int initialIndex) {
     final liveStreams = streams.map(_toLiveStreamCardModel).toList();
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => LiveStreamScreen(
-          streams: liveStreams,
-          initialIndex: initialIndex,
-        ),
+        builder: (context) => LiveStreamScreen(streams: liveStreams, initialIndex: initialIndex),
       ),
     );
   }
 
-  Widget _buildEmptyState(
-    BuildContext context,
-    ExploreController controller,
-  ) {
+  Widget _buildEmptyState(BuildContext context, ExploreController controller) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -300,33 +276,20 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.white.withValues(alpha: 0.06),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.1),
-                ),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
               ),
-              child: const Icon(
-                Icons.videocam_off_outlined,
-                color: Colors.white54,
-                size: 42,
-              ),
+              child: const Icon(Icons.videocam_off_outlined, color: Colors.white54, size: 42),
             ),
             const SizedBox(height: 18),
             const Text(
               'No live streams found',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-              ),
+              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 6),
             const Text(
               'Try clearing your search query',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white54,
-                fontSize: 13,
-              ),
+              style: TextStyle(color: Colors.white54, fontSize: 13),
             ),
             const SizedBox(height: 20),
             TextButton.icon(
@@ -336,10 +299,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
               icon: const Icon(Icons.refresh_rounded, color: AppColors.primaryYellow, size: 18),
               label: const Text(
                 'Show All Streams',
-                style: TextStyle(
-                  color: AppColors.primaryYellow,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(color: AppColors.primaryYellow, fontWeight: FontWeight.w600),
               ),
             ),
           ],
@@ -350,10 +310,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
 
   void _showFilterInfo(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Filter live rooms by region, tags & viewers'),
-        duration: Duration(seconds: 1),
-      ),
+      const SnackBar(content: Text('Filter live rooms by region, tags & viewers'), duration: Duration(seconds: 1)),
     );
   }
 
@@ -362,17 +319,10 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
       context: context,
       backgroundColor: const Color(0xF5161622),
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (context) {
         return Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 20,
-            bottom: MediaQuery.viewInsetsOf(context).bottom + 20,
-          ),
+          padding: EdgeInsets.only(left: 20, right: 20, top: 20, bottom: MediaQuery.viewInsetsOf(context).bottom + 20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -385,10 +335,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                   prefixIcon: const Icon(Icons.search, color: Colors.white70),
                   filled: true,
                   fillColor: const Color(0x66181824),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(20),
-                    borderSide: BorderSide.none,
-                  ),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
                 ),
                 onChanged: (val) {
                   ref.read(exploreControllerProvider.notifier).setSearchQuery(val);

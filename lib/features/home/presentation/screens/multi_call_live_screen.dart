@@ -44,49 +44,12 @@ class _MultiCallLiveScreenState extends State<MultiCallLiveScreen> {
 
   // 6 Interactive Seats Data
   final List<Map<String, dynamic>> _seats = [
-    {
-      'name': 'Alex Martin',
-      'diamonds': '5,099',
-      'asset': AppAssets.status2,
-      'isSSVIP': true,
-      'isSpeaking': true,
-    },
-    {
-      'name': 'Evelyn',
-      'diamonds': '6,921',
-      'asset': AppAssets.status3,
-      'isSSVIP': true,
-      'isSpeaking': false,
-    },
-    {
-      'name': 'Hulda Lewis',
-      'diamonds': '3,194',
-      'asset': AppAssets.status4,
-      'isSSVIP': false,
-      'isSpeaking': false,
-    },
-    {
-      'name': 'Kiara Fox',
-      'diamonds': '4,850',
-      'asset': AppAssets.status1,
-      'isSSVIP': false,
-      'isSpeaking': true,
-    },
-    {
-      'name': 'Leo Vance',
-      'diamonds': '2,410',
-      'asset': AppAssets.status5,
-      'isSSVIP': false,
-      'isSpeaking': false,
-    },
-    {
-      'name': 'Empty Seat',
-      'diamonds': '',
-      'asset': null,
-      'isSSVIP': false,
-      'isSpeaking': false,
-      'isEmpty': true,
-    },
+    {'name': 'Alex Martin', 'diamonds': '5,099', 'asset': AppAssets.status2, 'isSSVIP': true, 'isSpeaking': true},
+    {'name': 'Evelyn', 'diamonds': '6,921', 'asset': AppAssets.status3, 'isSSVIP': true, 'isSpeaking': false},
+    {'name': 'Hulda Lewis', 'diamonds': '3,194', 'asset': AppAssets.status4, 'isSSVIP': false, 'isSpeaking': false},
+    {'name': 'Kiara Fox', 'diamonds': '4,850', 'asset': AppAssets.status1, 'isSSVIP': false, 'isSpeaking': true},
+    {'name': 'Leo Vance', 'diamonds': '2,410', 'asset': AppAssets.status5, 'isSSVIP': false, 'isSpeaking': false},
+    {'name': 'Empty Seat', 'diamonds': '', 'asset': null, 'isSSVIP': false, 'isSpeaking': false, 'isEmpty': true},
   ];
 
   @override
@@ -217,104 +180,94 @@ class _MultiCallLiveScreenState extends State<MultiCallLiveScreen> {
                   top: -50,
                   left: -50,
                   child: Container(
-                  width: 250,
-                  height: 250,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: const Color(0xFF7C4DFF).withValues(alpha: 0.22),
+                    width: 250,
+                    height: 250,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFF7C4DFF).withValues(alpha: 0.22),
+                    ),
                   ),
                 ),
-              ),
 
-              // Content Area
-              SafeArea(
-                child: Column(
-                  children: [
-                    // 1. Top Bar (Host info, ID, Bonus Center, Viewers)
-                    _buildTopHeader(),
+                // Content Area
+                SafeArea(
+                  child: Column(
+                    children: [
+                      // 1. Top Bar (Host info, ID, Bonus Center, Viewers)
+                      _buildTopHeader(),
 
-                    const SizedBox(height: 8),
+                      const SizedBox(height: 8),
 
-                    // 2. Multi-Person Video/Seat Grid (Image 2) & Upward Flowing Live Chat
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Multi-person grid (6-9 seats)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 14),
-                            child: _buildSeatsGrid(),
-                          ),
+                      // 2. Multi-Person Video/Seat Grid (Image 2) & Upward Flowing Live Chat
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Multi-person grid (6-9 seats)
+                            Padding(padding: const EdgeInsets.symmetric(horizontal: 14), child: _buildSeatsGrid()),
 
-                          const SizedBox(height: 6),
+                            const SizedBox(height: 6),
 
-                          // Upward-Flowing Live Comments Feed ("malla poga")
-                          Expanded(
-                            child: LiveChatListView(comments: _comments),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // 3. Downside Input Bar with Comment, Star, Gift, and Mic Toggle
-                    Row(
-                      children: [
-                        Expanded(
-                          child: LiveBottomInputBar(
-                            onSendComment: _handleSendComment,
-                            onStarTap: _handleStarTap,
-                            onGiftTap: _handleGiftTap,
-                          ),
+                            // Upward-Flowing Live Comments Feed ("malla poga")
+                            Expanded(child: LiveChatListView(comments: _comments)),
+                          ],
                         ),
-                        // Mic Button
-                        Padding(
-                          padding: const EdgeInsets.only(right: 14),
-                          child: GestureDetector(
-                            onTap: () {
-                              setState(() => _isMicOn = !_isMicOn);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(_isMicOn ? 'Mic unmuted 🎤' : 'Mic muted 🔇'),
-                                  duration: const Duration(seconds: 1),
-                                ),
-                              );
-                            },
-                            child: Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: _isMicOn
-                                    ? const Color(0xFF00E676)
-                                    : const Color(0xFFFF5252),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: (_isMicOn ? const Color(0xFF00E676) : const Color(0xFFFF5252))
-                                        .withValues(alpha: 0.4),
-                                    blurRadius: 10,
+                      ),
+
+                      // 3. Downside Input Bar with Comment, Star, Gift, and Mic Toggle
+                      Row(
+                        children: [
+                          Expanded(
+                            child: LiveBottomInputBar(
+                              onSendComment: _handleSendComment,
+                              onStarTap: _handleStarTap,
+                              onGiftTap: _handleGiftTap,
+                            ),
+                          ),
+                          // Mic Button
+                          Padding(
+                            padding: const EdgeInsets.only(right: 14),
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() => _isMicOn = !_isMicOn);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(_isMicOn ? 'Mic unmuted 🎤' : 'Mic muted 🔇'),
+                                    duration: const Duration(seconds: 1),
                                   ),
-                                ],
-                              ),
-                              child: Icon(
-                                _isMicOn ? Icons.mic : Icons.mic_off,
-                                color: Colors.white,
-                                size: 22,
+                                );
+                              },
+                              child: Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: _isMicOn ? const Color(0xFF00E676) : const Color(0xFFFF5252),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: (_isMicOn ? const Color(0xFF00E676) : const Color(0xFFFF5252)).withValues(
+                                        alpha: 0.4,
+                                      ),
+                                      blurRadius: 10,
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(_isMicOn ? Icons.mic : Icons.mic_off, color: Colors.white, size: 22),
                               ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildTopHeader() {
     return Padding(
@@ -329,9 +282,7 @@ class _MultiCallLiveScreenState extends State<MultiCallLiveScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0x99512DA8), Color(0x99311B92)],
-                  ),
+                  gradient: const LinearGradient(colors: [Color(0x99512DA8), Color(0x99311B92)]),
                   borderRadius: BorderRadius.circular(22),
                   border: Border.all(color: const Color(0xFFB388FF), width: 1),
                 ),
@@ -345,19 +296,9 @@ class _MultiCallLiveScreenState extends State<MultiCallLiveScreen> {
                       children: const [
                         Text(
                           'Royan',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.bold),
                         ),
-                        Text(
-                          'ID 10026092',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 9.5,
-                          ),
-                        ),
+                        Text('ID 10026092', style: TextStyle(color: Colors.white70, fontSize: 9.5)),
                       ],
                     ),
                     const SizedBox(width: 6),
@@ -376,17 +317,10 @@ class _MultiCallLiveScreenState extends State<MultiCallLiveScreen> {
                   const SizedBox(width: 6),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: Colors.black45,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(12)),
                     child: const Text(
                       '9423',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -395,10 +329,7 @@ class _MultiCallLiveScreenState extends State<MultiCallLiveScreen> {
                     child: Container(
                       width: 28,
                       height: 28,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.black45,
-                      ),
+                      decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.black45),
                       child: const Icon(Icons.close, color: Colors.white, size: 16),
                     ),
                   ),
@@ -414,10 +345,7 @@ class _MultiCallLiveScreenState extends State<MultiCallLiveScreen> {
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                decoration: BoxDecoration(
-                  color: const Color(0x99D500F9),
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                decoration: BoxDecoration(color: const Color(0x99D500F9), borderRadius: BorderRadius.circular(12)),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -425,11 +353,7 @@ class _MultiCallLiveScreenState extends State<MultiCallLiveScreen> {
                     const SizedBox(width: 4),
                     Text(
                       '${(_diamondsCount / 1000).toStringAsFixed(1)}K',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                      ),
+                      style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800),
                     ),
                   ],
                 ),
@@ -437,10 +361,7 @@ class _MultiCallLiveScreenState extends State<MultiCallLiveScreen> {
               const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                decoration: BoxDecoration(
-                  color: const Color(0x9900B0FF),
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                decoration: BoxDecoration(color: const Color(0x9900B0FF), borderRadius: BorderRadius.circular(12)),
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -448,11 +369,7 @@ class _MultiCallLiveScreenState extends State<MultiCallLiveScreen> {
                     SizedBox(width: 4),
                     Text(
                       'Bonus Center',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
                     ),
                   ],
                 ),
@@ -486,10 +403,7 @@ class _MultiCallLiveScreenState extends State<MultiCallLiveScreen> {
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.15),
-                  style: BorderStyle.solid,
-                ),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.15), style: BorderStyle.solid),
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -498,11 +412,7 @@ class _MultiCallLiveScreenState extends State<MultiCallLiveScreen> {
                   SizedBox(height: 6),
                   Text(
                     'Take Seat',
-                    style: TextStyle(
-                      color: Color(0xFFB388FF),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: TextStyle(color: Color(0xFFB388FF), fontSize: 11, fontWeight: FontWeight.w700),
                   ),
                 ],
               ),
@@ -522,12 +432,7 @@ class _MultiCallLiveScreenState extends State<MultiCallLiveScreen> {
                 width: seat['isSpeaking'] == true ? 2 : 1,
               ),
               boxShadow: seat['isSpeaking'] == true
-                  ? [
-                      BoxShadow(
-                        color: const Color(0xFF00E676).withValues(alpha: 0.4),
-                        blurRadius: 10,
-                      ),
-                    ]
+                  ? [BoxShadow(color: const Color(0xFF00E676).withValues(alpha: 0.4), blurRadius: 10)]
                   : null,
             ),
             child: ClipRRect(
@@ -558,18 +463,12 @@ class _MultiCallLiveScreenState extends State<MultiCallLiveScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFFFFD700), Color(0xFFFF6F00)],
-                          ),
+                          gradient: const LinearGradient(colors: [Color(0xFFFFD700), Color(0xFFFF6F00)]),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: const Text(
                           'SSVIP',
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 8,
-                            fontWeight: FontWeight.w900,
-                          ),
+                          style: TextStyle(color: Colors.black, fontSize: 8, fontWeight: FontWeight.w900),
                         ),
                       ),
                     ),
@@ -580,10 +479,7 @@ class _MultiCallLiveScreenState extends State<MultiCallLiveScreen> {
                     right: 4,
                     child: Container(
                       padding: const EdgeInsets.all(3),
-                      decoration: BoxDecoration(
-                        color: Colors.black54,
-                        shape: BoxShape.circle,
-                      ),
+                      decoration: BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
                       child: Icon(
                         seat['isSpeaking'] == true ? Icons.mic : Icons.mic_off,
                         color: seat['isSpeaking'] == true ? const Color(0xFF00E676) : Colors.white60,
@@ -619,11 +515,7 @@ class _MultiCallLiveScreenState extends State<MultiCallLiveScreen> {
                           ),
                         Text(
                           seat['name'],
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],

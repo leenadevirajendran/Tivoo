@@ -17,11 +17,7 @@ class AnimatedGradientBackground extends StatelessWidget {
   const AnimatedGradientBackground({
     super.key,
     this.child,
-    this.colors = const [
-      AppColors.primaryPink,
-      AppColors.primaryPurple,
-      AppColors.primaryCyan,
-    ],
+    this.colors = const [AppColors.primaryPink, AppColors.primaryPurple, AppColors.primaryCyan],
     this.backgroundColor = AppColors.background,
   });
 
@@ -66,9 +62,7 @@ class AnimatedGradientBackground extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: RadialGradient(
-          colors: [color.withValues(alpha: 0.38), color.withValues(alpha: 0)],
-        ),
+        gradient: RadialGradient(colors: [color.withValues(alpha: 0.38), color.withValues(alpha: 0)]),
       ),
     );
   }

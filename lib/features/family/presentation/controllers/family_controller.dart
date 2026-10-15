@@ -180,7 +180,7 @@ class FamilyController extends StateNotifier<FamilyState> {
     );
   }
 
-  /// Claim Gray Tiki once target of 500 views is achieved
+  /// Claim Gray Tivoo once target of 500 views is achieved
   void claimGrayTiki() {
     state = state.copyWith(
       verification: state.verification.copyWith(
@@ -190,6 +190,8 @@ class FamilyController extends StateNotifier<FamilyState> {
       ),
     );
   }
+
+  void claimGrayTivoo() => claimGrayTiki();
 
   /// Create a new Family Team (Allowed only with Gray Tiki)
   bool createFamilyTeam({

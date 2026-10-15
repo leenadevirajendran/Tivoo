@@ -43,8 +43,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
       'authorAvatar': AppAssets.status4,
       'badge': 'VIP 32',
       'photo': AppAssets.status2,
-      'caption':
-          'Acoustic vibes on sunset terrace. Thank you all for stopping by during the live stream today! 🌸🎸',
+      'caption': 'Acoustic vibes on sunset terrace. Thank you all for stopping by during the live stream today! 🌸🎸',
       'timeAgo': '25 menit yang lalu',
       'likes': 214,
       'comments': 38,
@@ -57,8 +56,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
       'authorAvatar': AppAssets.status2,
       'badge': 'MVP 99',
       'photo': AppAssets.status5,
-      'caption':
-          'Late night sound studio production complete! Big drop coming soon for all my supporters! 🔥🎧',
+      'caption': 'Late night sound studio production complete! Big drop coming soon for all my supporters! 🔥🎧',
       'timeAgo': '1 jam yang lalu',
       'likes': 560,
       'comments': 72,
@@ -127,11 +125,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                 color: Colors.white.withValues(alpha: 0.08),
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(
-                                Icons.tune_rounded,
-                                color: Colors.white70,
-                                size: 20,
-                              ),
+                              child: const Icon(Icons.tune_rounded, color: Colors.white70, size: 20),
                             ),
                           ],
                         ),
@@ -196,9 +190,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                                   decoration: BoxDecoration(
                                     gradient: isSelected
-                                        ? const LinearGradient(
-                                            colors: [Color(0xFF00E5FF), Color(0xFF00B0FF)],
-                                          )
+                                        ? const LinearGradient(colors: [Color(0xFF00E5FF), Color(0xFF00B0FF)])
                                         : null,
                                     color: isSelected ? null : Colors.white.withValues(alpha: 0.08),
                                     borderRadius: BorderRadius.circular(20),
@@ -218,8 +210,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                         style: TextStyle(
                                           color: isSelected ? Colors.black87 : Colors.white,
                                           fontSize: 12,
-                                          fontWeight:
-                                              isSelected ? FontWeight.w800 : FontWeight.w600,
+                                          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
                                         ),
                                       ),
                                     ],
@@ -238,13 +229,10 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 90),
                   sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final post = _posts[index];
-                        return _buildPostCard(post, index);
-                      },
-                      childCount: _posts.length,
-                    ),
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final post = _posts[index];
+                      return _buildPostCard(post, index);
+                    }, childCount: _posts.length),
                   ),
                 ),
               ],
@@ -257,10 +245,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
               child: IgnorePointer(
                 child: Container(
                   padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.black.withValues(alpha: 0.35),
-                  ),
+                  decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.black.withValues(alpha: 0.35)),
                   child: const Text('🚀⭐', style: TextStyle(fontSize: 22)),
                 ),
               ),
@@ -271,11 +256,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
     );
   }
 
-  Widget _buildSubTab({
-    required String title,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildSubTab({required String title, required bool isSelected, required VoidCallback onTap}) {
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -294,9 +275,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
             width: isSelected ? 22 : 0,
             height: 2.5,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF00E5FF), Color(0xFF00B0FF)],
-              ),
+              gradient: const LinearGradient(colors: [Color(0xFF00E5FF), Color(0xFF00B0FF)]),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -311,17 +290,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF161229),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.08),
-          width: 0.8,
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x33000000),
-            blurRadius: 16,
-            offset: Offset(0, 4),
-          ),
-        ],
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 0.8),
+        boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 16, offset: Offset(0, 4))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -342,11 +312,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                           Flexible(
                             child: Text(
                               post['authorName'],
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: const TextStyle(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.bold),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -354,30 +320,18 @@ class _CommunityScreenState extends State<CommunityScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
                             decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFFFF4081), Color(0xFFE040FB)],
-                              ),
+                              gradient: const LinearGradient(colors: [Color(0xFFFF4081), Color(0xFFE040FB)]),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
                               post['badge'],
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 8.5,
-                                fontWeight: FontWeight.w900,
-                              ),
+                              style: const TextStyle(color: Colors.white, fontSize: 8.5, fontWeight: FontWeight.w900),
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 2),
-                      Text(
-                        post['timeAgo'],
-                        style: const TextStyle(
-                          color: Colors.white38,
-                          fontSize: 10.5,
-                        ),
-                      ),
+                      Text(post['timeAgo'], style: const TextStyle(color: Colors.white38, fontSize: 10.5)),
                     ],
                   ),
                 ),
@@ -396,24 +350,14 @@ class _CommunityScreenState extends State<CommunityScreen> {
               margin: const EdgeInsets.symmetric(horizontal: 12),
               height: 230,
               width: double.infinity,
-              child: Image.asset(
-                post['photo'],
-                fit: BoxFit.cover,
-              ),
+              child: Image.asset(post['photo'], fit: BoxFit.cover),
             ),
           ),
 
           // Caption
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
-            child: Text(
-              post['caption'],
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 13,
-                height: 1.35,
-              ),
-            ),
+            child: Text(post['caption'], style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.35)),
           ),
 
           // Interaction Bar (Likes, Comments, Shares)
@@ -451,19 +395,11 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(
-                      Icons.chat_bubble_outline_rounded,
-                      color: Colors.white60,
-                      size: 18,
-                    ),
+                    const Icon(Icons.chat_bubble_outline_rounded, color: Colors.white60, size: 18),
                     const SizedBox(width: 5),
                     Text(
                       '${post['comments']}',
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: const TextStyle(color: Colors.white70, fontSize: 12.5, fontWeight: FontWeight.w700),
                     ),
                   ],
                 ),
@@ -474,19 +410,11 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(
-                      Icons.share_outlined,
-                      color: Colors.white60,
-                      size: 18,
-                    ),
+                    const Icon(Icons.share_outlined, color: Colors.white60, size: 18),
                     const SizedBox(width: 5),
                     Text(
                       '${post['shares']}',
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: const TextStyle(color: Colors.white70, fontSize: 12.5, fontWeight: FontWeight.w700),
                     ),
                   ],
                 ),

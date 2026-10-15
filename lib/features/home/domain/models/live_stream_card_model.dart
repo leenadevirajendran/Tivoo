@@ -19,6 +19,12 @@ class LiveStreamCardModel {
   final bool isPk;
   final int? heatScore;
 
+  /// Interests shown on the home card (e.g. 'Music', 'Dance').
+  final List<String> tags;
+
+  /// Top-right card label: 'Top Host', 'Rising Star', 'Popular', 'New' or 'Trending'.
+  final String? badge;
+
   const LiveStreamCardModel({
     required this.id,
     this.userId,
@@ -39,6 +45,8 @@ class LiveStreamCardModel {
     this.likesCount,
     this.isPk = false,
     this.heatScore,
+    this.tags = const [],
+    this.badge,
   });
 
   String get displayUserId {
@@ -67,6 +75,11 @@ class LiveStreamCardModel {
     bool? isLive,
     bool? isFollowing,
     String? category,
+    String? likesCount,
+    bool? isPk,
+    int? heatScore,
+    List<String>? tags,
+    String? badge,
   }) {
     return LiveStreamCardModel(
       id: id ?? this.id,
@@ -85,6 +98,11 @@ class LiveStreamCardModel {
       isLive: isLive ?? this.isLive,
       isFollowing: isFollowing ?? this.isFollowing,
       category: category ?? this.category,
+      likesCount: likesCount ?? this.likesCount,
+      isPk: isPk ?? this.isPk,
+      heatScore: heatScore ?? this.heatScore,
+      tags: tags ?? this.tags,
+      badge: badge ?? this.badge,
     );
   }
 }

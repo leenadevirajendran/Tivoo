@@ -4,7 +4,6 @@ import '../domain/models/explore_stream_model.dart';
 class MockExploreData {
   MockExploreData._();
 
-
   static const List<ExploreStreamModel> exploreStreams = [
     ExploreStreamModel(
       id: 'exp_1',

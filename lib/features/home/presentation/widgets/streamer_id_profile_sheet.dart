@@ -15,15 +15,9 @@ import '../../domain/models/live_stream_card_model.dart';
 class StreamerIdProfileSheet extends StatefulWidget {
   final LiveStreamCardModel stream;
 
-  const StreamerIdProfileSheet({
-    super.key,
-    required this.stream,
-  });
+  const StreamerIdProfileSheet({super.key, required this.stream});
 
-  static Future<void> show(
-    BuildContext context, {
-    required LiveStreamCardModel stream,
-  }) {
+  static Future<void> show(BuildContext context, {required LiveStreamCardModel stream}) {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -65,17 +59,8 @@ class _StreamerIdProfileSheetState extends State<StreamerIdProfileSheet> {
       decoration: BoxDecoration(
         color: const Color(0xFF0D111A),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        border: Border.all(
-          color: const Color(0x33FFDF00),
-          width: 1.2,
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black87,
-            blurRadius: 30,
-            offset: Offset(0, -6),
-          ),
-        ],
+        border: Border.all(color: const Color(0x33FFDF00), width: 1.2),
+        boxShadow: const [BoxShadow(color: Colors.black87, blurRadius: 30, offset: Offset(0, -6))],
       ),
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
       child: SafeArea(
@@ -92,25 +77,15 @@ class _StreamerIdProfileSheetState extends State<StreamerIdProfileSheet> {
                 Container(
                   width: 44,
                   height: 4.5,
-                  decoration: BoxDecoration(
-                    color: Colors.white24,
-                    borderRadius: BorderRadius.circular(3),
-                  ),
+                  decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(3)),
                 ),
                 GestureDetector(
                   onTap: () => Navigator.of(context).pop(),
                   child: Container(
                     width: 32,
                     height: 32,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.08),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.close_rounded,
-                      color: Colors.white70,
-                      size: 18,
-                    ),
+                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.08), shape: BoxShape.circle),
+                    child: const Icon(Icons.close_rounded, color: Colors.white70, size: 18),
                   ),
                 ),
               ],
@@ -127,16 +102,8 @@ class _StreamerIdProfileSheetState extends State<StreamerIdProfileSheet> {
                   padding: const EdgeInsets.all(3),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(
-                      color: const Color(0xFFFFDF00),
-                      width: 2.2,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFFFDF00).withValues(alpha: 0.35),
-                        blurRadius: 16,
-                      ),
-                    ],
+                    border: Border.all(color: const Color(0xFFFFDF00), width: 2.2),
+                    boxShadow: [BoxShadow(color: const Color(0xFFFFDF00).withValues(alpha: 0.35), blurRadius: 16)],
                   ),
                   child: CustomAvatar(
                     radius: 40,
@@ -148,10 +115,7 @@ class _StreamerIdProfileSheetState extends State<StreamerIdProfileSheet> {
                   Positioned(
                     bottom: -6,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
                         color: const Color(0xFFFF2D55),
                         borderRadius: BorderRadius.circular(10),
@@ -160,8 +124,7 @@ class _StreamerIdProfileSheetState extends State<StreamerIdProfileSheet> {
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.fiber_manual_record,
-                              color: Colors.white, size: 8),
+                          Icon(Icons.fiber_manual_record, color: Colors.white, size: 8),
                           SizedBox(width: 3),
                           Text(
                             'LIVE',
@@ -187,19 +150,11 @@ class _StreamerIdProfileSheetState extends State<StreamerIdProfileSheet> {
               children: [
                 Text(
                   stream.streamerName,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800),
                 ),
                 if (stream.isVerified) ...[
                   const SizedBox(width: 6),
-                  const Icon(
-                    Icons.verified,
-                    color: Color(0xFFFFDF00),
-                    size: 19,
-                  ),
+                  const Icon(Icons.verified, color: Color(0xFFFFDF00), size: 19),
                 ],
               ],
             ),
@@ -210,24 +165,16 @@ class _StreamerIdProfileSheetState extends State<StreamerIdProfileSheet> {
             GestureDetector(
               onTap: _copyUserId,
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                 decoration: BoxDecoration(
                   color: const Color(0xFF161E30),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: const Color(0x66FFDF00),
-                    width: 1,
-                  ),
+                  border: Border.all(color: const Color(0x66FFDF00), width: 1),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(
-                      Icons.badge_outlined,
-                      color: Color(0xFFFFDF00),
-                      size: 15,
-                    ),
+                    const Icon(Icons.badge_outlined, color: Color(0xFFFFDF00), size: 15),
                     const SizedBox(width: 6),
                     Text(
                       'User ID: ${stream.displayUserId}',
@@ -239,11 +186,7 @@ class _StreamerIdProfileSheetState extends State<StreamerIdProfileSheet> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    const Icon(
-                      Icons.copy_rounded,
-                      color: Colors.white70,
-                      size: 14,
-                    ),
+                    const Icon(Icons.copy_rounded, color: Colors.white70, size: 14),
                   ],
                 ),
               ),
@@ -257,12 +200,7 @@ class _StreamerIdProfileSheetState extends State<StreamerIdProfileSheet> {
               child: Text(
                 stream.streamerBio,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  height: 1.3,
-                ),
+                style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500, height: 1.3),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -315,34 +253,22 @@ class _StreamerIdProfileSheetState extends State<StreamerIdProfileSheet> {
                       );
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _isFollowing
-                          ? const Color(0xFF222B3D)
-                          : const Color(0xFFFFDF00),
-                      foregroundColor:
-                          _isFollowing ? Colors.white : Colors.black,
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 12, horizontal: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
+                      backgroundColor: _isFollowing ? const Color(0xFF222B3D) : const Color(0xFFFFDF00),
+                      foregroundColor: _isFollowing ? Colors.white : Colors.black,
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       elevation: 0,
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          _isFollowing ? Icons.check : Icons.person_add_rounded,
-                          size: 16,
-                        ),
+                        Icon(_isFollowing ? Icons.check : Icons.person_add_rounded, size: 16),
                         const SizedBox(width: 4),
                         Flexible(
                           child: Text(
                             _isFollowing ? 'Following' : 'Follow',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                            ),
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -363,15 +289,9 @@ class _StreamerIdProfileSheetState extends State<StreamerIdProfileSheet> {
                     },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: const Color(0xFFFFDF00),
-                      side: const BorderSide(
-                        color: Color(0xFFFFDF00),
-                        width: 1.4,
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 12, horizontal: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
+                      side: const BorderSide(color: Color(0xFFFFDF00), width: 1.4),
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
                     child: const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -382,10 +302,7 @@ class _StreamerIdProfileSheetState extends State<StreamerIdProfileSheet> {
                         Flexible(
                           child: Text(
                             'Send Stars',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                            ),
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -403,9 +320,7 @@ class _StreamerIdProfileSheetState extends State<StreamerIdProfileSheet> {
                     GiftBottomSheet.show(context, (gift) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text(
-                            'Sent ${gift.name} to ${stream.streamerName}! 🎁',
-                          ),
+                          content: Text('Sent ${gift.name} to ${stream.streamerName}! 🎁'),
                           duration: const Duration(seconds: 2),
                         ),
                       );
@@ -419,11 +334,7 @@ class _StreamerIdProfileSheetState extends State<StreamerIdProfileSheet> {
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: Colors.white24),
                     ),
-                    child: const Icon(
-                      Icons.card_giftcard_rounded,
-                      color: AppColors.primaryPink,
-                      size: 20,
-                    ),
+                    child: const Icon(Icons.card_giftcard_rounded, color: AppColors.primaryPink, size: 20),
                   ),
                 ),
               ],
@@ -435,29 +346,17 @@ class _StreamerIdProfileSheetState extends State<StreamerIdProfileSheet> {
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const ProfileScreen(),
-                  ),
-                );
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfileScreen()));
               },
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     'View Full Profile',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600),
                   ),
                   SizedBox(width: 4),
-                  Icon(
-                    Icons.arrow_forward_rounded,
-                    color: Colors.white70,
-                    size: 14,
-                  ),
+                  Icon(Icons.arrow_forward_rounded, color: Colors.white70, size: 14),
                 ],
               ),
             ),
@@ -474,22 +373,14 @@ class _StreamerIdProfileSheetState extends State<StreamerIdProfileSheet> {
         children: [
           Text(
             value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 13.5,
-              fontWeight: FontWeight.w800,
-            ),
+            style: const TextStyle(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.w800),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 2),
           Text(
             label,
-            style: const TextStyle(
-              color: Colors.white54,
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-            ),
+            style: const TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.w500),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -499,10 +390,6 @@ class _StreamerIdProfileSheetState extends State<StreamerIdProfileSheet> {
   }
 
   Widget _buildDivider() {
-    return Container(
-      width: 1,
-      height: 22,
-      color: Colors.white12,
-    );
+    return Container(width: 1, height: 22, color: Colors.white12);
   }
 }

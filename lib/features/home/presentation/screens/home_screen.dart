@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../../core/theme/luxe_theme.dart';
+import '../../../pk_battle/pk_battle_live_screen.dart';
 import '../controllers/home_controller.dart';
 import '../widgets/home_header.dart';
+import '../widgets/home_hero_banner.dart';
 import '../widgets/popular_taalmil_view.dart';
-import 'chat_room_party_screen.dart';
-import 'pk_battle_live_screen.dart';
+import '../../../chat_room/chat_room_party_screen.dart';
+import '../../../wallet/presentation/screens/wallet_screen.dart';
 
-/// Main Tivoo Home Screen with 3 Category Tabs:
-/// - Live: 2-column stream grid matching Images 1 & 2
-/// - PK Battle: Competition arena with 10m/20m timer, invite, score clash bar, top star MVPs, win/loss
-/// - Chat Room: Audio Party (9 seats) & Video Party (6 member slots fully visible with zero cut-off)
+/// Home: header, hero banner, category pills (Live / PK Battle / Chat Room / Popular)
+/// and the 2-column grid of live cards. PK Battle and Chat Room open full screen.
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -18,106 +20,74 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  int _selectedTabIndex = 0; // 0 = Live, 1 = PK Battle, 2 = Chat Room
+  static const _live = 0, _pk = 1, _chat = 2, _popular = 3;
+  int _tab = _live;
 
-  void _navigateToTab(int index) {
-    if (index == 1) {
-      // PK Battle tab clicked: navigate to dedicated full-screen PK Battle Live Screen!
+  void _onTab(int index) {
+    if (index == _pk) {
+      Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (context) => PkBattleLiveScreen(onBack: () => Navigator.of(context).pop())));
+      return;
+    }
+    if (index == _chat) {
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (context) => PkBattleLiveScreen(
-            onBack: () => Navigator.of(context).pop(),
-          ),
+          builder: (context) => ChatRoomPartyScreen(initialStage: 1, onBack: () => Navigator.of(context).pop()),
         ),
       );
       return;
     }
-    if (index == 2) {
-      // Chat Room tab clicked: navigate to dedicated full-screen Chat Room Party Screen!
-      // This ensures 100% full screen with no overlapping home header and no bottom nav bar!
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => ChatRoomPartyScreen(
-            initialStage: 1,
-            onBack: () => Navigator.of(context).pop(),
-          ),
-        ),
-      );
-      return;
-    }
-    // Live (0) is the default home stream feed
-    if (_selectedTabIndex != index) {
-      setState(() => _selectedTabIndex = index);
-    }
+    setState(() => _tab = index);
+  }
+
+  void _toast(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), duration: const Duration(seconds: 1)));
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(homeControllerProvider);
-    final displayStreams = state.allStreams;
+    final streams = ref.watch(homeControllerProvider).allStreams;
+    final shown = _tab == _popular
+        ? ([...streams]..sort((a, b) => (b.heatScore ?? 0).compareTo(a.heatScore ?? 0)))
+        : streams;
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: kHomeNavy,
       body: Stack(
         children: [
-          // Home Feed: Live Stream Grid
-          Positioned.fill(
-            child: PopularTaalmilView(streams: displayStreams),
-          ),
-
-          // 2. Floating Top Header with Tabs (Live, PK Battle, Chat Room)
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Color(0xF2000000),
-                    Color(0xB3000000),
-                    Colors.transparent,
-                  ],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  stops: [0.0, 0.75, 1.0],
-                ),
-              ),
-              child: SafeArea(
+          const Positioned.fill(child: LuxeBackdrop()),
+          CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              SliverSafeArea(
                 bottom: false,
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: HomeHeader(
-                    selectedIndex: _selectedTabIndex,
-                    onIndexChanged: _navigateToTab,
-                    onSearchTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Search live streamers, topics & rooms'),
-                          duration: Duration(seconds: 1),
-                        ),
-                      );
-                    },
-                    onFavoritesTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Favorite streamers list'),
-                          duration: Duration(seconds: 1),
-                        ),
-                      );
-                    },
-                    onHistoryTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Watch history'),
-                          duration: Duration(seconds: 1),
-                        ),
-                      );
-                    },
+                sliver: SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 18, 14, 14),
+                    child: HomeHeader(
+                      notificationCount: 5,
+                      onSearchTap: () => _toast('Search people, live streams & tags'),
+                      onWalletTap: () => WalletScreen.push(context),
+                      onNotificationsTap: () => _toast('Notifications'),
+                    ),
                   ),
                 ),
               ),
-            ),
+              const SliverToBoxAdapter(
+                child: Padding(padding: EdgeInsets.symmetric(horizontal: 14), child: HomeHeroBanner()),
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: HomeCategoryTabs(selectedIndex: _tab, onSelected: _onTab),
+                ),
+              ),
+              PopularTaalmilView(
+                streams: shown,
+                onFollowTap: (s) => ref.read(homeControllerProvider.notifier).toggleFollow(s.id),
+              ),
+            ],
           ),
         ],
       ),

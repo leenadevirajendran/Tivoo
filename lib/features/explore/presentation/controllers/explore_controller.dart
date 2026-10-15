@@ -26,11 +26,7 @@ class ExploreState {
     }).toList();
   }
 
-  ExploreState copyWith({
-    List<ExploreStreamModel>? allStreams,
-    String? searchQuery,
-    bool? isReelsView,
-  }) {
+  ExploreState copyWith({List<ExploreStreamModel>? allStreams, String? searchQuery, bool? isReelsView}) {
     return ExploreState(
       allStreams: allStreams ?? this.allStreams,
       searchQuery: searchQuery ?? this.searchQuery,
@@ -68,7 +64,6 @@ class ExploreController extends StateNotifier<ExploreState> {
   }
 }
 
-final exploreControllerProvider =
-    StateNotifierProvider<ExploreController, ExploreState>((ref) {
+final exploreControllerProvider = StateNotifierProvider<ExploreController, ExploreState>((ref) {
   return ExploreController();
 });

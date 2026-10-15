@@ -45,19 +45,14 @@ class NeonTabBar extends StatelessWidget {
         itemBuilder: (context, index) {
           final isSelected = index == selectedIndex;
           final category = categories[index];
-          final gradient =
-              gradientForCategory?.call(category) ?? selectedGradient;
+          final gradient = gradientForCategory?.call(category) ?? selectedGradient;
           final emoji = isSelected ? emojiForCategory?.call(category) : null;
 
           final unselectedBg = isDark
               ? AppColors.surfaceColor.withValues(alpha: 0.6)
               : Colors.black.withValues(alpha: 0.05);
-          final unselectedBorder = isDark
-              ? Colors.white.withValues(alpha: 0.1)
-              : Colors.black.withValues(alpha: 0.08);
-          final unselectedTextColor = isDark
-              ? AppColors.textSecondary
-              : const Color(0xFF555566);
+          final unselectedBorder = isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.08);
+          final unselectedTextColor = isDark ? AppColors.textSecondary : const Color(0xFF555566);
 
           final selectedTextColor = gradient.colors.any((c) => c.computeLuminance() > 0.4)
               ? AppColors.textOnPrimary
@@ -71,24 +66,16 @@ class NeonTabBar extends StatelessWidget {
               curve: Curves.easeOutBack,
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 22,
-                  vertical: 10,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(24),
                   gradient: isSelected ? gradient : null,
                   color: isSelected ? null : unselectedBg,
-                  border: Border.all(
-                    color: isSelected ? Colors.transparent : unselectedBorder,
-                    width: 0.8,
-                  ),
+                  border: Border.all(color: isSelected ? Colors.transparent : unselectedBorder, width: 0.8),
                   boxShadow: isSelected
                       ? [
                           BoxShadow(
-                            color: gradient.colors.first.withValues(
-                              alpha: 0.45,
-                            ),
+                            color: gradient.colors.first.withValues(alpha: 0.45),
                             blurRadius: 14,
                             offset: const Offset(0, 4),
                           ),
@@ -98,10 +85,7 @@ class NeonTabBar extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (emoji != null) ...[
-                      Text(emoji, style: const TextStyle(fontSize: 14)),
-                      const SizedBox(width: 6),
-                    ],
+                    if (emoji != null) ...[Text(emoji, style: const TextStyle(fontSize: 14)), const SizedBox(width: 6)],
                     Text(
                       category,
                       style: isSelected
@@ -110,10 +94,7 @@ class NeonTabBar extends StatelessWidget {
                               fontWeight: FontWeight.w800,
                               fontSize: 14,
                             )
-                          : AppTextStyles.tabUnselected.copyWith(
-                              color: unselectedTextColor,
-                              fontSize: 14,
-                            ),
+                          : AppTextStyles.tabUnselected.copyWith(color: unselectedTextColor, fontSize: 14),
                     ),
                   ],
                 ),

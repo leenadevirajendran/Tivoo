@@ -165,11 +165,7 @@ class _LiveVideoPlayerState extends State<LiveVideoPlayer> {
 
   @override
   Widget build(BuildContext context) {
-    final hasActiveVideo =
-        _isInitialized &&
-        _controller != null &&
-        _controller!.value.isInitialized &&
-        !_hasError;
+    final hasActiveVideo = _isInitialized && _controller != null && _controller!.value.isInitialized && !_hasError;
 
     return VisibilityDetector(
       key: ValueKey('live-video-${widget.playerId}'),
@@ -192,12 +188,8 @@ class _LiveVideoPlayerState extends State<LiveVideoPlayer> {
                     fit: widget.fit,
                     clipBehavior: Clip.hardEdge,
                     child: SizedBox(
-                      width: (_controller!.value.size.width > 0)
-                          ? _controller!.value.size.width
-                          : 1080,
-                      height: (_controller!.value.size.height > 0)
-                          ? _controller!.value.size.height
-                          : 1920,
+                      width: (_controller!.value.size.width > 0) ? _controller!.value.size.width : 1080,
+                      height: (_controller!.value.size.height > 0) ? _controller!.value.size.height : 1920,
                       child: VideoPlayer(_controller!),
                     ),
                   ),
@@ -214,9 +206,7 @@ class _LiveVideoPlayerState extends State<LiveVideoPlayer> {
               child: LinearProgressIndicator(
                 minHeight: 2.0,
                 backgroundColor: Colors.transparent,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  AppColors.primaryYellow.withValues(alpha: 0.75),
-                ),
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryYellow.withValues(alpha: 0.75)),
               ),
             ),
 
@@ -233,15 +223,10 @@ class _LiveVideoPlayerState extends State<LiveVideoPlayer> {
                   decoration: BoxDecoration(
                     color: Colors.black.withValues(alpha: 0.55),
                     shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      width: 1,
-                    ),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 1),
                   ),
                   child: Icon(
-                    _isMuted
-                        ? Icons.volume_off_rounded
-                        : Icons.volume_up_rounded,
+                    _isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
                     color: Colors.white,
                     size: 16,
                   ),
@@ -254,8 +239,7 @@ class _LiveVideoPlayerState extends State<LiveVideoPlayer> {
   }
 
   Widget _buildPlaceholder() {
-    if (widget.placeholderAssetPath != null &&
-        widget.placeholderAssetPath!.isNotEmpty) {
+    if (widget.placeholderAssetPath != null && widget.placeholderAssetPath!.isNotEmpty) {
       return Image.asset(
         widget.placeholderAssetPath!,
         fit: widget.fit,
@@ -271,8 +255,7 @@ class _LiveVideoPlayerState extends State<LiveVideoPlayer> {
         ),
       );
     }
-    if (widget.placeholderImageUrl != null &&
-        widget.placeholderImageUrl!.isNotEmpty) {
+    if (widget.placeholderImageUrl != null && widget.placeholderImageUrl!.isNotEmpty) {
       return CachedNetworkImage(
         imageUrl: widget.placeholderImageUrl!,
         fit: widget.fit,
@@ -286,8 +269,7 @@ class _LiveVideoPlayerState extends State<LiveVideoPlayer> {
             ),
           ),
         ),
-        errorWidget: (context, url, error) =>
-            Container(color: const Color(0xFF1B1B2C)),
+        errorWidget: (context, url, error) => Container(color: const Color(0xFF1B1B2C)),
       );
     }
     return Container(

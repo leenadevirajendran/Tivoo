@@ -189,9 +189,7 @@ class ReelVideoManager {
   /// Pauses a specific reel
   Future<void> pause(String videoPath) async {
     final controller = _pool[videoPath];
-    if (controller != null &&
-        controller.value.isInitialized &&
-        controller.value.isPlaying) {
+    if (controller != null && controller.value.isInitialized && controller.value.isPlaying) {
       try {
         await controller.pause();
         _notify();

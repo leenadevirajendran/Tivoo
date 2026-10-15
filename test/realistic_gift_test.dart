@@ -52,45 +52,76 @@ void main() {
     });
   });
 
-  group('User Reference Gifts List Tests', () {
-    test('MockLiveComments.virtualGifts contains reference gifts', () {
+  group('User Reference Gifts (14 Genuine Sticker Gifts) List Tests', () {
+    test('MockLiveComments.virtualGifts contains exactly the 14 user reference gifts', () {
       final gifts = MockLiveComments.virtualGifts;
-      expect(gifts.length, greaterThanOrEqualTo(10));
+      expect(gifts.length, greaterThanOrEqualTo(14));
 
       final giftNames = gifts.map((g) => g.name).toSet();
       expect(giftNames, containsAll([
-        'Galaxy Rocket',
-        'Royal Crown',
-        'Golden Horse',
-        'Angel Vehicle',
-        'Love Castle',
-        'Luxury Car',
-        'Luxury Yacht',
-        'Diamond Wings',
-        'Star Throne',
-        'Roses',
-        'Ocean Dolphin',
+        'Rocket',
+        'Angel Wings',
+        'Flowers',
+        'Kitty',
+        'Tiki Love',
+        'Love',
+        'Yacht',
+        'Super Car',
+        'Diamond',
+        'Crown',
+        'Cake',
+        'Teddy',
+        'World Tour',
+        'Castle',
       ]));
-      expect(giftNames.contains('Rose Carriage'), isFalse);
-      expect(giftNames.contains('Shooting Star'), isFalse);
-
-      final dolphin = gifts.firstWhere((g) => g.name == 'Ocean Dolphin');
-      expect(dolphin.diamonds, 10000);
 
       // Check specific coin values matching user screenshot badges
-      final rocket = gifts.firstWhere((g) => g.name == 'Galaxy Rocket');
+      final rocket = gifts.firstWhere((g) => g.name == 'Rocket');
       expect(rocket.diamonds, 1000);
 
-      final royalCrown = gifts.firstWhere((g) => g.name == 'Royal Crown');
-      expect(royalCrown.diamonds, 50000);
+      final angelWings = gifts.firstWhere((g) => g.name == 'Angel Wings');
+      expect(angelWings.diamonds, 500);
 
-      final goldenHorse = gifts.firstWhere((g) => g.name == 'Golden Horse');
-      expect(goldenHorse.diamonds, 25000);
+      final yacht = gifts.firstWhere((g) => g.name == 'Yacht');
+      expect(yacht.diamonds, 2000);
+
+      final superCar = gifts.firstWhere((g) => g.name == 'Super Car');
+      expect(superCar.diamonds, 1000);
+
+      final diamond = gifts.firstWhere((g) => g.name == 'Diamond');
+      expect(diamond.diamonds, 500);
+
+      final crown = gifts.firstWhere((g) => g.name == 'Crown');
+      expect(crown.diamonds, 200);
+
+      final cake = gifts.firstWhere((g) => g.name == 'Cake');
+      expect(cake.diamonds, 100);
+
+      final teddy = gifts.firstWhere((g) => g.name == 'Teddy');
+      expect(teddy.diamonds, 50);
+
+      final kitty = gifts.firstWhere((g) => g.name == 'Kitty');
+      expect(kitty.diamonds, 50);
+
+      final tikiLove = gifts.firstWhere((g) => g.name == 'Tiki Love');
+      expect(tikiLove.diamonds, 100);
+
+      final love = gifts.firstWhere((g) => g.name == 'Love');
+      expect(love.diamonds, 10);
+
+      final flowers = gifts.firstWhere((g) => g.name == 'Flowers');
+      expect(flowers.diamonds, 10);
+
+      final castle = gifts.firstWhere((g) => g.name == 'Castle');
+      expect(castle.diamonds, 5000);
+
+      final worldTour = gifts.firstWhere((g) => g.name == 'World Tour');
+      expect(worldTour.diamonds, 10000);
     });
   });
 
-  group('ActiveGiftAnimationOverlay Presentation Tests', () {
-    testWidgets('triggers Galaxy Rocket gift, renders animation and skip button is removed',
+  group('ActiveGiftAnimationOverlay Sticker Presentation & Skip Tests', () {
+    testWidgets('triggers Rocket gift, renders genuine sticker asset and skip button is removed',
         (WidgetTester tester) async {
       final GlobalKey<ActiveGiftAnimationOverlayState> overlayKey =
           GlobalKey<ActiveGiftAnimationOverlayState>();
@@ -108,7 +139,7 @@ void main() {
 
       expect(find.text('Live Stream Screen'), findsOneWidget);
 
-      final rocketGift = MockLiveComments.virtualGifts.firstWhere((g) => g.name == 'Galaxy Rocket');
+      final rocketGift = MockLiveComments.virtualGifts.firstWhere((g) => g.name == 'Rocket');
       overlayKey.currentState?.playGift(rocketGift, senderName: 'Tester');
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -116,7 +147,7 @@ void main() {
       expect(find.text('Skip'), findsNothing);
     });
 
-    testWidgets('triggers Luxury Car gift, renders animation without skip button',
+    testWidgets('triggers Super Car gift, renders sticker animation without skip button',
         (WidgetTester tester) async {
       final GlobalKey<ActiveGiftAnimationOverlayState> overlayKey =
           GlobalKey<ActiveGiftAnimationOverlayState>();
@@ -132,14 +163,14 @@ void main() {
         ),
       );
 
-      final carGift = MockLiveComments.virtualGifts.firstWhere((g) => g.name == 'Luxury Car');
+      final carGift = MockLiveComments.virtualGifts.firstWhere((g) => g.name == 'Super Car');
       overlayKey.currentState?.playGift(carGift, senderName: 'Tester');
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.text('Skip'), findsNothing);
     });
 
-    testWidgets('triggers Luxury Yacht gift, renders animation without skip button',
+    testWidgets('triggers World Tour gift, renders sticker animation without skip button',
         (WidgetTester tester) async {
       final GlobalKey<ActiveGiftAnimationOverlayState> overlayKey =
           GlobalKey<ActiveGiftAnimationOverlayState>();
@@ -155,8 +186,8 @@ void main() {
         ),
       );
 
-      final yachtGift = MockLiveComments.virtualGifts.firstWhere((g) => g.name == 'Luxury Yacht');
-      overlayKey.currentState?.playGift(yachtGift, senderName: 'Tester');
+      final worldTourGift = MockLiveComments.virtualGifts.firstWhere((g) => g.name == 'World Tour');
+      overlayKey.currentState?.playGift(worldTourGift, senderName: 'Tester');
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.text('Skip'), findsNothing);

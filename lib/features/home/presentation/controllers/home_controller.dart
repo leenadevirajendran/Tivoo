@@ -21,9 +21,7 @@ class HomeState {
   List<LiveStreamCardModel> get filteredStreams {
     if (selectedCategoryIndex == 0) return allStreams;
     final categoryName = categories[selectedCategoryIndex];
-    final filtered = allStreams
-        .where((s) => s.category.toLowerCase() == categoryName.toLowerCase())
-        .toList();
+    final filtered = allStreams.where((s) => s.category.toLowerCase() == categoryName.toLowerCase()).toList();
     return filtered.isNotEmpty ? filtered : allStreams;
   }
 
@@ -35,8 +33,7 @@ class HomeState {
     bool? isLoading,
   }) {
     return HomeState(
-      selectedCategoryIndex:
-          selectedCategoryIndex ?? this.selectedCategoryIndex,
+      selectedCategoryIndex: selectedCategoryIndex ?? this.selectedCategoryIndex,
       categories: categories ?? this.categories,
       stories: stories ?? this.stories,
       allStreams: allStreams ?? this.allStreams,
@@ -66,8 +63,7 @@ class HomeController extends StateNotifier<HomeState> {
   }
 }
 
-final homeControllerProvider =
-    StateNotifierProvider<HomeController, HomeState>((ref) {
+final homeControllerProvider = StateNotifierProvider<HomeController, HomeState>((ref) {
   return HomeController();
 });
 

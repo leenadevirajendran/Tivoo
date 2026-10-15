@@ -37,8 +37,7 @@ class ReelMediaView extends StatefulWidget {
   State<ReelMediaView> createState() => _ReelMediaViewState();
 }
 
-class _ReelMediaViewState extends State<ReelMediaView>
-    with SingleTickerProviderStateMixin {
+class _ReelMediaViewState extends State<ReelMediaView> with SingleTickerProviderStateMixin {
   final ReelVideoManager _manager = ReelVideoManager.instance;
   bool _showSoundOverlay = false;
   late final AnimationController _soundAnimController;
@@ -47,23 +46,11 @@ class _ReelMediaViewState extends State<ReelMediaView>
   @override
   void initState() {
     super.initState();
-    _soundAnimController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 650),
-    );
+    _soundAnimController = AnimationController(vsync: this, duration: const Duration(milliseconds: 650));
     _soundScaleAnim = TweenSequence<double>([
-      TweenSequenceItem(
-        tween: Tween(begin: 0.6, end: 1.15).chain(CurveTween(curve: Curves.easeOutBack)),
-        weight: 40,
-      ),
-      TweenSequenceItem(
-        tween: Tween(begin: 1.15, end: 1.0).chain(CurveTween(curve: Curves.easeInOut)),
-        weight: 30,
-      ),
-      TweenSequenceItem(
-        tween: Tween(begin: 1.0, end: 0.8).chain(CurveTween(curve: Curves.easeIn)),
-        weight: 30,
-      ),
+      TweenSequenceItem(tween: Tween(begin: 0.6, end: 1.15).chain(CurveTween(curve: Curves.easeOutBack)), weight: 40),
+      TweenSequenceItem(tween: Tween(begin: 1.15, end: 1.0).chain(CurveTween(curve: Curves.easeInOut)), weight: 30),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.8).chain(CurveTween(curve: Curves.easeIn)), weight: 30),
     ]).animate(_soundAnimController);
 
     _soundAnimController.addStatusListener((status) {
@@ -82,8 +69,7 @@ class _ReelMediaViewState extends State<ReelMediaView>
   @override
   void didUpdateWidget(covariant ReelMediaView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.isActive != widget.isActive ||
-        oldWidget.videoAssetPath != widget.videoAssetPath) {
+    if (oldWidget.isActive != widget.isActive || oldWidget.videoAssetPath != widget.videoAssetPath) {
       _syncPlayback();
     }
   }
@@ -147,12 +133,8 @@ class _ReelMediaViewState extends State<ReelMediaView>
                       fit: BoxFit.cover,
                       clipBehavior: Clip.hardEdge,
                       child: SizedBox(
-                        width: (controller.value.size.width > 0)
-                            ? controller.value.size.width
-                            : 1080,
-                        height: (controller.value.size.height > 0)
-                            ? controller.value.size.height
-                            : 1920,
+                        width: (controller.value.size.width > 0) ? controller.value.size.width : 1080,
+                        height: (controller.value.size.height > 0) ? controller.value.size.height : 1920,
                         child: VideoPlayer(controller),
                       ),
                     ),
@@ -167,9 +149,7 @@ class _ReelMediaViewState extends State<ReelMediaView>
                     child: LinearProgressIndicator(
                       minHeight: 2.0,
                       backgroundColor: Colors.transparent,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        AppColors.primaryYellow.withValues(alpha: 0.75),
-                      ),
+                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryYellow.withValues(alpha: 0.75)),
                     ),
                   ),
 
@@ -182,34 +162,20 @@ class _ReelMediaViewState extends State<ReelMediaView>
                       behavior: HitTestBehavior.opaque,
                       onTap: () => _manager.retry(videoPath),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 5,
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                         decoration: BoxDecoration(
                           color: Colors.black.withValues(alpha: 0.7),
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            width: 1,
-                          ),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 1),
                         ),
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
-                              Icons.refresh_rounded,
-                              color: AppColors.primaryYellow,
-                              size: 13,
-                            ),
+                            Icon(Icons.refresh_rounded, color: AppColors.primaryYellow, size: 13),
                             SizedBox(width: 4),
                             Text(
                               'Retry Video',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                              ),
+                              style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
                             ),
                           ],
                         ),
@@ -230,15 +196,10 @@ class _ReelMediaViewState extends State<ReelMediaView>
                         decoration: BoxDecoration(
                           color: Colors.black.withValues(alpha: 0.55),
                           shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            width: 1,
-                          ),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 1),
                         ),
                         child: Icon(
-                          isMuted
-                              ? Icons.volume_off_rounded
-                              : Icons.volume_up_rounded,
+                          isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
                           color: Colors.white,
                           size: 15,
                         ),
@@ -256,15 +217,10 @@ class _ReelMediaViewState extends State<ReelMediaView>
                         decoration: BoxDecoration(
                           color: Colors.black.withValues(alpha: 0.65),
                           shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.25),
-                            width: 1.5,
-                          ),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 1.5),
                         ),
                         child: Icon(
-                          isMuted
-                              ? Icons.volume_off_rounded
-                              : Icons.volume_up_rounded,
+                          isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
                           color: AppColors.primaryYellow,
                           size: 36,
                         ),
@@ -317,12 +273,8 @@ class _ReelMediaViewState extends State<ReelMediaView>
       fit: BoxFit.cover,
       width: double.infinity,
       height: double.infinity,
-      errorBuilder: (context, error, stackTrace) => Image.asset(
-        AppAssets.liveCard1,
-        fit: BoxFit.cover,
-        width: double.infinity,
-        height: double.infinity,
-      ),
+      errorBuilder: (context, error, stackTrace) =>
+          Image.asset(AppAssets.liveCard1, fit: BoxFit.cover, width: double.infinity, height: double.infinity),
     );
   }
 }

@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_text_styles.dart';
 
-
 class AboutMeCard extends StatelessWidget {
   final String aboutMe;
 
-  const AboutMeCard({
-    super.key,
-    required this.aboutMe,
-  });
+  const AboutMeCard({super.key, required this.aboutMe});
 
   @override
   Widget build(BuildContext context) {
@@ -21,9 +17,7 @@ class AboutMeCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(22),
         color: isDark ? const Color(0xFF13131E) : Colors.white,
         border: Border.all(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.08)
-              : Colors.black.withValues(alpha: 0.05),
+          color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05),
           width: 0.8,
         ),
         boxShadow: [

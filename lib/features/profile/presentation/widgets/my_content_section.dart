@@ -48,19 +48,9 @@ class MyContentSection extends StatelessWidget {
             // Tabs: Videos & Images
             Row(
               children: [
-                _buildTab(
-                  title: 'Videos',
-                  isSelected: selectedTab == 0,
-                  onTap: () => onTabChanged(0),
-                  isDark: isDark,
-                ),
+                _buildTab(title: 'Videos', isSelected: selectedTab == 0, onTap: () => onTabChanged(0), isDark: isDark),
                 const SizedBox(width: 16),
-                _buildTab(
-                  title: 'Images',
-                  isSelected: selectedTab == 1,
-                  onTap: () => onTabChanged(1),
-                  isDark: isDark,
-                ),
+                _buildTab(title: 'Images', isSelected: selectedTab == 1, onTap: () => onTabChanged(1), isDark: isDark),
               ],
             ),
 
@@ -68,27 +58,19 @@ class MyContentSection extends StatelessWidget {
             PopupMenuButton<String>(
               onSelected: onSortChanged,
               color: isDark ? const Color(0xFF1C1C2C) : Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               itemBuilder: (context) => [
                 const PopupMenuItem(value: 'Recent', child: Text('Recent')),
-                const PopupMenuItem(
-                    value: 'Most Viewed', child: Text('Most Viewed')),
+                const PopupMenuItem(value: 'Most Viewed', child: Text('Most Viewed')),
                 const PopupMenuItem(value: 'Popular', child: Text('Popular')),
               ],
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
-                  color: isDark
-                      ? const Color(0xFF181828)
-                      : Colors.black.withValues(alpha: 0.05),
+                  color: isDark ? const Color(0xFF181828) : Colors.black.withValues(alpha: 0.05),
                   border: Border.all(
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.1)
-                        : Colors.black.withValues(alpha: 0.08),
+                    color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.08),
                     width: 0.8,
                   ),
                 ),
@@ -99,8 +81,7 @@ class MyContentSection extends StatelessWidget {
                       selectedSort,
                       style: TextStyle(
                         fontSize: 12,
-                        color:
-                            isDark ? Colors.white70 : const Color(0xFF555566),
+                        color: isDark ? Colors.white70 : const Color(0xFF555566),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -108,8 +89,7 @@ class MyContentSection extends StatelessWidget {
                     Icon(
                       Icons.keyboard_arrow_down_rounded,
                       size: 16,
-                      color:
-                          isDark ? Colors.white70 : const Color(0xFF555566),
+                      color: isDark ? Colors.white70 : const Color(0xFF555566),
                     ),
                   ],
                 ),
@@ -127,10 +107,7 @@ class MyContentSection extends StatelessWidget {
             alignment: Alignment.center,
             child: Text(
               selectedTab == 0 ? 'No videos uploaded yet' : 'No images uploaded yet',
-              style: TextStyle(
-                color: isDark ? Colors.white38 : Colors.black38,
-                fontSize: 13,
-              ),
+              style: TextStyle(color: isDark ? Colors.white38 : Colors.black38, fontSize: 13),
             ),
           )
         else
@@ -189,16 +166,13 @@ class MyContentSection extends StatelessWidget {
     );
   }
 
-  Widget _buildMediaCard(
-      BuildContext context, ProfileMediaPost post, bool isDark) {
+  Widget _buildMediaCard(BuildContext context, ProfileMediaPost post, bool isDark) {
     return GestureDetector(
       onTap: () => onPostTap?.call(post),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: Container(
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1A1A2A) : const Color(0xFFE5E5EA),
-          ),
+          decoration: BoxDecoration(color: isDark ? const Color(0xFF1A1A2A) : const Color(0xFFE5E5EA)),
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -207,22 +181,15 @@ class MyContentSection extends StatelessWidget {
                 imageUrl: post.mediaUrl,
                 fit: BoxFit.cover,
                 fadeInDuration: const Duration(milliseconds: 150),
-                placeholder: (context, url) =>
-                    Container(color: const Color(0xFF161622)),
-                errorWidget: (context, url, error) =>
-                    const Icon(Icons.broken_image, color: Colors.white38),
+                placeholder: (context, url) => Container(color: const Color(0xFF161622)),
+                errorWidget: (context, url, error) => const Icon(Icons.broken_image, color: Colors.white38),
               ),
 
               // Gradient Scrim for readable badges and text
               Container(
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [
-                      Colors.black38,
-                      Colors.transparent,
-                      Colors.transparent,
-                      Colors.black87,
-                    ],
+                    colors: [Colors.black38, Colors.transparent, Colors.transparent, Colors.black87],
                     stops: [0.0, 0.25, 0.65, 1.0],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
@@ -236,19 +203,14 @@ class MyContentSection extends StatelessWidget {
                   top: 6,
                   right: 6,
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                     decoration: BoxDecoration(
                       color: Colors.black.withValues(alpha: 0.7),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
                       post.duration,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700),
                     ),
                   ),
                 ),
@@ -266,20 +228,14 @@ class MyContentSection extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          post.type == ProfileMediaType.video
-                              ? Icons.play_arrow_rounded
-                              : Icons.visibility_outlined,
+                          post.type == ProfileMediaType.video ? Icons.play_arrow_rounded : Icons.visibility_outlined,
                           size: 11,
                           color: Colors.white,
                         ),
                         const SizedBox(width: 2),
                         Text(
                           post.viewsCount,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w700,
-                          ),
+                          style: const TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.w700),
                         ),
                       ],
                     ),
@@ -288,19 +244,11 @@ class MyContentSection extends StatelessWidget {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
-                          Icons.favorite,
-                          size: 9,
-                          color: AppColors.primaryYellow,
-                        ),
+                        const Icon(Icons.favorite, size: 9, color: AppColors.primaryYellow),
                         const SizedBox(width: 2),
                         Text(
                           post.likesCount,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w700,
-                          ),
+                          style: const TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.w700),
                         ),
                       ],
                     ),

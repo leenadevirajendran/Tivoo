@@ -29,15 +29,12 @@ class CustomAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     Widget avatarImage;
 
-    final fallbackAsset = (assetPath != null && assetPath!.isNotEmpty)
-        ? assetPath!
-        : AppAssets.liveCard1;
+    final fallbackAsset = (assetPath != null && assetPath!.isNotEmpty) ? assetPath! : AppAssets.liveCard1;
 
     // Center on face for tall vertical portrait assets (status1 to status5)
-    final effectiveAlignment = alignment ??
-        ((assetPath != null && assetPath!.contains('status'))
-            ? const Alignment(0.0, -0.55)
-            : Alignment.center);
+    final effectiveAlignment =
+        alignment ??
+        ((assetPath != null && assetPath!.contains('status')) ? const Alignment(0.0, -0.55) : Alignment.center);
 
     // Generous retina-quality decode dimension without squashing aspect ratio
     final pixelDim = (radius * 2 * 3.5).toInt().clamp(150, 600);
@@ -106,32 +103,17 @@ class CustomAvatar extends StatelessWidget {
     if (hasStoryRing) {
       content = Container(
         padding: const EdgeInsets.all(2.5),
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: ringGradient ?? AppColors.storyRingGradient,
-        ),
+        decoration: BoxDecoration(shape: BoxShape.circle, gradient: ringGradient ?? AppColors.storyRingGradient),
         child: Container(
           padding: const EdgeInsets.all(2),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Theme.of(context).scaffoldBackgroundColor,
-          ),
+          decoration: BoxDecoration(shape: BoxShape.circle, color: Theme.of(context).scaffoldBackgroundColor),
           child: ClipOval(
-
-            child: SizedBox(
-              width: radius * 2,
-              height: radius * 2,
-              child: avatarImage,
-            ),
+            child: SizedBox(width: radius * 2, height: radius * 2, child: avatarImage),
           ),
         ),
       );
     } else {
-      content = SizedBox(
-        width: radius * 2,
-        height: radius * 2,
-        child: content,
-      );
+      content = SizedBox(width: radius * 2, height: radius * 2, child: content);
     }
 
     if (isUserAdd) {
@@ -146,21 +128,11 @@ class CustomAvatar extends StatelessWidget {
               bottom: 0,
               child: Container(
                 padding: const EdgeInsets.all(3),
-                decoration: const BoxDecoration(
-                  color: AppColors.background,
-                  shape: BoxShape.circle,
-                ),
+                decoration: const BoxDecoration(color: AppColors.background, shape: BoxShape.circle),
                 child: Container(
                   padding: const EdgeInsets.all(2),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.add,
-                    size: 11,
-                    color: Colors.black,
-                  ),
+                  decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                  child: const Icon(Icons.add, size: 11, color: Colors.black),
                 ),
               ),
             ),
@@ -169,9 +141,6 @@ class CustomAvatar extends StatelessWidget {
       );
     }
 
-    return GestureDetector(
-      onTap: onTap,
-      child: content,
-    );
+    return GestureDetector(onTap: onTap, child: content);
   }
 }

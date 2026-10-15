@@ -6,18 +6,10 @@ import '../../domain/models/user_profile_model.dart';
 
 class UploadPostDialog extends StatefulWidget {
   final ProfileMediaType type;
-  final Function({
-    required ProfileMediaType type,
-    required String title,
-    required String mediaUrl,
-    String duration,
-  }) onUpload;
+  final Function({required ProfileMediaType type, required String title, required String mediaUrl, String duration})
+  onUpload;
 
-  const UploadPostDialog({
-    super.key,
-    required this.type,
-    required this.onUpload,
-  });
+  const UploadPostDialog({super.key, required this.type, required this.onUpload});
 
   static void show(
     BuildContext context, {
@@ -27,7 +19,8 @@ class UploadPostDialog extends StatefulWidget {
       required String title,
       required String mediaUrl,
       String duration,
-    }) onUpload,
+    })
+    onUpload,
   }) {
     showModalBottomSheet(
       context: context,
@@ -70,24 +63,11 @@ class _UploadPostDialogState extends State<UploadPostDialog> {
       decoration: BoxDecoration(
         color: const Color(0xF5161622),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        border: const Border(
-          top: BorderSide(color: Color(0x33FFFFFF), width: 1),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: accentColor.withValues(alpha: 0.3),
-            blurRadius: 40,
-            spreadRadius: -10,
-          ),
-        ],
+        border: const Border(top: BorderSide(color: Color(0x33FFFFFF), width: 1)),
+        boxShadow: [BoxShadow(color: accentColor.withValues(alpha: 0.3), blurRadius: 40, spreadRadius: -10)],
       ),
       child: Padding(
-        padding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-          top: 20,
-          bottom: MediaQuery.viewInsetsOf(context).bottom + 20,
-        ),
+        padding: EdgeInsets.only(left: 20, right: 20, top: 20, bottom: MediaQuery.viewInsetsOf(context).bottom + 20),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -97,32 +77,21 @@ class _UploadPostDialogState extends State<UploadPostDialog> {
                 child: Container(
                   width: 36,
                   height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.white24,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
+                  decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
                 ),
               ),
               const SizedBox(height: 16),
               Center(
                 child: Text(
                   isVideo ? 'Upload Live Video' : 'Upload Image Post',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
                 ),
               ),
               const SizedBox(height: 18),
 
               const Text(
                 'Select Cover / Media',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(color: Colors.white70, fontSize: 12.5, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 8),
 
@@ -132,8 +101,7 @@ class _UploadPostDialogState extends State<UploadPostDialog> {
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   itemCount: _sampleMediaOptions.length,
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(width: 10),
+                  separatorBuilder: (context, index) => const SizedBox(width: 10),
                   itemBuilder: (context, index) {
                     final url = _sampleMediaOptions[index];
                     final isSelected = url == _selectedThumbnailUrl;
@@ -152,17 +120,9 @@ class _UploadPostDialogState extends State<UploadPostDialog> {
                             width: isSelected ? 2.5 : 1,
                           ),
                           boxShadow: isSelected
-                              ? [
-                                  BoxShadow(
-                                    color: accentColor.withValues(alpha: 0.5),
-                                    blurRadius: 12,
-                                  ),
-                                ]
+                              ? [BoxShadow(color: accentColor.withValues(alpha: 0.5), blurRadius: 12)]
                               : null,
-                          image: DecorationImage(
-                            image: NetworkImage(url),
-                            fit: BoxFit.cover,
-                          ),
+                          image: DecorationImage(image: NetworkImage(url), fit: BoxFit.cover),
                         ),
                       ),
                     );
@@ -174,35 +134,22 @@ class _UploadPostDialogState extends State<UploadPostDialog> {
 
               const Text(
                 'Title / Caption',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(color: Colors.white70, fontSize: 12.5, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 6),
               GlowTextField(
                 controller: _titleController,
-                hintText: isVideo
-                    ? 'e.g. Acoustic Chill Session #12'
-                    : 'e.g. Studio Light setup vibe',
+                hintText: isVideo ? 'e.g. Acoustic Chill Session #12' : 'e.g. Studio Light setup vibe',
               ),
 
               if (isVideo) ...[
                 const SizedBox(height: 12),
                 const Text(
                   'Video Duration',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: TextStyle(color: Colors.white70, fontSize: 12.5, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 6),
-                GlowTextField(
-                  controller: _durationController,
-                  hintText: 'e.g. 12:45',
-                ),
+                GlowTextField(controller: _durationController, hintText: 'e.g. 12:45'),
               ],
 
               const SizedBox(height: 20),
@@ -212,9 +159,7 @@ class _UploadPostDialogState extends State<UploadPostDialog> {
                 height: 48,
                 borderRadius: 24,
                 gradient: isVideo
-                    ? const LinearGradient(
-                        colors: [Color(0xFF8E38FF), Color(0xFF6A3BFF)],
-                      )
+                    ? const LinearGradient(colors: [Color(0xFF8E38FF), Color(0xFF6A3BFF)])
                     : AppColors.getStartedButtonGradient,
                 onPressed: () {
                   final title = _titleController.text.trim().isNotEmpty

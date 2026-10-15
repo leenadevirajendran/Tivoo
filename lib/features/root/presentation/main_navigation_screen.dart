@@ -49,6 +49,7 @@ class MainNavigationScreen extends ConsumerWidget {
             bottom: 0,
             child: FloatingBottomNavBar(
               currentIndex: selectedIndex,
+              activityBadgeCount: 5,
               onTap: (index) {
                 if (index != 1) {
                   ReelVideoManager.instance.pauseAll();

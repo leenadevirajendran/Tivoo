@@ -38,13 +38,13 @@ class GradientButton extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: gradient,
         borderRadius: BorderRadius.circular(borderRadius),
-        boxShadow: boxShadow ??
+        boxShadow:
+            boxShadow ??
             [
               BoxShadow(
-                color: (gradient is LinearGradient
-                        ? (gradient as LinearGradient).colors.first
-                        : AppColors.primaryYellow)
-                    .withValues(alpha: 0.35),
+                color:
+                    (gradient is LinearGradient ? (gradient as LinearGradient).colors.first : AppColors.primaryYellow)
+                        .withValues(alpha: 0.35),
                 blurRadius: 18,
                 offset: const Offset(0, 6),
               ),
@@ -71,10 +71,7 @@ class GradientButton extends StatelessWidget {
                     ),
                   )
                 else ...[
-                  if (leadingIcon != null) ...[
-                    leadingIcon!,
-                    const SizedBox(width: 8),
-                  ],
+                  if (leadingIcon != null) ...[leadingIcon!, const SizedBox(width: 8)],
                   Flexible(
                     child: Text(
                       text,
@@ -83,10 +80,7 @@ class GradientButton extends StatelessWidget {
                       maxLines: 1,
                     ),
                   ),
-                  if (trailingIcon != null) ...[
-                    const SizedBox(width: 10),
-                    trailingIcon!,
-                  ],
+                  if (trailingIcon != null) ...[const SizedBox(width: 10), trailingIcon!],
                 ],
               ],
             ),

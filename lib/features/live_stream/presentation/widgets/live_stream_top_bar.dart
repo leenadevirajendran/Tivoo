@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_assets.dart';
 import '../../../../core/widgets/custom_avatar.dart';
 import 'live_stream_viewers_sheet.dart';
+import 'purchase_stars_sheet.dart';
 
 /// Top Bar for Live Stream screen strictly matching Image 1:
 /// - [((•)) LIVE] vibrant red pill badge with broadcast waves
@@ -114,7 +115,32 @@ class LiveStreamTopBar extends StatelessWidget {
 
           const Spacer(),
 
-          // 4. Close Button [✕]
+          // 4. Wallet Button
+          GestureDetector(
+            onTap: () => PurchaseStarsSheet.show(context),
+            child: Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.black.withValues(alpha: 0.55),
+                border: Border.all(
+                  color: const Color(0xFFFFB800),
+                  width: 1.0,
+                ),
+              ),
+              padding: const EdgeInsets.all(5),
+              child: Image.asset(
+                'assets/stars/wallet.png',
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) =>
+                    const Icon(Icons.account_balance_wallet_rounded, color: Color(0xFFFFB800), size: 16),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+
+          // 5. Close Button [✕]
           GestureDetector(
             onTap: onCloseTap,
             child: Container(

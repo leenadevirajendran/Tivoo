@@ -17,6 +17,7 @@ import '../widgets/live_bottom_input_bar.dart';
 import '../widgets/live_chat_list_view.dart';
 import '../widgets/live_stream_top_bar.dart';
 import '../../../home/presentation/widgets/streamer_id_profile_sheet.dart';
+import '../../../gift/gift_balance_details_dialog.dart';
 
 /// Full-screen live viewer, vertically swipeable between [streams] the way
 /// TikTok/Bigo Live feeds work — each page plays its own video only while
@@ -110,9 +111,34 @@ class _LiveStreamPageState extends ConsumerState<_LiveStreamPage> {
         ref
             .read(liveStreamControllerProvider(widget.stream.id).notifier)
             .addUserComment('sent ${gift.name}! 🌟');
+        Future.delayed(const Duration(milliseconds: 1200), () {
+          if (!mounted) return;
+          GiftBalanceDetailsDialog.show(
+            context: context,
+            gift: gift,
+            quantity: 1,
+            recipient: widget.stream.streamerName,
+            deductedStars: gift.diamonds,
+            onSendMore: () => _handleGiftTap(controller),
+          );
+        });
       } else {
         _triggerHeartAnimation();
-        _activeGiftKey.currentState?.playGift(gift, senderName: 'You');
+        _activeGiftKey.currentState?.playGift(
+          gift,
+          senderName: 'You',
+          onComplete: () {
+            if (!mounted) return;
+            GiftBalanceDetailsDialog.show(
+              context: context,
+              gift: gift,
+              quantity: 1,
+              recipient: widget.stream.streamerName,
+              deductedStars: gift.diamonds,
+              onSendMore: () => _handleGiftTap(controller),
+            );
+          },
+        );
       }
       setState(() {
         _recentGift = gift;
@@ -122,14 +148,6 @@ class _LiveStreamPageState extends ConsumerState<_LiveStreamPage> {
           setState(() => _recentGift = null);
         }
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'You sent ${gift.name} ${gift.icon} to ${widget.stream.streamerName}!',
-          ),
-          duration: const Duration(seconds: 1),
-        ),
-      );
     });
   }
 
@@ -370,7 +388,7 @@ class _LiveStreamPageState extends ConsumerState<_LiveStreamPage> {
                                       isLiked: liveState.isLiked,
                                       likesCount: liveState.formattedLikes,
                                       commentsCount: liveState.formattedComments,
-                                      starsCount: 'Star',
+                                      starsCount: 'Stars',
                                       onFollowTap: () {
                                         controller.toggleFollow();
                                         ScaffoldMessenger.of(context).showSnackBar(
@@ -387,6 +405,7 @@ class _LiveStreamPageState extends ConsumerState<_LiveStreamPage> {
                                       onLikeTap: () {
                                         _triggerHeartAnimation();
                                       },
+                                      onCommentTap: () => _commentFocusNode.requestFocus(),
                                       onGiftTap: () => _handleGiftTap(controller),
                                       onAvatarTap: () {
                                         StreamerIdProfileSheet.show(

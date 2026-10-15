@@ -39,14 +39,9 @@ class GlowIconButton extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor =
         backgroundColor ??
-        (isDark
-            ? AppColors.surfaceColor.withValues(alpha: 0.8)
-            : Colors.black.withValues(alpha: 0.06));
-    final defaultIconColor =
-        iconColor ?? (isDark ? AppColors.textPrimary : const Color(0xFF1F1F2C));
-    final borderColor = isDark
-        ? Colors.white.withValues(alpha: 0.1)
-        : Colors.black.withValues(alpha: 0.08);
+        (isDark ? AppColors.surfaceColor.withValues(alpha: 0.8) : Colors.black.withValues(alpha: 0.06));
+    final defaultIconColor = iconColor ?? (isDark ? AppColors.textPrimary : const Color(0xFF1F1F2C));
+    final borderColor = isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.08);
 
     return Stack(
       clipBehavior: Clip.none,
@@ -65,13 +60,7 @@ class GlowIconButton extends StatelessWidget {
                 color: bgColor,
                 border: Border.all(color: borderColor, width: 0.8),
                 boxShadow: glow
-                    ? [
-                        BoxShadow(
-                          color: glowColor.withValues(alpha: 0.45),
-                          blurRadius: 16,
-                          spreadRadius: 1,
-                        ),
-                      ]
+                    ? [BoxShadow(color: glowColor.withValues(alpha: 0.45), blurRadius: 16, spreadRadius: 1)]
                     : null,
               ),
               child: Icon(icon, color: defaultIconColor, size: iconSize),
@@ -88,9 +77,7 @@ class GlowIconButton extends StatelessWidget {
               decoration: BoxDecoration(
                 color: badgeColor,
                 shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(color: badgeColor.withValues(alpha: 0.6), blurRadius: 4),
-                ],
+                boxShadow: [BoxShadow(color: badgeColor.withValues(alpha: 0.6), blurRadius: 4)],
               ),
             ),
           ),

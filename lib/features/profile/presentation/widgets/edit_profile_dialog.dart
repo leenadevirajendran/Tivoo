@@ -6,35 +6,21 @@ import '../../domain/models/user_profile_model.dart';
 
 class EditProfileDialog extends StatefulWidget {
   final UserProfileModel profile;
-  final Function({
-    required String name,
-    required String username,
-    required String bio,
-    required String aboutMe,
-  }) onSave;
+  final Function({required String name, required String username, required String bio, required String aboutMe}) onSave;
 
-  const EditProfileDialog({
-    super.key,
-    required this.profile,
-    required this.onSave,
-  });
+  const EditProfileDialog({super.key, required this.profile, required this.onSave});
 
   static void show(
     BuildContext context, {
     required UserProfileModel profile,
-    required Function({
-      required String name,
-      required String username,
-      required String bio,
-      required String aboutMe,
-    }) onSave,
+    required Function({required String name, required String username, required String bio, required String aboutMe})
+    onSave,
   }) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) =>
-          EditProfileDialog(profile: profile, onSave: onSave),
+      builder: (context) => EditProfileDialog(profile: profile, onSave: onSave),
     );
   }
 
@@ -72,24 +58,11 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
       decoration: BoxDecoration(
         color: const Color(0xF5161622),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        border: const Border(
-          top: BorderSide(color: Color(0x33FFFFFF), width: 1),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.glowPurple.withValues(alpha: 0.3),
-            blurRadius: 40,
-            spreadRadius: -10,
-          ),
-        ],
+        border: const Border(top: BorderSide(color: Color(0x33FFFFFF), width: 1)),
+        boxShadow: [BoxShadow(color: AppColors.glowPurple.withValues(alpha: 0.3), blurRadius: 40, spreadRadius: -10)],
       ),
       child: Padding(
-        padding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-          top: 20,
-          bottom: MediaQuery.viewInsetsOf(context).bottom + 20,
-        ),
+        padding: EdgeInsets.only(left: 20, right: 20, top: 20, bottom: MediaQuery.viewInsetsOf(context).bottom + 20),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -99,52 +72,32 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                 child: Container(
                   width: 36,
                   height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.white24,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
+                  decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
                 ),
               ),
               const SizedBox(height: 16),
               const Center(
                 child: Text(
                   'Edit Profile',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
                 ),
               ),
               const SizedBox(height: 18),
 
               _buildFieldLabel('Display Name'),
-              GlowTextField(
-                controller: _nameController,
-                hintText: 'Your display name',
-              ),
+              GlowTextField(controller: _nameController, hintText: 'Your display name'),
 
               const SizedBox(height: 12),
               _buildFieldLabel('Username'),
-              GlowTextField(
-                controller: _usernameController,
-                hintText: '@username',
-              ),
+              GlowTextField(controller: _usernameController, hintText: '@username'),
 
               const SizedBox(height: 12),
               _buildFieldLabel('Tagline / Bio'),
-              GlowTextField(
-                controller: _bioController,
-                hintText: 'Live. Stream. Connect.',
-              ),
+              GlowTextField(controller: _bioController, hintText: 'Live. Stream. Connect.'),
 
               const SizedBox(height: 12),
               _buildFieldLabel('About Me'),
-              GlowTextField(
-                controller: _aboutMeController,
-                hintText: 'Tell viewers about yourself...',
-                maxLines: 3,
-              ),
+              GlowTextField(controller: _aboutMeController, hintText: 'Tell viewers about yourself...', maxLines: 3),
 
               const SizedBox(height: 20),
               GradientButton(
@@ -173,11 +126,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
       padding: const EdgeInsets.only(left: 4, bottom: 6),
       child: Text(
         label,
-        style: const TextStyle(
-          color: Colors.white70,
-          fontSize: 12.5,
-          fontWeight: FontWeight.w600,
-        ),
+        style: const TextStyle(color: Colors.white70, fontSize: 12.5, fontWeight: FontWeight.w600),
       ),
     );
   }

@@ -13,13 +13,7 @@ class ProfileHeroHeader extends ConsumerWidget {
   final VoidCallback? onEditTap;
   final VoidCallback? onSettingsTap;
 
-  const ProfileHeroHeader({
-    super.key,
-    required this.profile,
-    this.onBackTap,
-    this.onEditTap,
-    this.onSettingsTap,
-  });
+  const ProfileHeroHeader({super.key, required this.profile, this.onBackTap, this.onEditTap, this.onSettingsTap});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -45,10 +39,8 @@ class ProfileHeroHeader extends ConsumerWidget {
                 fadeInDuration: const Duration(milliseconds: 150),
                 memCacheWidth: 800,
                 memCacheHeight: 600,
-                placeholder: (context, url) =>
-                    Container(color: const Color(0xFF13131E)),
-                errorWidget: (context, url, error) =>
-                    Container(color: const Color(0xFF13131E)),
+                placeholder: (context, url) => Container(color: const Color(0xFF13131E)),
+                errorWidget: (context, url, error) => Container(color: const Color(0xFF13131E)),
               ),
               // Gradient Scrim from Top to Bottom
               Container(
@@ -76,7 +68,6 @@ class ProfileHeroHeader extends ConsumerWidget {
           child: Column(
             children: [
               // Top Action Bar: Back, Theme Toggle, Edit, Settings
-
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -90,18 +81,12 @@ class ProfileHeroHeader extends ConsumerWidget {
                   Row(
                     children: [
                       GlowIconButton(
-                        icon: isDark
-                            ? Icons.light_mode_rounded
-                            : Icons.dark_mode_rounded,
+                        icon: isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
                         size: 40,
                         backgroundColor: AppColors.surfaceColor.withValues(alpha: 0.85),
-                        iconColor: isDark
-                            ? AppColors.primaryYellow
-                            : AppColors.primaryAmber,
+                        iconColor: isDark ? AppColors.primaryYellow : AppColors.primaryAmber,
                         glow: true,
-                        glowColor: isDark
-                            ? AppColors.primaryYellow
-                            : AppColors.primaryAmber,
+                        glowColor: isDark ? AppColors.primaryYellow : AppColors.primaryAmber,
                         onTap: () {
                           ref.read(themeModeProvider.notifier).toggleTheme();
                         },
@@ -157,21 +142,14 @@ class ProfileHeroHeader extends ConsumerWidget {
                             ),
                             if (profile.isVerified) ...[
                               const SizedBox(width: 6),
-                              const Icon(
-                                Icons.verified,
-                                color: Color(0xFF388AF6),
-                                size: 19,
-                              ),
+                              const Icon(Icons.verified, color: Color(0xFF388AF6), size: 19),
                             ],
                           ],
                         ),
                         const SizedBox(height: 2),
                         Text(
                           profile.username,
-                          style: AppTextStyles.streamerTagline.copyWith(
-                            fontSize: 13,
-                            color: Colors.white70,
-                          ),
+                          style: AppTextStyles.streamerTagline.copyWith(fontSize: 13, color: Colors.white70),
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -191,28 +169,19 @@ class ProfileHeroHeader extends ConsumerWidget {
                           children: profile.roles.map((role) {
                             final isFirst = role == profile.roles.first;
                             return Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 5),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(20),
-                                gradient: isFirst
-                                    ? AppColors.getStartedButtonGradient
-                                    : null,
+                                gradient: isFirst ? AppColors.getStartedButtonGradient : null,
                                 color: isFirst ? null : AppColors.cardBackground,
                                 border: isFirst
                                     ? null
-                                    : Border.all(
-                                        color: AppColors.primaryYellow
-                                            .withValues(alpha: 0.4),
-                                        width: 1,
-                                      ),
+                                    : Border.all(color: AppColors.primaryYellow.withValues(alpha: 0.4), width: 1),
                               ),
                               child: Text(
                                 role,
                                 style: TextStyle(
-                                  color: isFirst
-                                      ? AppColors.textOnPrimary
-                                      : Colors.white,
+                                  color: isFirst ? AppColors.textOnPrimary : Colors.white,
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -253,10 +222,7 @@ class ProfileHeroHeader extends ConsumerWidget {
           ),
           child: Container(
             padding: const EdgeInsets.all(2.5),
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: Color(0xFF13131E),
-            ),
+            decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF13131E)),
             child: ClipOval(
               child: CachedNetworkImage(
                 imageUrl: profile.avatarUrl,
@@ -265,10 +231,8 @@ class ProfileHeroHeader extends ConsumerWidget {
                 fit: BoxFit.cover,
                 memCacheWidth: 200,
                 memCacheHeight: 200,
-                placeholder: (context, url) =>
-                    Container(color: AppColors.surfaceColor),
-                errorWidget: (context, url, error) =>
-                    const Icon(Icons.person, size: 42),
+                placeholder: (context, url) => Container(color: AppColors.surfaceColor),
+                errorWidget: (context, url, error) => const Icon(Icons.person, size: 42),
               ),
             ),
           ),
@@ -284,17 +248,11 @@ class ProfileHeroHeader extends ConsumerWidget {
                 color: const Color(0xFF00E676),
                 shape: BoxShape.circle,
                 border: Border.all(color: const Color(0xFF13131E), width: 2.5),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x6600E676),
-                    blurRadius: 6,
-                  ),
-                ],
+                boxShadow: const [BoxShadow(color: Color(0x6600E676), blurRadius: 6)],
               ),
             ),
           ),
       ],
     );
   }
-
 }

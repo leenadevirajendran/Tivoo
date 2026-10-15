@@ -79,16 +79,17 @@ class _LiveBottomInputBarState extends State<LiveBottomInputBar> {
                       focusNode: widget.focusNode,
                       textAlignVertical: TextAlignVertical.center,
                       cursorColor: const Color(0xFF2979FF),
+                      cursorWidth: 2.2,
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w600,
                       ),
                       onSubmitted: (_) => _handleSend(),
                       decoration: const InputDecoration(
                         hintText: 'Add a comment...',
                         hintStyle: TextStyle(
-                          color: Colors.white60,
+                          color: Color(0xFF9E9EAF),
                           fontSize: 13.5,
                         ),
                         border: InputBorder.none,

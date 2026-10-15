@@ -1,8 +1,13 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/utils/responsive.dart';
+import '../live_stream/presentation/controllers/star_wallet_controller.dart';
 import 'gift_options.dart';
+import 'realistic_3d_star.dart';
+import 'buy_stars_sheet.dart';
+import '../wallet/presentation/screens/wallet_screen.dart';
 
 /// Tiki Live Gift Bottom Sheet with complete Coin Top-Up Flow matching Image 2:
 /// - Screen 4 & 8: Gift Store with Coin balance (`🪙 350 +`), tabs (`All`, `Popular`, `Luxury`, `Love`),
@@ -10,12 +15,13 @@ import 'gift_options.dart';
 /// - Screen 6: "Buy Coins" Pack selector sheet (`70 Coins ₹49`, `350 Coins ₹249 Popular`, etc.).
 /// - Screen 5: "Top Up Coins" Payment Method sheet (Google Pay, PhonePe, Paytm, UPI, Cards, Net Banking).
 /// - Screen 7: "Payment Successful!" popup dialog with 3D coin stack illustration.
-class GiftBottomSheet extends StatefulWidget {
+class GiftBottomSheet extends ConsumerStatefulWidget {
   final Function(GiftItem gift) onGiftSelected;
   final Function(GiftItem gift, int quantity)? onGiftWithQuantitySelected;
   final List<String>? recipients;
   final String? initialRecipient;
   final Function(GiftItem gift, int quantity, String recipient)? onGiftWithRecipientSelected;
+  final bool dismissOnSend;
 
   const GiftBottomSheet({
     super.key,
@@ -24,6 +30,7 @@ class GiftBottomSheet extends StatefulWidget {
     this.recipients,
     this.initialRecipient,
     this.onGiftWithRecipientSelected,
+    this.dismissOnSend = false,
   });
 
   static void show(
@@ -33,6 +40,7 @@ class GiftBottomSheet extends StatefulWidget {
     List<String>? recipients,
     String? initialRecipient,
     Function(GiftItem gift, int quantity, String recipient)? onGiftWithRecipientSelected,
+    bool dismissOnSend = true,
   }) {
     showModalBottomSheet(
       context: context,
@@ -45,21 +53,23 @@ class GiftBottomSheet extends StatefulWidget {
         recipients: recipients,
         initialRecipient: initialRecipient,
         onGiftWithRecipientSelected: onGiftWithRecipientSelected,
+        dismissOnSend: dismissOnSend,
       ),
     );
   }
 
   @override
-  State<GiftBottomSheet> createState() => _GiftBottomSheetState();
+  ConsumerState<GiftBottomSheet> createState() => _GiftBottomSheetState();
 }
 
-class _GiftBottomSheetState extends State<GiftBottomSheet> {
+class _GiftBottomSheetState extends ConsumerState<GiftBottomSheet> {
   late GiftItem _selectedGift;
   late String _selectedRecipient;
-  int _coinBalance = 99999; // Generous balance so user can test all 3D stickers freely!
   int _quantity = 1;
   String _selectedCategory = 'All';
   bool _showPreviewAndSend = false;
+  String? _deductionFeedbackMessage;
+  int? _lastDeductedAmount;
 
   final List<String> _categories = GiftCategoryOption.labels;
 
@@ -81,21 +91,35 @@ class _GiftBottomSheetState extends State<GiftBottomSheet> {
     setState(() {
       _selectedGift = gift;
       _showPreviewAndSend = true;
+      _deductionFeedbackMessage = null;
+      _lastDeductedAmount = null;
     });
   }
 
   void _sendSelectedGift() {
+    final wallet = ref.read(starWalletProvider);
     final totalCost = _selectedGift.diamonds * _quantity;
-    // Allow user to freely send and test any 3D sticker as requested
-    if (_coinBalance < totalCost) {
-      _coinBalance = 99999;
+
+    if (wallet.starBalance < totalCost) {
+      _showInsufficientBalanceDialog(totalCost, wallet.starBalance);
+      return;
     }
 
-    setState(() {
-      _coinBalance -= totalCost;
-    });
+    final success = ref.read(starWalletProvider.notifier).sendStars(
+      totalCost,
+      giftName: _selectedGift.name,
+      recipient: _selectedRecipient,
+    );
 
-    Navigator.pop(context);
+    if (!success) {
+      _showInsufficientBalanceDialog(totalCost, wallet.starBalance);
+      return;
+    }
+
+    if (widget.dismissOnSend && Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+
     if (widget.onGiftWithRecipientSelected != null) {
       widget.onGiftWithRecipientSelected!(_selectedGift, _quantity, _selectedRecipient);
     } else if (widget.onGiftWithQuantitySelected != null) {
@@ -103,203 +127,122 @@ class _GiftBottomSheetState extends State<GiftBottomSheet> {
     } else {
       widget.onGiftSelected(_selectedGift);
     }
+
+    HapticFeedback.lightImpact();
+
+    final remaining = wallet.starBalance - totalCost;
+    if (mounted) {
+      setState(() {
+        _lastDeductedAmount = totalCost;
+        _deductionFeedbackMessage =
+            'Sent ${_selectedGift.name} x$_quantity! -${_formatCost(totalCost)} ⭐ deducted. Remaining: ${_formatCost(remaining)} ⭐';
+      });
+    }
+  }
+
+  void _showInsufficientBalanceDialog(int needed, int available) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF16123D),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: const BorderSide(color: Color(0x66FFC928), width: 1.5),
+        ),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            Text('⭐ ', style: TextStyle(fontSize: 22)),
+            Flexible(
+              child: Text(
+                'Insufficient Stars',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'This gift requires ${_formatCost(needed)} ⭐, but your wallet currently has ${_formatCost(available)} ⭐.',
+              style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white12),
+              ),
+              child: Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                children: [
+                  const Text('Missing Stars:', style: TextStyle(color: Colors.white60, fontSize: 13)),
+                  Text(
+                    '${_formatCost(needed - available)} ⭐',
+                    style: const TextStyle(
+                      color: Color(0xFFFF5252),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFFC928),
+              foregroundColor: Colors.black,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              _showBuyCoinsSheet(context);
+            },
+            child: const Text(
+              'Top Up Stars ⭐',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatCoins(int amount) {
+    return amount.toString().replaceAllMapped(
+      RegExp(r'\B(?=(\d{3})+(?!\d))'),
+      (match) => ',',
+    );
   }
 
   // ===========================================================================
-  // SCREEN 6: Buy Coins Sheet (Coin Packs)
+  // SCREEN 6: Buy Stars Sheet matching Reference Image 1
   // ===========================================================================
   void _showBuyCoinsSheet(BuildContext parentContext) {
-    final packs = CoinPackOption.standardPacks.map((p) => {
-      'coins': p.coins,
-      'price': p.price,
-      'isPopular': p.isPopular,
-    }).toList();
-
-    showModalBottomSheet(
-      context: parentContext,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (ctx) {
-        return Container(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.sizeOf(ctx).height * 0.76,
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-          decoration: const BoxDecoration(
-            color: Color(0xFF101018),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-            border: Border(top: BorderSide(color: Color(0x55FFD600), width: 1.5)),
-          ),
-          child: SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 38,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.white24,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                // Top bar: < Buy Coins
-                Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => Navigator.pop(ctx),
-                      child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
-                    ),
-                    const SizedBox(width: 14),
-                    const Text(
-                      'Buy Coins',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // List of Coin Packs matching Image 2 Screen 6
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: packs.length,
-                    itemBuilder: (c, idx) {
-                      final p = packs[idx];
-                      final isPop = p['isPopular'] as bool;
-
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF181822),
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(
-                            color: isPop ? const Color(0xFFFFD600) : Colors.white12,
-                            width: isPop ? 1.8 : 1.0,
-                          ),
-                          boxShadow: isPop
-                              ? const [
-                                  BoxShadow(
-                                    color: Color(0x33FFD600),
-                                    blurRadius: 10,
-                                  ),
-                                ]
-                              : null,
-                        ),
-                        child: Row(
-                          children: [
-                            // 3D Coin Graphic
-                            Container(
-                              width: 38,
-                              height: 38,
-                              decoration: const BoxDecoration(
-                                shape: BoxShape.circle,
-                                gradient: RadialGradient(
-                                  colors: [Color(0xFFFFEA00), Color(0xFFFF9100)],
-                                ),
-                              ),
-                              child: const Center(
-                                child: Text('🪙', style: TextStyle(fontSize: 20)),
-                              ),
-                            ),
-                            const SizedBox(width: 14),
-
-                            // Coins amount + Popular badge
-                            Expanded(
-                              child: Row(
-                                children: [
-                                  Text(
-                                    '${p['coins']} Coins',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  if (isPop) ...[
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFFF2D78),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: const Text(
-                                        'Popular',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-
-                            // Price Button
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: isPop ? const Color(0xFFFFD600) : Colors.white12,
-                                foregroundColor: isPop ? Colors.black : Colors.white,
-                                elevation: isPop ? 4 : 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              ),
-                              onPressed: () {
-                                Navigator.pop(ctx);
-                                _showPaymentMethodSheet(parentContext, p);
-                              },
-                              child: Text(
-                                p['price'] as String,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w900,
-                                  color: isPop ? Colors.black : Colors.white,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-
-                // Bottom banner: More Coins More Gifts More Fun ♡
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF2E124D), Color(0xFF1E0E33)],
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0x66BA43F6)),
-                  ),
-                  child: const Center(
-                    child: Text(
-                      'More Coins   More Gifts   More Fun ♡',
-                      style: TextStyle(
-                        color: Color(0xFFFFD600),
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
+    final currentStars = ref.read(starWalletProvider).starBalance;
+    BuyStarsSheet.show(
+      parentContext,
+      currentBalance: currentStars,
+      onSelectPack: (coins, price) {
+        // Star purchase is smoothly handled with payment selection & celebration directly in BuyStarsSheet
       },
     );
   }
@@ -329,9 +272,9 @@ class _GiftBottomSheetState extends State<GiftBottomSheet> {
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
               decoration: const BoxDecoration(
-                color: Color(0xFF12121A),
+                color: Color(0xFF0E0B2C),
                 borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-                border: Border(top: BorderSide(color: Color(0x55FFD600), width: 1.5)),
+                border: Border(top: BorderSide(color: Color(0x55FFC928), width: 1.5)),
               ),
               child: SafeArea(
                 child: Column(
@@ -372,18 +315,18 @@ class _GiftBottomSheetState extends State<GiftBottomSheet> {
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1C1A28),
+                        color: const Color(0xFF1A1548),
                         borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: const Color(0x33FFD600)),
+                        border: Border.all(color: const Color(0x33FFC928)),
                       ),
                       child: Column(
                         children: [
-                          const Text('🪙 🪙 🪙', style: TextStyle(fontSize: 36)),
-                          const SizedBox(height: 4),
+                          const Realistic3DStar(size: 46),
+                          const SizedBox(height: 8),
                           Text(
-                            '${pack['coins']} Coins for ${pack['price']}',
+                            '${_formatCoins(pack['coins'] as int)} Stars for ${pack['price']}',
                             style: const TextStyle(
-                              color: Color(0xFFFFD600),
+                              color: Color(0xFFFFC928),
                               fontSize: 16,
                               fontWeight: FontWeight.w900,
                             ),
@@ -402,10 +345,10 @@ class _GiftBottomSheetState extends State<GiftBottomSheet> {
                           margin: const EdgeInsets.only(bottom: 8),
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                           decoration: BoxDecoration(
-                            color: isSel ? const Color(0xFF221F33) : const Color(0xFF171720),
+                            color: isSel ? const Color(0xFF241B5C) : const Color(0xFF171340),
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(
-                              color: isSel ? const Color(0xFFFFD600) : Colors.white12,
+                              color: isSel ? const Color(0xFFFFC928) : Colors.white12,
                               width: isSel ? 1.5 : 0.8,
                             ),
                           ),
@@ -425,7 +368,7 @@ class _GiftBottomSheetState extends State<GiftBottomSheet> {
                               ),
                               Icon(
                                 isSel ? Icons.radio_button_checked : Icons.radio_button_off,
-                                color: isSel ? const Color(0xFFFFD600) : Colors.white38,
+                                color: isSel ? const Color(0xFFFFC928) : Colors.white38,
                                 size: 20,
                               ),
                             ],
@@ -487,7 +430,7 @@ class _GiftBottomSheetState extends State<GiftBottomSheet> {
           child: Container(
             padding: const EdgeInsets.all(22),
             decoration: BoxDecoration(
-              color: const Color(0xFF14141E),
+              color: const Color(0xFF100D33),
               borderRadius: BorderRadius.circular(28),
               border: Border.all(color: const Color(0xFF00E676), width: 1.8),
               boxShadow: const [
@@ -533,10 +476,10 @@ class _GiftBottomSheetState extends State<GiftBottomSheet> {
                 const SizedBox(height: 6),
 
                 Text(
-                  '$coinsAdded Coins\nadded to your account.',
+                  '${_formatCoins(coinsAdded)} Stars\nadded to your account.',
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                    color: Color(0xFFFFD600),
+                    color: Color(0xFFFFC928),
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
                     height: 1.3,
@@ -544,21 +487,14 @@ class _GiftBottomSheetState extends State<GiftBottomSheet> {
                 ),
                 const SizedBox(height: 18),
 
-                // 3D gold coins stack illustration
+                // 3D gold multiple coins stack illustration
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1F1C2D),
+                    color: const Color(0xFF1E1852),
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('🪙 🪙 🪙', style: TextStyle(fontSize: 26)),
-                      SizedBox(width: 8),
-                      Text('✨ ✨', style: TextStyle(fontSize: 18)),
-                    ],
-                  ),
+                  child: const Realistic3DStar(size: 48),
                 ),
                 const SizedBox(height: 14),
 
@@ -577,7 +513,7 @@ class _GiftBottomSheetState extends State<GiftBottomSheet> {
                   width: double.infinity,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFFD600),
+                      backgroundColor: const Color(0xFFFFC928),
                       foregroundColor: Colors.black,
                       elevation: 6,
                       shadowColor: const Color(0xAAFFD600),
@@ -588,13 +524,14 @@ class _GiftBottomSheetState extends State<GiftBottomSheet> {
                     ),
                     onPressed: () {
                       Navigator.pop(dialogCtx);
-                      setState(() {
-                        _coinBalance += coinsAdded;
-                      });
+                      ref.read(starWalletProvider.notifier).creditStars(
+                            coinsAdded,
+                            reason: 'Coins Pack Purchase',
+                          );
                       ScaffoldMessenger.of(parentContext).showSnackBar(
                         SnackBar(
-                          content: Text('🎉 $coinsAdded Coins credited to your wallet!'),
-                          backgroundColor: const Color(0xFFFFD600),
+                          content: Text('🎉 $coinsAdded Stars credited to your wallet!'),
+                          backgroundColor: const Color(0xFFFFC928),
                           duration: const Duration(seconds: 2),
                         ),
                       );
@@ -618,21 +555,27 @@ class _GiftBottomSheetState extends State<GiftBottomSheet> {
   }
 
   String _formatCost(int cost) {
-    if (cost >= 1000) {
-      final s = cost.toString();
-      final lastThree = s.substring(s.length - 3);
-      final rest = s.substring(0, s.length - 3);
-      return '$rest,$lastThree';
+    if (cost >= 1000000) {
+      final m = cost / 1000000;
+      return '${m.toStringAsFixed(m % 1 == 0 ? 0 : 1)}M';
+    } else if (cost >= 100000) {
+      final k = cost / 1000;
+      return '${k.toStringAsFixed(k % 1 == 0 ? 0 : 1)}K';
     }
-    return '$cost';
+    return cost.toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]},',
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final wallet = ref.watch(starWalletProvider);
+    final currentStarBalance = wallet.starBalance;
     final filteredGifts = _getFilteredGifts();
     final bottomPadding = MediaQuery.paddingOf(context).bottom;
     final totalCost = _selectedGift.diamonds * _quantity;
-    final bool hasEnoughCoins = _coinBalance >= totalCost;
+    final bool hasEnoughCoins = currentStarBalance >= totalCost;
 
     return Container(
       constraints: BoxConstraints(
@@ -645,14 +588,14 @@ class _GiftBottomSheetState extends State<GiftBottomSheet> {
         bottomPadding > 0 ? bottomPadding + 8 : 16,
       ),
       decoration: const BoxDecoration(
-        color: Color(0xF0101018),
+        color: Color(0xF00E0B2C),
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         border: Border(
-          top: BorderSide(color: Color(0x55FFD600), width: 1.5),
+          top: BorderSide(color: Color(0x55FFC928), width: 1.5),
         ),
         boxShadow: [
           BoxShadow(
-            color: Color(0x33FFD600),
+            color: Color(0x33FFC928),
             blurRadius: 36,
             spreadRadius: -6,
           ),
@@ -665,8 +608,8 @@ class _GiftBottomSheetState extends State<GiftBottomSheet> {
           switchInCurve: Curves.easeOutCubic,
           switchOutCurve: Curves.easeInCubic,
           child: _showPreviewAndSend
-              ? _buildPreviewAndSendView(context, totalCost, hasEnoughCoins)
-              : _buildChooseAGiftView(context, filteredGifts, totalCost, hasEnoughCoins),
+              ? _buildPreviewAndSendView(context, totalCost, hasEnoughCoins, currentStarBalance)
+              : _buildChooseAGiftView(context, filteredGifts, totalCost, hasEnoughCoins, currentStarBalance),
         ),
       ),
     );
@@ -677,6 +620,7 @@ class _GiftBottomSheetState extends State<GiftBottomSheet> {
     List<GiftItem> filteredGifts,
     int totalCost,
     bool hasEnoughCoins,
+    int currentStarBalance,
   ) {
     return Column(
       key: const ValueKey('choose_gift_view'),
@@ -695,40 +639,39 @@ class _GiftBottomSheetState extends State<GiftBottomSheet> {
 
             // Header: `< Send Gift` + Recipient pill & Star balance matching Image 2 Panel 2
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.08),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      color: Colors.white,
+                      size: 14,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  'Stars',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (widget.recipients != null && widget.recipients!.isNotEmpty) ...[
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
                       child: Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.08),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.arrow_back_ios_new_rounded,
-                          color: Colors.white,
-                          size: 15,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    const Text(
-                      'Gift',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    if (widget.recipients != null && widget.recipients!.isNotEmpty) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
                             colors: [Color(0xFFFF2D78), Color(0xFFBA43F6)],
@@ -737,49 +680,82 @@ class _GiftBottomSheetState extends State<GiftBottomSheet> {
                         ),
                         child: Text(
                           'To: ${_selectedRecipient.split(' ').first}',
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 10.5,
+                            fontSize: 10,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
-                    ],
-                  ],
-                ),
+                    ),
+                  ),
+                ] else
+                  const Spacer(),
+                const SizedBox(width: 6),
 
                 // Top balance indicator
                 GestureDetector(
                   onTap: () => _showBuyCoinsSheet(context),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1E1A10),
+                      color: const Color(0xFF2A2008),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFFFD600), width: 1.2),
+                      border: Border.all(color: const Color(0xFFFFC928), width: 1.1),
                       boxShadow: const [
                         BoxShadow(
-                          color: Color(0x33FFD600),
-                          blurRadius: 8,
+                          color: Color(0x33FFC928),
+                          blurRadius: 6,
                         ),
                       ],
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text('⭐', style: TextStyle(fontSize: 12)),
-                        const SizedBox(width: 5),
+                        const Realistic3DStar(size: 15),
+                        const SizedBox(width: 4),
                         Text(
-                          _formatCost(_coinBalance),
+                          _formatCost(currentStarBalance),
                           style: const TextStyle(
-                            color: Color(0xFFFFD600),
-                            fontSize: 12.5,
+                            color: Color(0xFFFFC928),
+                            fontSize: 12,
                             fontWeight: FontWeight.w900,
                           ),
                         ),
                         const SizedBox(width: 4),
-                        const Icon(Icons.add_circle, color: Color(0xFFFFD600), size: 14),
+                        const Icon(Icons.add_circle, color: Color(0xFFFFC928), size: 13),
                       ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+
+                // Wallet button attached to the right of the Gift screen
+                Tooltip(
+                  message: 'Wallet',
+                  child: GestureDetector(
+                    onTap: () => WalletScreen.push(context),
+                    child: Container(
+                      width: 30,
+                      height: 30,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2A2008),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFFFFC928), width: 1.1),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x33FFC928),
+                            blurRadius: 6,
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.account_balance_wallet_rounded,
+                        color: Color(0xFFFFC928),
+                        size: 15,
+                      ),
                     ),
                   ),
                 ),
@@ -809,7 +785,7 @@ class _GiftBottomSheetState extends State<GiftBottomSheet> {
                                 colors: [Color(0xFFFF2D78), Color(0xFFBA43F6)],
                               )
                             : null,
-                        color: isCatSel ? null : const Color(0xFF1B1926),
+                        color: isCatSel ? null : const Color(0xFF1A1548),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: isCatSel ? Colors.transparent : Colors.white12,
@@ -897,7 +873,7 @@ class _GiftBottomSheetState extends State<GiftBottomSheet> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1B1926),
+                      color: const Color(0xFF1A1548),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(color: Colors.white12, width: 1),
                     ),
@@ -907,7 +883,7 @@ class _GiftBottomSheetState extends State<GiftBottomSheet> {
                         const Text('⭐', style: TextStyle(fontSize: 14)),
                         const SizedBox(width: 6),
                         Text(
-                          _formatCost(_coinBalance),
+                          _formatCost(currentStarBalance),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 14,
@@ -958,6 +934,7 @@ class _GiftBottomSheetState extends State<GiftBottomSheet> {
     BuildContext context,
     int totalCost,
     bool hasEnoughCoins,
+    int currentStarBalance,
   ) {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -1025,8 +1002,10 @@ class _GiftBottomSheetState extends State<GiftBottomSheet> {
         if (widget.recipients != null && widget.recipients!.length > 1) ...[
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            child: Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 8,
+              runSpacing: 6,
               children: widget.recipients!.map((r) {
                 final isSel = _selectedRecipient == r;
                 final isLeft = widget.recipients!.indexOf(r) == 0;
@@ -1103,7 +1082,7 @@ class _GiftBottomSheetState extends State<GiftBottomSheet> {
             Text(
               '${_selectedGift.diamonds}',
               style: const TextStyle(
-                color: Color(0xFFFFD600),
+                color: Color(0xFFFFC928),
                 fontSize: 15,
                 fontWeight: FontWeight.w900,
               ),
@@ -1128,7 +1107,7 @@ class _GiftBottomSheetState extends State<GiftBottomSheet> {
           height: 42,
           padding: const EdgeInsets.symmetric(horizontal: 8),
           decoration: BoxDecoration(
-            color: const Color(0xFF1B1B26),
+            color: const Color(0xFF1A1548),
             borderRadius: BorderRadius.circular(21),
             border: Border.all(color: Colors.white24, width: 1),
           ),
@@ -1177,17 +1156,56 @@ class _GiftBottomSheetState extends State<GiftBottomSheet> {
             ],
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 10),
 
-        // Big Send Gift CTA button matching Screenshot 2 Panel 3
+        // Live deduction feedback banner
+        if (_deductionFeedbackMessage != null) ...[
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF1B3B2B), Color(0xFF132B1E)],
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFF00E676), width: 1.2),
+              boxShadow: const [
+                BoxShadow(color: Color(0x3300E676), blurRadius: 10),
+              ],
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Color(0xFF00E676), size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _deductionFeedbackMessage!,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+
+        // Big Send Gift CTA button
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFF2D78),
+              backgroundColor: hasEnoughCoins
+                  ? const Color(0xFFFF2D78)
+                  : const Color(0xFF7A1B38),
               foregroundColor: Colors.white,
               elevation: 8,
-              shadowColor: const Color(0xAAFF2D78),
+              shadowColor: hasEnoughCoins
+                  ? const Color(0xAAFF2D78)
+                  : Colors.transparent,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(24),
               ),
@@ -1195,7 +1213,11 @@ class _GiftBottomSheetState extends State<GiftBottomSheet> {
             ),
             onPressed: _sendSelectedGift,
             child: Text(
-              'Send Gift ($totalCost ⭐)',
+              hasEnoughCoins
+                  ? (_lastDeductedAmount != null
+                      ? 'Send Again (${_formatCost(totalCost)} ⭐)'
+                      : 'Send Gift (${_formatCost(totalCost)} ⭐)')
+                  : 'Recharge Stars (Need ${_formatCost(totalCost)} ⭐)',
               style: const TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w900,
@@ -1206,21 +1228,46 @@ class _GiftBottomSheetState extends State<GiftBottomSheet> {
         ),
         const SizedBox(height: 10),
 
-        // Balance & Top Up footer
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        // Remaining Balance & Top Up footer
+        Wrap(
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 8,
+          runSpacing: 4,
           children: [
-            const Text('⭐', style: TextStyle(fontSize: 13)),
-            const SizedBox(width: 5),
-            Text(
-              '$_coinBalance',
-              style: const TextStyle(
-                color: Color(0xFFFFD600),
-                fontSize: 13,
-                fontWeight: FontWeight.w900,
-              ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('⭐', style: TextStyle(fontSize: 14)),
+                const SizedBox(width: 5),
+                Text(
+                  '${_formatCost(currentStarBalance)} ⭐',
+                  style: const TextStyle(
+                    color: Color(0xFFFFC928),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                if (_lastDeductedAmount != null) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFF1744).withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      '-${_formatCost(_lastDeductedAmount!)} ⭐',
+                      style: const TextStyle(
+                        color: Color(0xFFFF5252),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
-            const SizedBox(width: 12),
             GestureDetector(
               onTap: () => _showBuyCoinsSheet(context),
               child: Container(
@@ -1284,7 +1331,7 @@ class _InteractiveGiftGridCardState extends State<_InteractiveGiftGridCard> {
           decoration: BoxDecoration(
             color: widget.isSelected
                 ? const Color(0x33FF2D78)
-                : const Color(0xFF13111C),
+                : const Color(0xFF100D33),
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
               color: widget.isSelected
@@ -1349,7 +1396,7 @@ class _InteractiveGiftGridCardState extends State<_InteractiveGiftGridCard> {
                             child: Text(
                               _formatCost(widget.gift.diamonds),
                               style: const TextStyle(
-                                color: Color(0xFFFFD600),
+                                color: Color(0xFFFFC928),
                                 fontSize: 12,
                                 fontWeight: FontWeight.w900,
                               ),
@@ -1526,7 +1573,7 @@ class _GiftInteractivePreviewPopState extends State<_GiftInteractivePreviewPop>
         height: 180,
         width: double.infinity,
         decoration: BoxDecoration(
-          color: const Color(0xFF141220),
+          color: const Color(0xFF100D33),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
             color: const Color(0x66FF2D78),
@@ -1565,7 +1612,7 @@ class _GiftInteractivePreviewPopState extends State<_GiftInteractivePreviewPop>
                 builder: (context, _) => CustomPaint(
                   painter: _GiftBurstPainter(
                     progress: _burstProgress.value,
-                    color: const Color(0xFFFFD600),
+                    color: const Color(0xFFFFC928),
                   ),
                 ),
               ),
@@ -1619,14 +1666,14 @@ class _GiftInteractivePreviewPopState extends State<_GiftInteractivePreviewPop>
                   border: Border.all(
                     color: _popController.isAnimating
                         ? const Color(0xFFFF2D78)
-                        : const Color(0xFFFFD600),
+                        : const Color(0xFFFFC928),
                     width: 1.0,
                   ),
                   boxShadow: [
                     BoxShadow(
                       color: (_popController.isAnimating
                               ? const Color(0xFFFF2D78)
-                              : const Color(0xFFFFD600))
+                              : const Color(0xFFFFC928))
                           .withValues(alpha: 0.3),
                       blurRadius: 8,
                     ),
@@ -1640,7 +1687,7 @@ class _GiftInteractivePreviewPopState extends State<_GiftInteractivePreviewPop>
                       style: TextStyle(
                         color: _popController.isAnimating
                             ? const Color(0xFFFF2D78)
-                            : const Color(0xFFFFD600),
+                            : const Color(0xFFFFC928),
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.3,

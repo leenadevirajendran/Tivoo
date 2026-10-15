@@ -9,6 +9,7 @@ import '../../../../core/widgets/animated_gradient_background.dart';
 import '../../../../core/widgets/gradient_button.dart';
 import '../../../../core/widgets/tivoo_logo.dart';
 import '../../../auth/presentation/screens/login_screen.dart';
+import '../../../auth/presentation/screens/register_screen.dart';
 import '../widgets/chat_bubble_widget.dart';
 
 class SplashScreen extends StatelessWidget {
@@ -19,6 +20,19 @@ class SplashScreen extends StatelessWidget {
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
             const LoginScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 400),
+      ),
+    );
+  }
+
+  void _navigateToRegister(BuildContext context) {
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            const RegisterScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(opacity: animation, child: child);
         },
@@ -174,7 +188,7 @@ class SplashScreen extends StatelessWidget {
                                 padding: const EdgeInsets.symmetric(horizontal: 24),
                                 child: GradientButton(
                                   text: AppStrings.getStarted,
-                                  onPressed: () => _navigateToLogin(context),
+                                  onPressed: () => _navigateToRegister(context),
                                   trailingIcon: const Icon(
                                     Icons.arrow_forward_rounded,
                                     color: AppColors.textOnPrimary,
