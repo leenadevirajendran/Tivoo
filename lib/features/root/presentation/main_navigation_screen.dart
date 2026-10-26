@@ -21,8 +21,8 @@ class MainNavigationScreen extends ConsumerWidget {
     final selectedIndex = ref.watch(bottomNavIndexProvider);
 
     final pages = [
-      const HomeScreen(),
       const ExploreScreen(),
+      const HomeScreen(),
       const ActivityScreen(),
       const ProfileScreen(),
     ];
@@ -51,7 +51,7 @@ class MainNavigationScreen extends ConsumerWidget {
               currentIndex: selectedIndex,
               activityBadgeCount: 5,
               onTap: (index) {
-                if (index != 1) {
+                if (index != 0) {
                   ReelVideoManager.instance.pauseAll();
                 }
                 ref.read(bottomNavIndexProvider.notifier).state = index;

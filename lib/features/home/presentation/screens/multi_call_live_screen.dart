@@ -29,6 +29,7 @@ class _MultiCallLiveScreenState extends State<MultiCallLiveScreen> {
 
   late final List<LiveComment> _comments;
   Timer? _commentTimer;
+  bool _isCommentsPaused = false;
   bool _isMicOn = true;
   int _diamondsCount = 888450;
 
@@ -58,7 +59,7 @@ class _MultiCallLiveScreenState extends State<MultiCallLiveScreen> {
     _comments = List<LiveComment>.from(MockLiveComments.initialComments);
 
     _commentTimer = Timer.periodic(const Duration(seconds: 4), (_) {
-      if (!mounted) return;
+      if (!mounted || _isCommentsPaused) return;
       final raw = _simulatedChatters[_simulatedIndex % _simulatedChatters.length];
       _simulatedIndex++;
       final parts = raw.split(': ');
@@ -209,7 +210,26 @@ class _MultiCallLiveScreenState extends State<MultiCallLiveScreen> {
                             const SizedBox(height: 6),
 
                             // Upward-Flowing Live Comments Feed ("malla poga")
-                            Expanded(child: LiveChatListView(comments: _comments)),
+                            Expanded(
+                              child: LiveChatListView(
+                                comments: _comments,
+                                onPauseComments: () => setState(() => _isCommentsPaused = true),
+                                onResumeComments: () => setState(() => _isCommentsPaused = false),
+                                onDeleteComment: (id) => setState(() => _comments.removeWhere((c) => c.id == id)),
+                                onReportComment: (id) => setState(() {
+                                  final idx = _comments.indexWhere((c) => c.id == id);
+                                  if (idx != -1) {
+                                    _comments[idx] = _comments[idx].copyWith(
+                                      message: 'This comment has been reported',
+                                      isReported: true,
+                                    );
+                                  }
+                                }),
+                                onBlockUser: (userName) => setState(() {
+                                  _comments.removeWhere((c) => c.userName == userName);
+                                }),
+                              ),
+                            ),
                           ],
                         ),
                       ),

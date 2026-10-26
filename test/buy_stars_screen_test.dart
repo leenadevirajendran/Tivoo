@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tivoo/features/gift/buy_stars_sheet.dart';
-import 'package:tivoo/features/live_stream/presentation/controllers/star_wallet_controller.dart';
 
 void main() {
   Widget createTestWidget({Size? surfaceSize}) {

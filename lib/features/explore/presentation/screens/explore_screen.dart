@@ -92,17 +92,15 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     super.dispose();
   }
 
-  /// Back arrow: pop if Explore was pushed, otherwise switch to the Home tab.
-  void _goHome() {
-    if (Navigator.of(context).canPop()) {
-      Navigator.of(context).pop();
-    } else {
-      ref.read(bottomNavIndexProvider.notifier).state = 0;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    // Automatically resume video playback when user switches to the Explore tab
+    ref.listen<int>(bottomNavIndexProvider, (prev, next) {
+      if (next == 0 && prev != 0) {
+        _onPageSettled(_currentIndex);
+      }
+    });
+
     final state = ref.watch(exploreControllerProvider);
     final controller = ref.read(exploreControllerProvider.notifier);
 
@@ -184,7 +182,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                 child: ExploreHeader(
                   isReelsView: true,
                   onViewModeToggle: controller.toggleViewMode,
-                  onBackTap: _goHome,
+                  onBackTap: Navigator.of(context).canPop() ? () => Navigator.of(context).pop() : null,
                   onSearchTap: () => _showSearchDialog(context, ref),
                   onFilterTap: () => _showFilterInfo(context),
                 ),
@@ -208,7 +206,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
             child: ExploreHeader(
               isReelsView: false,
               onViewModeToggle: controller.toggleViewMode,
-              onBackTap: _goHome,
+              onBackTap: Navigator.of(context).canPop() ? () => Navigator.of(context).pop() : null,
               onSearchTap: () => _showSearchDialog(context, ref),
               onFilterTap: () => _showFilterInfo(context),
             ),

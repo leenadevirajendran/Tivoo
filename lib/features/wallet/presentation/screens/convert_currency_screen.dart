@@ -105,8 +105,11 @@ class _ConvertCurrencyScreenState extends ConsumerState<ConvertCurrencyScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      body: Column(
-        children: [
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          children: [
           Expanded(
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
@@ -388,6 +391,7 @@ class _ConvertCurrencyScreenState extends ConsumerState<ConvertCurrencyScreen> {
               label: 'Review Conversion',
               onPressed: isValid
                   ? () {
+                      FocusScope.of(context).unfocus();
                       Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => ConfirmConversionScreen(
@@ -404,8 +408,9 @@ class _ConvertCurrencyScreenState extends ConsumerState<ConvertCurrencyScreen> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildPreviewItem({
     required Widget icon,

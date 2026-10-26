@@ -42,7 +42,5 @@ void main() {
     expect(find.text('4,000'), findsOneWidget);
     expect(find.text('5,000'), findsOneWidget);
     expect(find.text('10,000'), findsOneWidget);
-
-    print('All 9 packs verified on full screen!');
   });
 }

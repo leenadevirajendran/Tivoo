@@ -1,5 +1,8 @@
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/constants/app_assets.dart';
 import '../../../../core/theme/luxe_theme.dart';
@@ -9,31 +12,95 @@ import '../../../family/presentation/screens/family_team_screen.dart';
 import '../../../home/presentation/controllers/home_controller.dart';
 import '../../../settings/presentation/screens/settings_screen.dart';
 import '../controllers/profile_controller.dart';
+import '../../../home/domain/models/live_stream_card_model.dart';
+import '../controllers/follow_controller.dart';
+import '../widgets/instagram_follow_button.dart';
 import '../widgets/edit_profile_dialog.dart';
 import '../widgets/profile_luxe_sections.dart';
 import '../widgets/tiki_verification_sheet.dart';
 import '../../../wallet/presentation/screens/wallet_screen.dart';
+import '../../../../core/widgets/tivoo_share_sheet.dart';
 
 /// VIP profile in the Luxe style: top bar, identity header, bio, actions, badges,
 /// Videos / Likes bar and the Drafts / Pinned / My Posts content grid.
 class ProfileScreen extends ConsumerStatefulWidget {
-  const ProfileScreen({super.key});
+  final LiveStreamCardModel? streamer;
+
+  const ProfileScreen({super.key, this.streamer});
 
   @override
   ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  int _tab = 1; // 0 = Drafts, 1 = Pinned, 2 = My Posts
-  bool _showVideos = true;
+  bool _isViewingDrafts = false;
 
-  static const _videos = [
-    ProfileVideo(AppAssets.status1, draft: true),
-    ProfileVideo(AppAssets.status2, views: '4.9K', pinned: true),
-    ProfileVideo(AppAssets.status3, views: '6.3K', pinned: true),
-    ProfileVideo(AppAssets.status4, views: '8.2K', pinned: true),
+  late final List<ProfileVideo> _videos = [
+    // 1st item: Drafts folder tile (with draft1 as cover)
+    ProfileVideo(
+      AppAssets.draft1,
+      isDraftFolder: true,
+      draftCount: 6,
+    ),
+    // 1st set of posts
+    ProfileVideo(AppAssets.status2, views: '4.9K'),
+    ProfileVideo(AppAssets.status3, views: '6.3K'),
+    ProfileVideo(AppAssets.status4, views: '8.2K'),
     ProfileVideo(AppAssets.avatarNeha, views: '5.7K'),
     ProfileVideo(AppAssets.status5, views: '9.1K'),
+    // 2nd set of posts (scrollable)
+    ProfileVideo(AppAssets.avatarPriya, views: '12.4K'),
+    ProfileVideo(AppAssets.avatarDiya, views: '3.8K'),
+    ProfileVideo(AppAssets.avatarSneha, views: '15.1K'),
+    ProfileVideo(AppAssets.avatarArun, views: '7.6K'),
+    ProfileVideo(AppAssets.avatarKarthik, views: '18.9K'),
+    ProfileVideo(AppAssets.avatarMeena, views: '22.3K'),
+    ProfileVideo(AppAssets.liveCard1, views: '31.5K'),
+  ];
+
+  final List<DraftVideoItem> _drafts = [
+    const DraftVideoItem(
+      id: 'd1',
+      asset: AppAssets.draft1,
+      title: 'Vlog cut #1',
+      duration: '00:42',
+      date: 'Today',
+    ),
+    const DraftVideoItem(
+      id: 'd2',
+      asset: AppAssets.draft2,
+      title: 'Story draft #2',
+      duration: '01:15',
+      date: 'Yesterday',
+    ),
+    const DraftVideoItem(
+      id: 'd3',
+      asset: AppAssets.draft3,
+      title: 'Reel edit #3',
+      duration: '00:58',
+      date: '2d ago',
+    ),
+    const DraftVideoItem(
+      id: 'd4',
+      asset: AppAssets.draft4,
+      title: 'Music session #4',
+      duration: '00:32',
+      date: '3d ago',
+    ),
+    const DraftVideoItem(
+      id: 'd5',
+      asset: AppAssets.draft5,
+      title: 'Special live #5',
+      duration: '01:20',
+      date: '5d ago',
+    ),
+    const DraftVideoItem(
+      id: 'd6',
+      asset: AppAssets.draft6,
+      title: 'Highlights #6',
+      duration: '00:48',
+      date: '1w ago',
+    ),
   ];
 
   void _toast(String message) {
@@ -42,7 +109,60 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     ).showSnackBar(SnackBar(content: Text(message), duration: const Duration(milliseconds: 900)));
   }
 
+  void _toggleBlock(BuildContext context, String userId, String userName, bool isBlocked) {
+    if (isBlocked) {
+      ref.read(followControllerProvider.notifier).unblockUser(
+        userId,
+        onStatusNotify: (msg) => _toast(msg),
+      );
+    } else {
+      showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: const Color(0xFF141927),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: const [
+              Icon(Icons.block_rounded, color: Color(0xFFFF4B6E), size: 24),
+              SizedBox(width: 8),
+              Text('Block User', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: Text(
+            'Are you sure you want to block $userName? They will no longer be able to message you, view your profile, or see your activity.',
+            style: const TextStyle(color: Colors.white70, fontSize: 14),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF4B6E),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                ref.read(followControllerProvider.notifier).blockUser(
+                  userId,
+                  onStatusNotify: (msg) => _toast(msg),
+                );
+              },
+              child: const Text('Block'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
   void _goBack() {
+    if (_isViewingDrafts) {
+      setState(() => _isViewingDrafts = false);
+      return;
+    }
     if (Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
     } else {
@@ -51,6 +171,118 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   void _open(Widget screen) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
+
+  void _openDraftOptions(DraftVideoItem draft) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 30),
+          decoration: const BoxDecoration(
+            color: Color(0xFF100D28),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            boxShadow: [BoxShadow(color: Color(0x66000000), blurRadius: 20)],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.asset(draft.asset, width: 50, height: 50, fit: BoxFit.cover),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          draft.title,
+                          style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${draft.duration} • Saved ${draft.date}',
+                          style: const TextStyle(color: Colors.white54, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LuxeColors.goldGradient,
+                  ),
+                  child: const Icon(Icons.edit_rounded, color: Color(0xFF1A1300), size: 18),
+                ),
+                title: const Text('Edit Draft', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                subtitle: const Text('Add sound, stickers, effects or trim video', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _toast('Opening video editor for "${draft.title}" ✂️');
+                },
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFF2E9BFF).withValues(alpha: 0.2),
+                  ),
+                  child: const Icon(Icons.publish_rounded, color: Color(0xFF2E9BFF), size: 18),
+                ),
+                title: const Text('Post to Feed Now', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                subtitle: const Text('Publish this draft to your profile', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _toast('Publishing "${draft.title}" to profile! 🎉');
+                },
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.redAccent.withValues(alpha: 0.2),
+                  ),
+                  child: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 18),
+                ),
+                title: const Text('Delete Draft', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  setState(() {
+                    _drafts.removeWhere((d) => d.id == draft.id);
+                  });
+                  _toast('Draft deleted');
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   void _editProfile() {
     final controller = ref.read(profileControllerProvider.notifier);
@@ -63,80 +295,813 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
+  void _showChangeAvatarSheet() {
+    final avatarPresets = [
+      AppAssets.status5,
+      AppAssets.avatarNeha,
+      AppAssets.avatarPriya,
+      AppAssets.avatarDiya,
+      AppAssets.avatarSneha,
+      AppAssets.avatarArun,
+      AppAssets.avatarKarthik,
+      AppAssets.avatarMeena,
+      AppAssets.status1,
+      AppAssets.status2,
+      AppAssets.status3,
+      AppAssets.status4,
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return Container(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          decoration: const BoxDecoration(
+            color: Color(0xFF100D28),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            boxShadow: [BoxShadow(color: Color(0x99000000), blurRadius: 28, offset: Offset(0, -4))],
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                const Text(
+                  'Change Profile Picture',
+                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Upload from your gallery, camera, or choose an avatar',
+                  style: TextStyle(color: Colors.white60, fontSize: 12),
+                ),
+                const SizedBox(height: 18),
+                _UploadOptionTile(
+                  icon: Icons.photo_library_rounded,
+                  iconColor: const Color(0xFFFFB800),
+                  iconBg: const Color(0x26FFB800),
+                  title: 'Upload from Gallery',
+                  subtitle: 'Select a photo from your album',
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    try {
+                      final picker = ImagePicker();
+                      final picked = await picker.pickImage(source: ImageSource.gallery);
+                      if (picked != null) {
+                        ref.read(profileControllerProvider.notifier).updateProfile(avatarUrl: picked.path);
+                        _toast('Profile picture updated from gallery! 📸');
+                      }
+                    } catch (e) {
+                      _toast('Could not pick photo: $e');
+                    }
+                  },
+                ),
+                const SizedBox(height: 10),
+                _UploadOptionTile(
+                  icon: Icons.camera_alt_rounded,
+                  iconColor: const Color(0xFFFF4081),
+                  iconBg: const Color(0x26FF4081),
+                  title: 'Take a Photo (Camera)',
+                  subtitle: 'Capture a selfie or photo right now',
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    try {
+                      final picker = ImagePicker();
+                      final picked = await picker.pickImage(source: ImageSource.camera);
+                      if (picked != null) {
+                        ref.read(profileControllerProvider.notifier).updateProfile(avatarUrl: picked.path);
+                        _toast('Profile picture updated from camera! 📷');
+                      }
+                    } catch (e) {
+                      _toast('Could not take photo: $e');
+                    }
+                  },
+                ),
+                const SizedBox(height: 18),
+                const Text(
+                  'Or Choose an Avatar',
+                  style: TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 64,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: avatarPresets.length,
+                    separatorBuilder: (context, index) => const SizedBox(width: 10),
+                    itemBuilder: (context, i) {
+                      final asset = avatarPresets[i];
+                      return GestureDetector(
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          ref.read(profileControllerProvider.notifier).updateProfile(avatarUrl: asset);
+                          _toast('Avatar chosen! 🌟');
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: const Color(0xFFFFDF00), width: 1.5),
+                          ),
+                          child: CustomAvatar(radius: 26, assetPath: asset),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showDeletePostOption(ProfileVideo video) {
+    if (video.isDraftFolder) return;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          decoration: const BoxDecoration(
+            color: Color(0xFF100D28),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            boxShadow: [BoxShadow(color: Color(0x99000000), blurRadius: 28, offset: Offset(0, -4))],
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                const Text(
+                  'Post Options',
+                  style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.redAccent.withValues(alpha: 0.16),
+                    ),
+                    child: const Icon(Icons.delete_forever_rounded, color: Colors.redAccent, size: 22),
+                  ),
+                  title: const Text('Delete Post', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600, fontSize: 16)),
+                  subtitle: const Text('This post will be permanently removed', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    setState(() {
+                      _videos.remove(video);
+                    });
+                    _toast('Post deleted successfully 🗑️');
+                  },
+                ),
+                const SizedBox(height: 8),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withValues(alpha: 0.08),
+                    ),
+                    child: const Icon(Icons.close_rounded, color: Colors.white70, size: 22),
+                  ),
+                  title: const Text('Cancel', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w600, fontSize: 15)),
+                  onTap: () => Navigator.pop(ctx),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _openInstagramPostViewer(ProfileVideo video) {
+    if (video.isDraftFolder) return;
+    final profile = ref.read(profileControllerProvider).profile;
+    bool isLiked = false;
+    int likesCount = int.tryParse(video.views?.replaceAll(RegExp(r'[^0-9]'), '') ?? '49') ?? 49;
+    likesCount = (likesCount * 12);
+
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierDismissible: true,
+        barrierColor: Colors.black.withValues(alpha: 0.92),
+        pageBuilder: (ctx, anim, secAnim) {
+          return StatefulBuilder(
+            builder: (ctx, setModalState) {
+              return Scaffold(
+                backgroundColor: Colors.transparent,
+                body: SafeArea(
+                  child: Stack(
+                    children: [
+                      // Center media
+                      Center(
+                        child: GestureDetector(
+                          onDoubleTap: () {
+                            setModalState(() {
+                              isLiked = true;
+                              likesCount += 1;
+                            });
+                          },
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: AspectRatio(
+                              aspectRatio: 9 / 16,
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  video.filePath != null
+                                      ? Image.file(
+                                          File(video.filePath!),
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) => Image.asset(video.asset, fit: BoxFit.cover),
+                                        )
+                                      : Image.asset(video.asset, fit: BoxFit.cover),
+                                  const DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topCenter,
+                                        end: Alignment.bottomCenter,
+                                        colors: [Color(0x66000000), Colors.transparent, Color(0xAA000000)],
+                                        stops: [0, 0.45, 1],
+                                      ),
+                                    ),
+                                  ),
+                                  // Bottom user details & caption
+                                  Positioned(
+                                    left: 16,
+                                    bottom: 24,
+                                    right: 70,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            CustomAvatar(
+                                              radius: 16,
+                                              imageUrl: profile.avatarUrl.isNotEmpty ? profile.avatarUrl : null,
+                                              assetPath: profile.avatarUrl.isEmpty ? AppAssets.status5 : null,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              '@${profile.username}',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 6),
+                                            const Icon(Icons.verified_rounded, color: Color(0xFF2E9BFF), size: 14),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        const Text(
+                                          'Living the dream on Tivoo! ✨ #live #streamer #moments',
+                                          style: TextStyle(color: Colors.white, fontSize: 13),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 6),
+                                        const Row(
+                                          children: [
+                                            Icon(Icons.music_note_rounded, color: Color(0xFFFFDF00), size: 14),
+                                            SizedBox(width: 4),
+                                            Text(
+                                              'Original Audio • Tivoo Vibes',
+                                              style: TextStyle(color: Color(0xFFFFDF00), fontSize: 11),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  // Right side actions (Like, Comment, Share, More)
+                                  Positioned(
+                                    right: 12,
+                                    bottom: 24,
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          icon: Icon(
+                                            isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                                            color: isLiked ? Colors.redAccent : Colors.white,
+                                            size: 30,
+                                          ),
+                                          onPressed: () {
+                                            setModalState(() {
+                                              isLiked = !isLiked;
+                                              if (isLiked) {
+                                                likesCount += 1;
+                                              } else {
+                                                likesCount = (likesCount - 1).clamp(0, 999999);
+                                              }
+                                            });
+                                          },
+                                        ),
+                                        Text(
+                                          '$likesCount',
+                                          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                        ),
+                                        const SizedBox(height: 14),
+                                        IconButton(
+                                          icon: const Icon(Icons.chat_bubble_outline_rounded, color: Colors.white, size: 26),
+                                          onPressed: () => _toast('Opening comments...'),
+                                        ),
+                                        const Text('48', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                                        const SizedBox(height: 14),
+                                        IconButton(
+                                          icon: const Icon(Icons.share_rounded, color: Colors.white, size: 26),
+                                          onPressed: () => _toast('Sharing post... 🚀'),
+                                        ),
+                                        const Text('Share', style: TextStyle(color: Colors.white, fontSize: 11)),
+                                        const SizedBox(height: 14),
+                                        IconButton(
+                                          icon: const Icon(Icons.more_vert_rounded, color: Colors.white, size: 24),
+                                          onPressed: () {
+                                            Navigator.pop(ctx);
+                                            _showDeletePostOption(video);
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Top back button
+                      Positioned(
+                        top: 10,
+                        left: 10,
+                        child: IconButton(
+                          icon: const Icon(Icons.close_rounded, color: Colors.white, size: 28),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  void _showUploadOptions() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return Container(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          decoration: BoxDecoration(
+            color: const Color(0xFF100D28),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            border: Border(
+              top: BorderSide(color: LuxeColors.gold.withValues(alpha: 0.4), width: 1.2),
+            ),
+            boxShadow: const [
+              BoxShadow(color: Color(0x99000000), blurRadius: 28, offset: Offset(0, -4)),
+            ],
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 42,
+                    height: 4.5,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.28),
+                      borderRadius: BorderRadius.circular(2.5),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(9),
+                      decoration: BoxDecoration(
+                        gradient: LuxeColors.goldGradient,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.cloud_upload_rounded, color: Color(0xFF1A1300), size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Upload Posts',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Share photo or video to your profile',
+                          style: TextStyle(color: Colors.white54, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                // 1. Upload from gallery
+                _UploadOptionTile(
+                  icon: Icons.photo_library_rounded,
+                  iconColor: const Color(0xFFFFB800),
+                  iconBg: const Color(0x26FFB800),
+                  title: 'Upload from gallery',
+                  subtitle: 'Select photos or videos from your album',
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _pickFromGallery();
+                  },
+                ),
+                const SizedBox(height: 10),
+                // 2. File manager
+                _UploadOptionTile(
+                  icon: Icons.folder_open_rounded,
+                  iconColor: const Color(0xFF2E9BFF),
+                  iconBg: const Color(0x262E9BFF),
+                  title: 'File manager',
+                  subtitle: 'Choose media files directly from device storage',
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _pickFromFileManager();
+                  },
+                ),
+                const SizedBox(height: 10),
+                // 3. Camera
+                _UploadOptionTile(
+                  icon: Icons.camera_alt_rounded,
+                  iconColor: const Color(0xFFFF4081),
+                  iconBg: const Color(0x26FF4081),
+                  title: 'Camera',
+                  subtitle: 'Capture new photo or record video right now',
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _showCameraChoiceSheet();
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _pickFromGallery() async {
+    try {
+      final picker = ImagePicker();
+      final media = await picker.pickMedia();
+      if (media != null) {
+        _addNewPost(filePath: media.path, label: media.name);
+      }
+    } catch (e) {
+      _toast('Unable to open gallery: $e');
+    }
+  }
+
+  Future<void> _pickFromFileManager() async {
+    try {
+      final files = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['jpg', 'jpeg', 'png', 'webp', 'mp4', 'mov', 'avi', 'mkv'],
+      );
+      if (files.isNotEmpty && files.first.path != null) {
+        final path = files.first.path!;
+        final name = files.first.name;
+        _addNewPost(filePath: path, label: name);
+      }
+    } catch (e) {
+      _toast('Unable to open file manager: $e');
+    }
+  }
+
+  void _showCameraChoiceSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 30),
+          decoration: BoxDecoration(
+            color: const Color(0xFF100D28),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+            border: Border(top: BorderSide(color: LuxeColors.gold.withValues(alpha: 0.4), width: 1.2)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Camera',
+                  style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Color(0x33FF4081),
+                    ),
+                    child: const Icon(Icons.camera_rounded, color: Color(0xFFFF4081), size: 20),
+                  ),
+                  title: const Text('Take Photo', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                  subtitle: const Text('Capture a picture with your camera', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _captureWithCamera(isVideo: false);
+                  },
+                ),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Color(0x332E9BFF),
+                    ),
+                    child: const Icon(Icons.videocam_rounded, color: Color(0xFF2E9BFF), size: 20),
+                  ),
+                  title: const Text('Record Video', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                  subtitle: const Text('Shoot a video reel with your camera', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _captureWithCamera(isVideo: true);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _captureWithCamera({required bool isVideo}) async {
+    try {
+      final picker = ImagePicker();
+      final XFile? file = isVideo
+          ? await picker.pickVideo(source: ImageSource.camera)
+          : await picker.pickImage(source: ImageSource.camera);
+      if (file != null) {
+        _addNewPost(filePath: file.path, label: file.name);
+      }
+    } catch (e) {
+      _toast('Unable to open camera: $e');
+    }
+  }
+
+  void _addNewPost({required String filePath, required String label}) {
+    setState(() {
+      final insertIndex = _videos.length > 1 ? 1 : _videos.length;
+      _videos.insert(
+        insertIndex,
+        ProfileVideo(
+          AppAssets.status2,
+          filePath: filePath,
+          views: 'Just now',
+        ),
+      );
+    });
+    _toast('Post uploaded successfully! 🎉');
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isViewingStreamer = widget.streamer != null;
+    final streamer = widget.streamer;
     final profile = ref.watch(profileControllerProvider).profile;
+    final followMap = ref.watch(followControllerProvider);
+    final relationship = isViewingStreamer
+        ? (followMap[streamer!.id] ??
+            ref.read(followControllerProvider.notifier).getRelationship(
+                  streamer.id,
+                  defaultName: streamer.streamerName,
+                  defaultAvatar: streamer.streamerAssetPath ?? streamer.streamerAvatarUrl ?? '',
+                  initialFollowers: 120400,
+                  initialFollowing: streamer.isFollowing,
+                ))
+        : null;
+
     final s = profileScale(context);
     final gap = SizedBox(height: 12 * s);
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF07061A),
-      body: Stack(
-        children: [
-          const Positioned.fill(child: ProfileBackdrop()),
-          SafeArea(
-            bottom: false,
-            child: DefaultTextStyle.merge(
-              style: const TextStyle(fontFamily: 'Poppins'),
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: EdgeInsets.fromLTRB(14 * s, 8, 14 * s, 120),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: context.isTablet ? 680 : double.infinity),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ProfileTopBar(
-                          onBack: _goBack,
-                          onVip: () => _toast('👑 VIP host tier active'),
-                          onMenu: _showMenu,
-                          onSettings: () => _open(const SettingsScreen()),
-                        ),
-                        SizedBox(height: 20 * s),
-                        ProfileIdentityHeader(
-                          username: profile.username,
-                          avatarAsset: AppAssets.status5,
-                          onAvatarCamera: () => _toast('Change profile photo'),
-                        ),
-                        SizedBox(height: 10 * s),
-                        ProfileBio(name: profile.name, bio: profile.bio),
-                        SizedBox(height: 14 * s),
-                        ProfileActions(
-                          onEdit: _editProfile,
-                          onFindFriends: () => _toast('Finding friends & nearby creators...'),
-                          onCamera: () => _toast('Open camera / create story'),
-                        ),
-                        gap,
-                        ProfileBadgesRow(
-                          onTikiStar: () => TivooVerificationSheet.show(context),
-                          onAngels: () => _toast('Your angels'),
-                          onShare: () => _toast('Sharing profile link ✨'),
-                          onFamily: () => _open(const FamilyTeamScreen()),
-                        ),
-                        gap,
-                        ProfileStatsBar(
-                          videos: 411,
-                          likes: 39637,
-                          showVideos: _showVideos,
-                          onChanged: (v) => setState(() => _showVideos = v),
-                        ),
-                        gap,
-                        ProfileContentPanel(
-                          tab: _tab,
-                          onTab: (t) => setState(() => _tab = t),
-                          videos: _videos,
-                          onOpen: (v) =>
-                              _toast(v.draft ? 'Opening drafts (12 videos)' : 'Playing video · ${v.views} views'),
-                        ),
-                      ],
+    return PopScope(
+      canPop: !_isViewingDrafts,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _isViewingDrafts) {
+          setState(() => _isViewingDrafts = false);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFF07061A),
+        body: Stack(
+          children: [
+            const Positioned.fill(child: ProfileBackdrop()),
+            SafeArea(
+              bottom: false,
+              child: DefaultTextStyle.merge(
+                style: const TextStyle(fontFamily: 'Poppins'),
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: EdgeInsets.fromLTRB(14 * s, 8, 14 * s, 120 + MediaQuery.paddingOf(context).bottom),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: context.isTablet ? 680 : double.infinity),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ProfileTopBar(
+                            onBack: _goBack,
+                            onMenu: isViewingStreamer ? null : _showMenu,
+                            onSettings: isViewingStreamer ? null : () => _open(const SettingsScreen()),
+                            showActions: !isViewingStreamer,
+                          ),
+                          SizedBox(height: 20 * s),
+                          ProfileIdentityHeader(
+                            username: isViewingStreamer
+                                ? streamer!.streamerName.toLowerCase().replaceAll(' ', '_')
+                                : profile.username,
+                            avatarAsset: isViewingStreamer
+                                ? (streamer!.streamerAssetPath ??
+                                    (streamer.streamerAvatarUrl == null
+                                        ? AppAssets.liveCard1
+                                        : streamer.streamerAvatarUrl!))
+                                : (profile.avatarUrl.isNotEmpty ? profile.avatarUrl : AppAssets.status5),
+                            followersCount: isViewingStreamer
+                                ? relationship!.formattedFollowers
+                                : profile.followersCount,
+                            followingCount: isViewingStreamer ? '142' : '${profile.followingCount}',
+                            likesCount: isViewingStreamer ? '45.2K' : profile.likesCount,
+                            onAvatarCamera: isViewingStreamer ? () {} : _showChangeAvatarSheet,
+                          ),
+                          SizedBox(height: 10 * s),
+                          ProfileBio(
+                            name: isViewingStreamer ? streamer!.streamerName : profile.name,
+                            bio: isViewingStreamer ? streamer!.streamerBio : profile.bio,
+                          ),
+                          SizedBox(height: 14 * s),
+                          if (isViewingStreamer)
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: InstagramFollowButton(
+                                    userId: streamer!.id,
+                                    userName: streamer.streamerName,
+                                    userAvatar: streamer.streamerAssetPath ?? streamer.streamerAvatarUrl ?? '',
+                                    initialFollowers: 120400,
+                                    initialFollowing: streamer.isFollowing,
+                                    height: 44 * s,
+                                  ),
+                                ),
+                                SizedBox(width: 8 * s),
+                                Expanded(
+                                  child: SizedBox(
+                                    height: 44 * s,
+                                    child: ElevatedButton.icon(
+                                      onPressed: () => _toggleBlock(
+                                        context,
+                                        streamer.id,
+                                        streamer.streamerName,
+                                        relationship?.isBlocked ?? false,
+                                      ),
+                                      icon: Icon(
+                                        (relationship?.isBlocked ?? false)
+                                            ? Icons.lock_open_rounded
+                                            : Icons.block_rounded,
+                                        size: 15,
+                                        color: (relationship?.isBlocked ?? false)
+                                            ? Colors.white70
+                                            : const Color(0xFFFF4B6E),
+                                      ),
+                                      label: Text(
+                                        (relationship?.isBlocked ?? false) ? 'Unblock' : 'Block',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 13,
+                                          color: (relationship?.isBlocked ?? false)
+                                              ? Colors.white70
+                                              : const Color(0xFFFF4B6E),
+                                        ),
+                                      ),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: (relationship?.isBlocked ?? false)
+                                            ? const Color(0xFF1E2840)
+                                            : const Color(0x22FF4B6E),
+                                        foregroundColor: (relationship?.isBlocked ?? false)
+                                            ? Colors.white
+                                            : const Color(0xFFFF4B6E),
+                                        elevation: 0,
+                                        side: BorderSide(
+                                          color: (relationship?.isBlocked ?? false)
+                                              ? Colors.white24
+                                              : const Color(0x66FF4B6E),
+                                        ),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            )
+                          else
+                            ProfileActions(
+                              onEdit: _editProfile,
+                              onUploadPosts: _showUploadOptions,
+                            ),
+                          if (!isViewingStreamer) ...[
+                            gap,
+                            ProfileBadgesRow(
+                              onTikiStar: () => TivooVerificationSheet.show(context),
+                              onAngels: () => _toast('Your angels'),
+                              onShare: () {
+                                final profile = ref.read(profileControllerProvider).profile;
+                                final shareUrl = 'https://tivoo.app/profile/${profile.username}';
+                                final shareText = 'Check out ${profile.name} (@${profile.username}) on Tivoo! $shareUrl';
+                                TivooShareSheet.show(
+                                  context,
+                                  title: 'Share Profile',
+                                  subtitle: '@${profile.username}',
+                                  shareUrl: shareUrl,
+                                  shareText: shareText,
+                                );
+                              },
+                              onFamily: () => _open(const FamilyTeamScreen()),
+                            ),
+                          ],
+                          SizedBox(height: 24 * s),
+                          ProfileContentPanel(
+                            isViewingDrafts: _isViewingDrafts,
+                            videos: isViewingStreamer ? _videos.where((v) => !v.isDraftFolder).toList() : _videos,
+                            draftVideos: _drafts,
+                            onOpen: _openInstagramPostViewer,
+                            onLongPressVideo: isViewingStreamer ? null : _showDeletePostOption,
+                            onOpenDrafts: () => setState(() => _isViewingDrafts = true),
+                            onCloseDrafts: () => setState(() => _isViewingDrafts = false),
+                            onOpenDraft: _openDraftOptions,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -226,39 +1191,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         shrinkWrap: true,
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                         children: [
-                          item(Icons.person_outline_rounded, LuxeColors.gold, 'My Profile', () {}),
-                          item(
-                            Icons.insights_rounded,
-                            LuxeColors.goldDeep,
-                            'Creator Tools',
-                            () => _toast('📊 Creator tools & analytics'),
-                            subtitle: 'Analytics, LIVE Center, Monetization',
-                          ),
                           item(
                             Icons.account_balance_wallet_rounded,
                             const Color(0xFFFF9100),
                             'Wallet / Balance',
                             () => WalletScreen.push(context),
-                            subtitle: 'Diamonds, Coins, Stars',
+                            subtitle: 'Coins, Stars',
                           ),
                           item(
                             Icons.military_tech_outlined,
                             LuxeColors.gold,
                             'My Level & Rewards',
                             () => _toast('👑 Level 10 host • SVIP badge active'),
-                          ),
-                          item(
-                            Icons.groups_rounded,
-                            const Color(0xFF8FB8FF),
-                            'Family / Team',
-                            () => _open(const FamilyTeamScreen()),
-                          ),
-                          item(
-                            Icons.settings_outlined,
-                            Colors.white70,
-                            'Settings & Privacy',
-                            () => _open(const SettingsScreen()),
-                            subtitle: 'AI Content Moderation, Privacy, Account',
                           ),
                         ],
                       ),
@@ -270,6 +1214,68 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
         );
       },
+    );
+  }
+}
+
+class _UploadOptionTile extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBg;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _UploadOptionTile({
+    required this.icon,
+    required this.iconColor,
+    required this.iconBg,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: ListTile(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+        leading: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: iconBg,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: iconColor, size: 22),
+        ),
+        title: Text(
+          title,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: const TextStyle(
+            color: Colors.white60,
+            fontSize: 12,
+          ),
+        ),
+        trailing: const Icon(
+          Icons.arrow_forward_ios_rounded,
+          color: Colors.white38,
+          size: 15,
+        ),
+        onTap: onTap,
+      ),
     );
   }
 }

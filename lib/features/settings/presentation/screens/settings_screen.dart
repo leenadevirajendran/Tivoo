@@ -6,9 +6,9 @@ import '../../../../core/widgets/glow_icon_button.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../../auth/presentation/screens/login_screen.dart';
 import '../../../profile/presentation/controllers/profile_controller.dart';
+import 'package:image_picker/image_picker.dart';
 import '../widgets/settings_tile.dart';
 
-import 'ai_content_moderation_screen.dart';
 import 'change_password_screen.dart';
 import 'edit_profile_screen.dart';
 import 'help_support_screen.dart';
@@ -73,6 +73,230 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
+  Future<void> _pickImage(
+    BuildContext context,
+    WidgetRef ref,
+    ImageSource source,
+  ) async {
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(
+        source: source,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+      if (picked != null) {
+        ref.read(profileControllerProvider.notifier).updateProfile(
+              avatarUrl: picked.path,
+            );
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(source == ImageSource.gallery
+                  ? 'Profile picture updated from gallery!'
+                  : 'Profile picture updated from camera!'),
+              backgroundColor: AppColors.primaryYellow,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not pick image: $e'),
+            backgroundColor: const Color(0xFFFF453A),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showChangeProfilePictureSheet(
+    BuildContext context,
+    WidgetRef ref,
+    String currentAvatar,
+  ) {
+    const avatarPresets = [
+      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&auto=format&fit=crop&q=85',
+      'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=600&auto=format&fit=crop&q=85',
+      'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=600&auto=format&fit=crop&q=85',
+      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&auto=format&fit=crop&q=85',
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.cardBackground,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Change Profile Picture',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: AppColors.textSecondary),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Upload a new profile picture from your gallery or choose an avatar.',
+                style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryYellow,
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 4,
+                      ),
+                      icon: const Icon(Icons.photo_library_rounded, size: 20),
+                      label: const Text(
+                        'From Gallery',
+                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _pickImage(context, ref, ImageSource.gallery);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.primaryYellow,
+                        side: const BorderSide(color: AppColors.primaryYellow, width: 1.2),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      icon: const Icon(Icons.camera_alt_rounded, size: 20),
+                      label: const Text(
+                        'Take Photo',
+                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _pickImage(context, ref, ImageSource.camera);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 22),
+              const Text(
+                'Preset Avatars',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: avatarPresets.map((url) {
+                  final isSelected = url == currentAvatar;
+                  return GestureDetector(
+                    onTap: () {
+                      ref.read(profileControllerProvider.notifier).updateProfile(
+                            avatarUrl: url,
+                          );
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Profile picture updated!'),
+                          backgroundColor: AppColors.primaryYellow,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(2.5),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isSelected ? AppColors.primaryYellow : Colors.transparent,
+                          width: 2.5,
+                        ),
+                      ),
+                      child: CustomAvatar(
+                        radius: 28,
+                        imageUrl: url,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 18),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.04),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white10),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.info_outline_rounded, color: AppColors.textSecondary, size: 18),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Other details (name, username, bio, phone, email) can be edited in Account & Security → Edit Profile.',
+                        style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(profileControllerProvider).profile;
@@ -124,15 +348,40 @@ class SettingsScreen extends ConsumerWidget {
               ),
               child: Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: AppColors.storyRingGradient,
-                    ),
-                    child: CustomAvatar(
-                      radius: 28,
-                      imageUrl: profile.avatarUrl,
+                  GestureDetector(
+                    onTap: () => _showChangeProfilePictureSheet(context, ref, profile.avatarUrl),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: AppColors.storyRingGradient,
+                          ),
+                          child: CustomAvatar(
+                            radius: 28,
+                            imageUrl: profile.avatarUrl,
+                          ),
+                        ),
+                        Positioned(
+                          right: -2,
+                          bottom: -2,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryYellow,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: AppColors.cardBackground, width: 2),
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt_rounded,
+                              size: 11,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(width: 14),
@@ -181,10 +430,7 @@ class SettingsScreen extends ConsumerWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     ),
                     onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const EditProfileScreen()),
-                      );
+                      _showChangeProfilePictureSheet(context, ref, profile.avatarUrl);
                     },
                     child: const Text('Edit', style: TextStyle(fontWeight: FontWeight.w700)),
                   ),
@@ -239,18 +485,6 @@ class SettingsScreen extends ConsumerWidget {
                       context,
                       MaterialPageRoute(
                           builder: (_) => const NotificationsSettingsScreen()),
-                    );
-                  },
-                ),
-                SettingsTile(
-                  icon: Icons.psychology_rounded,
-                  title: 'AI Video Moderation & Detection',
-                  subtitle: 'Avoid unwanted videos, sensitivity filter & 5-step detection',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const AiContentModerationScreen()),
                     );
                   },
                 ),

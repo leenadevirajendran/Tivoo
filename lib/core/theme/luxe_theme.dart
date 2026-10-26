@@ -122,6 +122,7 @@ class LuxeCircleButton extends StatelessWidget {
   final String label;
   final int badge;
   final bool gold;
+  final Color? iconColor;
 
   const LuxeCircleButton({
     super.key,
@@ -133,6 +134,7 @@ class LuxeCircleButton extends StatelessWidget {
     this.size = 42,
     this.badge = 0,
     this.gold = false,
+    this.iconColor,
   });
 
   @override
@@ -181,7 +183,11 @@ class LuxeCircleButton extends StatelessWidget {
                                     Icon(Icons.account_balance_wallet_rounded, color: const Color(0xFFFFD700), size: size * 0.52),
                               ),
                             )
-                          : Icon(icon ?? Icons.circle, color: Colors.white, size: size * 0.5)),
+                          : Icon(
+                              icon ?? Icons.circle,
+                              color: iconColor ?? (gold ? const Color(0xFFFFD700) : Colors.white),
+                              size: size * 0.5,
+                            )),
                 ),
               ),
               if (badge > 0) Positioned(right: -3, top: -3, child: LuxeBadge(count: badge)),

@@ -59,6 +59,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
         );
 
     setState(() => _isProcessing = false);
+    FocusScope.of(context).unfocus();
 
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(

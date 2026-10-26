@@ -45,6 +45,9 @@ dependencies:
   camera: ^0.12.1
   permission_handler: ^13.0.2
   audioplayers: ^6.8.1
+  image_picker: ^1.2.4
+  file_picker: ^13.1.0
+  url_launcher: ^6.3.3
 
 dev_dependencies:
   flutter_test:
@@ -78,6 +81,8 @@ flutter:
     - assets/banners/
     - assets/stars/
     - assets/wallet/
+    - assets/drafts/
+    - assets/pk/
 
   fonts:
     - family: Pacifico # Tivoo wordmark

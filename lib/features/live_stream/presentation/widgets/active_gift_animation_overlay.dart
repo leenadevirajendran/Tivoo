@@ -266,6 +266,7 @@ class _Look {
 
   /// Hand-tuned looks for the featured gifts.
   static const Map<String, _Look> _featured = {
+    // Legacy & 3D key names
     'gift_rose_bouquet': _Look('rose', _Tier.premium, _Arrival.depth, [_MoteKind.petal, _MoteKind.ember], _rose),
     'p3d_royal_crown': _Look('crown', _Tier.premium, _Arrival.below, [_MoteKind.sparkle, _MoteKind.ember], _gold),
     'p3d_angel_vehicle': _Look('angel_vehicle', _Tier.premium, _Arrival.left, [
@@ -315,6 +316,70 @@ class _Look {
       _gold,
       fireworks: true,
     ),
+
+    // Unified Gift Catalog IDs (PK Battle & all screens)
+    'gift_ani7_crown': _Look('crown', _Tier.premium, _Arrival.below, [_MoteKind.sparkle, _MoteKind.ember], _gold),
+    'gift_ani3_vehicle': _Look('angel_vehicle', _Tier.premium, _Arrival.left, [
+      _MoteKind.feather,
+      _MoteKind.sparkle,
+    ], _heaven),
+    'gift_ani2_horse': _Look('horse', _Tier.premium, _Arrival.left, [_MoteKind.ember, _MoteKind.sparkle], _gold),
+    'gift_ani5_castle': _Look(
+      'castle',
+      _Tier.premium,
+      _Arrival.below,
+      [_MoteKind.heart, _MoteKind.sparkle],
+      _pink,
+      fireworks: true,
+    ),
+    'gift_rocket': _Look(
+      'rocket',
+      _Tier.premium,
+      _Arrival.below,
+      [_MoteKind.star, _MoteKind.sparkle],
+      _cosmic,
+      rocket: _RocketRig.galaxy,
+    ),
+    'gift_golden_lion': _Look(
+      'lion',
+      _Tier.premium,
+      _Arrival.left,
+      [_MoteKind.ember, _MoteKind.sparkle],
+      _gold,
+      fireworks: true,
+    ),
+    'gift_ani6_car': _Look(
+      'car',
+      _Tier.premium,
+      _Arrival.right,
+      [_MoteKind.ember, _MoteKind.sparkle],
+      _neon,
+      fireworks: true,
+    ),
+    'gift_super_car': _Look(
+      'car',
+      _Tier.premium,
+      _Arrival.right,
+      [_MoteKind.ember, _MoteKind.sparkle],
+      _neon,
+      fireworks: true,
+    ),
+    'gift_flowers': _Look('flowers', _Tier.premium, _Arrival.left, [_MoteKind.petal, _MoteKind.sparkle], _pink),
+    'gift_yacht': _Look('yacht', _Tier.premium, _Arrival.right, [_MoteKind.bubble, _MoteKind.sparkle], _blue),
+    'gift_diamond_wings': _Look(
+      'wings',
+      _Tier.premium,
+      _Arrival.depth,
+      [_MoteKind.shard, _MoteKind.sparkle],
+      _ice,
+      wings: _WingRig.diamond,
+    ),
+    'gift_ani4_throne': _Look('throne', _Tier.premium, _Arrival.above, [_MoteKind.star, _MoteKind.sparkle], _gold),
+    'gift_ani10_roses': _Look('roses', _Tier.premium, _Arrival.depth, [_MoteKind.petal, _MoteKind.sparkle], _rose),
+    'gift_ani1_whale': _Look('whale', _Tier.premium, _Arrival.right, [_MoteKind.bubble, _MoteKind.sparkle], _blue),
+    'gift_rose': _Look('rose', _Tier.medium, _Arrival.depth, [_MoteKind.petal], _rose),
+    'gift_love': _Look('love', _Tier.medium, _Arrival.depth, [_MoteKind.heart, _MoteKind.sparkle], _rose),
+    'gift_diamond': _Look('diamond', _Tier.medium, _Arrival.spin, [_MoteKind.sparkle], _ice),
   };
 
   static _Look of(GiftItem gift) {
@@ -342,7 +407,16 @@ class _Look {
     if (has('roses')) {
       return const _Look('roses', _Tier.premium, _Arrival.depth, [_MoteKind.petal, _MoteKind.sparkle], _rose);
     }
-    if (has('rocket')) return const _Look('rocket', _Tier.premium, _Arrival.below, [_MoteKind.star], _cosmic);
+    if (has('rocket')) {
+      return const _Look(
+        'rocket',
+        _Tier.premium,
+        _Arrival.below,
+        [_MoteKind.star, _MoteKind.sparkle],
+        _cosmic,
+        rocket: _RocketRig.galaxy,
+      );
+    }
     if (has('car')) {
       return const _Look('car', _Tier.premium, _Arrival.right, [_MoteKind.ember], _neon, fireworks: true);
     }
@@ -356,7 +430,16 @@ class _Look {
       return const _Look('world_tour', _Tier.premium, _Arrival.spin, [_MoteKind.star, _MoteKind.sparkle], _cosmic);
     }
     if (has('horse')) return const _Look('horse', _Tier.premium, _Arrival.left, [_MoteKind.ember], _gold);
-    if (has('wing')) return const _Look('wings', _Tier.medium, _Arrival.above, [_MoteKind.feather], _ice);
+    if (has('wing')) {
+      return const _Look(
+        'wings',
+        _Tier.premium,
+        _Arrival.depth,
+        [_MoteKind.shard, _MoteKind.sparkle],
+        _ice,
+        wings: _WingRig.diamond,
+      );
+    }
     if (has('diamond')) return const _Look('diamond', _Tier.medium, _Arrival.spin, [_MoteKind.sparkle], _ice);
     if (has('crown')) return const _Look('crown', _Tier.medium, _Arrival.below, [_MoteKind.sparkle], _gold);
     if (has('rose')) return const _Look('rose', _Tier.medium, _Arrival.depth, [_MoteKind.petal], _rose);

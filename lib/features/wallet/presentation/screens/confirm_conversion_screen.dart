@@ -27,6 +27,7 @@ class _ConfirmConversionScreenState extends ConsumerState<ConfirmConversionScree
   bool _isProcessing = false;
 
   Future<void> _handleConfirm() async {
+    FocusScope.of(context).unfocus();
     setState(() => _isProcessing = true);
     await Future.delayed(const Duration(milliseconds: 600));
 
@@ -76,142 +77,155 @@ class _ConfirmConversionScreenState extends ConsumerState<ConfirmConversionScree
         ),
         centerTitle: true,
       ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        child: Column(
-          children: [
-            const SizedBox(height: 16),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: constraints.maxHeight - 24,
+              ),
+              child: IntrinsicHeight(
+                child: Column(
+                  children: [
+                    const SizedBox(height: 12),
 
-            // Visual Emblem Conversion matching reference image 8
-            Center(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (widget.isStarToTCoin) ...[
-                    const StarIconWidget(size: 60),
-                    const SizedBox(width: 16),
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: const Color(0xFF152258),
-                        border: Border.all(color: const Color(0xFF2D55B8)),
-                      ),
-                      child: const Icon(
-                        Icons.swap_horiz_rounded,
-                        color: Color(0xFF3D7BFF),
-                        size: 26,
+                    // Visual Emblem Conversion matching reference image 8
+                    Center(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (widget.isStarToTCoin) ...[
+                            const StarIconWidget(size: 56),
+                            const SizedBox(width: 16),
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: const Color(0xFF152258),
+                                border: Border.all(color: const Color(0xFF2D55B8)),
+                              ),
+                              child: const Icon(
+                                Icons.swap_horiz_rounded,
+                                color: Color(0xFF3D7BFF),
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            const TCoinIcon(size: 56),
+                          ] else ...[
+                            const TCoinIcon(size: 56),
+                            const SizedBox(width: 16),
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: const Color(0xFF152258),
+                                border: Border.all(color: const Color(0xFF2D55B8)),
+                              ),
+                              child: const Icon(
+                                Icons.swap_horiz_rounded,
+                                color: Color(0xFF3D7BFF),
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            const StarIconWidget(size: 56),
+                          ],
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    const TCoinIcon(size: 60),
-                  ] else ...[
-                    const TCoinIcon(size: 60),
-                    const SizedBox(width: 16),
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: const Color(0xFF152258),
-                        border: Border.all(color: const Color(0xFF2D55B8)),
-                      ),
-                      child: const Icon(
-                        Icons.swap_horiz_rounded,
-                        color: Color(0xFF3D7BFF),
-                        size: 26,
+
+                    const SizedBox(height: 24),
+
+                    // Details Summary Card matching reference image 8
+                    WalletNeonCard(
+                      padding: const EdgeInsets.all(18),
+                      borderColor: const Color(0xFF24326A),
+                      child: Column(
+                        children: [
+                          _buildSummaryRow(
+                            icon: widget.isStarToTCoin
+                                ? const StarIconWidget(size: 22)
+                                : const TCoinIcon(size: 22),
+                            label: widget.isStarToTCoin ? 'Stars to Convert' : 'T Coins to Convert',
+                            value: '${widget.sourceAmount}',
+                          ),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 10),
+                            child: Divider(color: Color(0xFF1E2856), height: 1),
+                          ),
+                          _buildSummaryRow(
+                            icon: widget.isStarToTCoin
+                                ? const TCoinIcon(size: 22)
+                                : const StarIconWidget(size: 22),
+                            label: widget.isStarToTCoin ? 'T Coins to Receive' : 'Stars to Receive',
+                            value: '${widget.targetAmount}',
+                            isHighlight: true,
+                          ),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 10),
+                            child: Divider(color: Color(0xFF1E2856), height: 1),
+                          ),
+                          _buildSummaryRow(
+                            icon: widget.isStarToTCoin
+                                ? const StarIconWidget(size: 22)
+                                : const TCoinIcon(size: 22),
+                            label: widget.isStarToTCoin ? 'Remaining Stars' : 'Remaining T Coins',
+                            value: '${widget.remainingSourceBalance}',
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    const StarIconWidget(size: 60),
+
+                    const SizedBox(height: 16),
+
+                    // Rate Info Card matching reference image 8
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        color: const Color(0xFF0E1236),
+                        border: Border.all(color: const Color(0xFF24326A), width: 1.2),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Conversion Rate',
+                            style: GoogleFonts.outfit(
+                              color: WalletPalette.textSecondary,
+                              fontSize: 14,
+                            ),
+                          ),
+                          Text(
+                            rateText,
+                            style: GoogleFonts.outfit(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const Spacer(),
+                    const SizedBox(height: 16),
+
+                    WalletActionButton(
+                      label: 'Confirm',
+                      isLoading: _isProcessing,
+                      onPressed: _handleConfirm,
+                    ),
+                    const SizedBox(height: 12),
                   ],
-                ],
+                ),
               ),
             ),
-
-            const SizedBox(height: 32),
-
-            // Details Summary Card matching reference image 8
-            WalletNeonCard(
-              padding: const EdgeInsets.all(18),
-              borderColor: const Color(0xFF24326A),
-              child: Column(
-                children: [
-                  _buildSummaryRow(
-                    icon: widget.isStarToTCoin
-                        ? const StarIconWidget(size: 22)
-                        : const TCoinIcon(size: 22),
-                    label: widget.isStarToTCoin ? 'Stars to Convert' : 'T Coins to Convert',
-                    value: '${widget.sourceAmount}',
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 10),
-                    child: Divider(color: Color(0xFF1E2856), height: 1),
-                  ),
-                  _buildSummaryRow(
-                    icon: widget.isStarToTCoin
-                        ? const TCoinIcon(size: 22)
-                        : const StarIconWidget(size: 22),
-                    label: widget.isStarToTCoin ? 'T Coins to Receive' : 'Stars to Receive',
-                    value: '${widget.targetAmount}',
-                    isHighlight: true,
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 10),
-                    child: Divider(color: Color(0xFF1E2856), height: 1),
-                  ),
-                  _buildSummaryRow(
-                    icon: widget.isStarToTCoin
-                        ? const StarIconWidget(size: 22)
-                        : const TCoinIcon(size: 22),
-                    label: widget.isStarToTCoin ? 'Remaining Stars' : 'Remaining T Coins',
-                    value: '${widget.remainingSourceBalance}',
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Rate Info Card matching reference image 8
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                color: const Color(0xFF0E1236),
-                border: Border.all(color: const Color(0xFF24326A), width: 1.2),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Conversion Rate',
-                    style: GoogleFonts.outfit(
-                      color: WalletPalette.textSecondary,
-                      fontSize: 14,
-                    ),
-                  ),
-                  Text(
-                    rateText,
-                    style: GoogleFonts.outfit(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const Spacer(),
-
-            WalletActionButton(
-              label: 'Confirm',
-              isLoading: _isProcessing,
-              onPressed: _handleConfirm,
-            ),
-            const SizedBox(height: 12),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

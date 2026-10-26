@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_assets.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/comment_action_sheet.dart';
 import '../../../../core/widgets/custom_avatar.dart';
 import '../../../../core/widgets/live_badge.dart';
 import '../../../../core/widgets/reel_media_view.dart';
@@ -28,6 +30,8 @@ class _HomeReelCardState extends State<HomeReelCard> with SingleTickerProviderSt
   final GlobalKey<FloatingHeartsOverlayState> _heartsKey = GlobalKey();
   bool _isLiked = false;
   bool _isMuted = true;
+  bool _isCommentsPaused = false;
+  Timer? _commentsTicker;
   late final AnimationController _likeAnimController;
   late final Animation<double> _likeScaleAnimation;
   late final List<LiveComment> _comments;
@@ -51,10 +55,76 @@ class _HomeReelCardState extends State<HomeReelCard> with SingleTickerProviderSt
         _commentsScrollController.jumpTo(_commentsScrollController.position.maxScrollExtent);
       }
     });
+
+    _startCommentsTicker();
+  }
+
+  @override
+  void didUpdateWidget(covariant HomeReelCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive != oldWidget.isActive) {
+      if (widget.isActive) {
+        _startCommentsTicker();
+      } else {
+        _commentsTicker?.cancel();
+      }
+    }
+  }
+
+  void _startCommentsTicker() {
+    _commentsTicker?.cancel();
+    if (!widget.isActive) return;
+    _commentsTicker = Timer.periodic(const Duration(milliseconds: 3800), (_) {
+      if (!mounted || _isCommentsPaused || !widget.isActive) return;
+      final pool = MockLiveComments.automatedIncomingPool;
+      final template = pool[DateTime.now().second % pool.length];
+      setState(() {
+        _comments.add(
+          LiveComment(
+            id: 'auto_video_${DateTime.now().millisecondsSinceEpoch}',
+            userName: template.userName,
+            userAvatarUrl: template.userAvatarUrl,
+            message: template.message,
+            timestamp: DateTime.now(),
+          ),
+        );
+      });
+      _scrollToLatestComment();
+    });
+  }
+
+  void _handleHoldComment(LiveComment comment) {
+    CommentActionSheet.show(
+      context,
+      comment: comment,
+      onPause: () {
+        setState(() => _isCommentsPaused = true);
+      },
+      onResume: () {
+        setState(() => _isCommentsPaused = false);
+      },
+      onReported: () {
+        setState(() {
+          final idx = _comments.indexWhere((c) => c.id == comment.id);
+          if (idx != -1) {
+            _comments[idx] = _comments[idx].copyWith(
+              message: 'This comment has been reported',
+              isReported: true,
+            );
+          }
+        });
+      },
+      onBlocked: () {
+        setState(() {
+          _comments.removeWhere((c) => c.userName == comment.userName);
+        });
+      },
+    );
   }
 
   @override
   void dispose() {
+    _commentsTicker?.cancel();
     _commentsScrollController.dispose();
     _likeAnimController.dispose();
     super.dispose();
@@ -169,52 +239,271 @@ class _HomeReelCardState extends State<HomeReelCard> with SingleTickerProviderSt
 
   void _showLiveCommentInputSheet() {
     final textController = TextEditingController();
+    final sheetScrollController = ScrollController();
+    const quickEmojis = [
+      '❤️', '😍', '🔥', '👏', '⭐', '🎉', '🌹', '💯', '😂', '✨',
+      '🙌', '🥰', '🥳', '😎', '💖', '🤩', '👍', '🎁', '👑', '💃',
+    ];
+
+    setState(() => _isCommentsPaused = true);
+
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xF5141420),
+      backgroundColor: const Color(0xF5101424),
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.only(left: 16, right: 16, top: 14, bottom: MediaQuery.viewInsetsOf(ctx).bottom + 14),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: textController,
-                  autofocus: true,
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                  decoration: InputDecoration(
-                    hintText: 'Chat in ${widget.stream.streamerName}\'s live...',
-                    hintStyle: const TextStyle(color: Colors.white54, fontSize: 13),
-                    filled: true,
-                    fillColor: const Color(0x33FFFFFF),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            void insertEmoji(String emoji) {
+              final text = textController.text;
+              final selection = textController.selection;
+              if (selection.start >= 0 && selection.end >= 0) {
+                final newText = text.replaceRange(selection.start, selection.end, emoji);
+                textController.value = TextEditingValue(
+                  text: newText,
+                  selection: TextSelection.collapsed(offset: selection.start + emoji.length),
+                );
+              } else {
+                textController.text += emoji;
+                textController.selection = TextSelection.collapsed(offset: textController.text.length);
+              }
+            }
+
+            return Container(
+              height: MediaQuery.sizeOf(context).height * 0.65,
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.viewInsetsOf(ctx).bottom,
+              ),
+              child: Column(
+                children: [
+                  const SizedBox(height: 10),
+                  // Drag Handle
+                  Container(
+                    width: 38,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
-                  onSubmitted: (val) {
-                    if (val.trim().isNotEmpty) {
-                      _postComment(val.trim());
-                      Navigator.of(ctx).pop();
-                    }
-                  },
-                ),
+                  const SizedBox(height: 12),
+
+                  // Header with Comment count and close
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Text(
+                              'Comments',
+                              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                '${_comments.length}',
+                                style: const TextStyle(color: AppColors.primaryYellow, fontSize: 12, fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                          ],
+                        ),
+                        GestureDetector(
+                          onTap: () => Navigator.of(ctx).pop(),
+                          child: Container(
+                            width: 28,
+                            height: 28,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white.withValues(alpha: 0.08),
+                            ),
+                            child: const Icon(Icons.close_rounded, color: Colors.white70, size: 16),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(color: Colors.white12, height: 16),
+
+                  // Comments List (Hold to report or delete!)
+                  Expanded(
+                    child: _comments.isEmpty
+                        ? const Center(
+                            child: Text(
+                              'No comments yet. Say something! 💬',
+                              style: TextStyle(color: Colors.white38, fontSize: 13),
+                            ),
+                          )
+                        : ListView.separated(
+                            controller: sheetScrollController,
+                            physics: const BouncingScrollPhysics(),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                            itemCount: _comments.length,
+                            separatorBuilder: (_, _) => const SizedBox(height: 12),
+                            itemBuilder: (context, index) {
+                              final comment = _comments[index];
+                              return GestureDetector(
+                                onLongPress: () {
+                                  _handleHoldComment(comment);
+                                  setModalState(() {});
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.03),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      CustomAvatar(
+                                        radius: 15,
+                                        imageUrl: comment.userAvatarUrl,
+                                        assetPath: comment.userAssetPath ?? AppAssets.status4,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Text(
+                                                  comment.userName,
+                                                  style: const TextStyle(
+                                                    color: AppColors.primaryYellow,
+                                                    fontSize: 12.5,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 6),
+                                                const Text(
+                                                  '• Just now',
+                                                  style: TextStyle(color: Colors.white38, fontSize: 10.5),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 3),
+                                            Text(
+                                              comment.message,
+                                              style: TextStyle(
+                                                color: comment.isReported ? Colors.white54 : Colors.white,
+                                                fontStyle: comment.isReported ? FontStyle.italic : FontStyle.normal,
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      const Column(
+                                        children: [
+                                          Icon(Icons.favorite_border_rounded, size: 16, color: Colors.white38),
+                                          SizedBox(height: 2),
+                                          Text('0', style: TextStyle(color: Colors.white38, fontSize: 10)),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+
+                  // Bottom Input Bar
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF161B2E),
+                      border: Border(top: BorderSide(color: Colors.white12)),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Quick Emojis
+                        SizedBox(
+                          height: 32,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            physics: const BouncingScrollPhysics(),
+                            itemCount: quickEmojis.length,
+                            separatorBuilder: (_, _) => const SizedBox(width: 6),
+                            itemBuilder: (context, index) {
+                              final emoji = quickEmojis[index];
+                              return GestureDetector(
+                                onTap: () => insertEmoji(emoji),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Center(
+                                    child: Text(emoji, style: const TextStyle(fontSize: 16)),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: textController,
+                                autofocus: false,
+                                style: const TextStyle(color: Colors.white, fontSize: 14),
+                                decoration: InputDecoration(
+                                  hintText: 'Add a comment...',
+                                  hintStyle: const TextStyle(color: Colors.white54, fontSize: 13),
+                                  filled: true,
+                                  fillColor: Colors.white.withValues(alpha: 0.08),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+                                ),
+                                onSubmitted: (val) {
+                                  if (val.trim().isNotEmpty) {
+                                    _postComment(val.trim());
+                                    textController.clear();
+                                    setModalState(() {});
+                                  }
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              icon: const Icon(Icons.send_rounded, color: AppColors.primaryYellow),
+                              onPressed: () {
+                                if (textController.text.trim().isNotEmpty) {
+                                  _postComment(textController.text.trim());
+                                  textController.clear();
+                                  setModalState(() {});
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
-              IconButton(
-                icon: const Icon(Icons.send_rounded, color: AppColors.primaryYellow),
-                onPressed: () {
-                  if (textController.text.trim().isNotEmpty) {
-                    _postComment(textController.text.trim());
-                    Navigator.of(ctx).pop();
-                  }
-                },
-              ),
-            ],
-          ),
+            );
+          },
         );
       },
-    );
+    ).whenComplete(() {
+      setState(() => _isCommentsPaused = false);
+    });
   }
 
   void _postComment(String message) {
@@ -543,45 +832,48 @@ class _HomeReelCardState extends State<HomeReelCard> with SingleTickerProviderSt
                 padding: const EdgeInsets.only(bottom: 5),
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(colors: [Color(0x99FFDF00), Color(0x66E65100)]),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFFFDF00), width: 1),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.star_rounded, color: Color(0xFFFFDF00), size: 15),
-                        const SizedBox(width: 5),
-                        Flexible(
-                          child: RichText(
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            text: TextSpan(
-                              children: [
-                                TextSpan(
-                                  text: '${comment.userName} ',
-                                  style: const TextStyle(
-                                    color: Color(0xFFFFDF00),
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w800,
+                  child: GestureDetector(
+                    onLongPress: () => _handleHoldComment(comment),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(colors: [Color(0x99FFDF00), Color(0x66E65100)]),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFFFDF00), width: 1),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.star_rounded, color: Color(0xFFFFDF00), size: 15),
+                          const SizedBox(width: 5),
+                          Flexible(
+                            child: RichText(
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              text: TextSpan(
+                                children: [
+                                  TextSpan(
+                                    text: '${comment.userName} ',
+                                    style: const TextStyle(
+                                      color: Color(0xFFFFDF00),
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w800,
+                                    ),
                                   ),
-                                ),
-                                TextSpan(
-                                  text: comment.message,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w700,
+                                  TextSpan(
+                                    text: comment.message,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -594,45 +886,48 @@ class _HomeReelCardState extends State<HomeReelCard> with SingleTickerProviderSt
                 padding: const EdgeInsets.only(bottom: 5),
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
-                    decoration: BoxDecoration(
-                      color: const Color(0x66FF2D55),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0x99FF2D55), width: 0.8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.favorite_rounded, color: Color(0xFFFF2D55), size: 13),
-                        const SizedBox(width: 5),
-                        Flexible(
-                          child: RichText(
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            text: TextSpan(
-                              children: [
-                                TextSpan(
-                                  text: '${comment.userName} ',
-                                  style: const TextStyle(
-                                    color: Color(0xFFFF6482),
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w700,
+                  child: GestureDetector(
+                    onLongPress: () => _handleHoldComment(comment),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
+                      decoration: BoxDecoration(
+                        color: const Color(0x66FF2D55),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0x99FF2D55), width: 0.8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.favorite_rounded, color: Color(0xFFFF2D55), size: 13),
+                          const SizedBox(width: 5),
+                          Flexible(
+                            child: RichText(
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              text: TextSpan(
+                                children: [
+                                  TextSpan(
+                                    text: '${comment.userName} ',
+                                    style: const TextStyle(
+                                      color: Color(0xFFFF6482),
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
-                                ),
-                                TextSpan(
-                                  text: comment.message,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w500,
+                                  TextSpan(
+                                    text: comment.message,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -644,46 +939,50 @@ class _HomeReelCardState extends State<HomeReelCard> with SingleTickerProviderSt
               padding: const EdgeInsets.only(bottom: 5),
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.45),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 0.8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CustomAvatar(radius: 10, imageUrl: comment.userAvatarUrl, assetPath: comment.userAssetPath),
-                      const SizedBox(width: 6),
-                      Flexible(
-                        child: RichText(
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          text: TextSpan(
-                            children: [
-                              TextSpan(
-                                text: '${comment.userName}: ',
-                                style: const TextStyle(
-                                  color: AppColors.primaryYellow,
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w700,
+                child: GestureDetector(
+                  onLongPress: () => _handleHoldComment(comment),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.45),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 0.8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CustomAvatar(radius: 10, imageUrl: comment.userAvatarUrl, assetPath: comment.userAssetPath),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: RichText(
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            text: TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: '${comment.userName}: ',
+                                  style: const TextStyle(
+                                    color: AppColors.primaryYellow,
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
-                              ),
-                              TextSpan(
-                                text: comment.message,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w500,
-                                  shadows: [Shadow(color: Colors.black87, blurRadius: 3)],
+                                TextSpan(
+                                  text: comment.message,
+                                  style: TextStyle(
+                                    color: comment.isReported ? Colors.white54 : Colors.white,
+                                    fontStyle: comment.isReported ? FontStyle.italic : FontStyle.normal,
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w500,
+                                    shadows: const [Shadow(color: Colors.black87, blurRadius: 3)],
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),

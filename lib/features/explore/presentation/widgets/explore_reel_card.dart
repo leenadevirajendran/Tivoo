@@ -5,13 +5,18 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/services/reel_video_manager.dart';
 import '../../../../core/widgets/custom_avatar.dart';
-import '../../../../core/widgets/glass_container.dart';
 import '../../../../core/widgets/reel_media_view.dart';
 import '../../../gift/gift_options.dart';
 import '../../../gift/gift_sheet_screen.dart';
 import '../../../live_stream/presentation/widgets/floating_hearts_overlay.dart';
 import '../../../live_stream/presentation/widgets/floating_stars_overlay.dart';
+import '../../../../core/widgets/tivoo_share_sheet.dart';
 import '../../domain/models/explore_stream_model.dart';
+import '../../../home/presentation/widgets/streamer_id_profile_sheet.dart';
+import '../../../home/domain/models/live_stream_card_model.dart';
+import '../../../profile/presentation/controllers/follow_controller.dart';
+import '../../../profile/presentation/widgets/instagram_follow_button.dart';
+import '../../../profile/presentation/widgets/instagram_follow_actions_sheet.dart';
 
 class ExploreReelCard extends ConsumerStatefulWidget {
   final ExploreStreamModel stream;
@@ -41,15 +46,46 @@ class _ExploreReelCardState extends ConsumerState<ExploreReelCard>
     with SingleTickerProviderStateMixin {
   final GlobalKey<FloatingHeartsOverlayState> _heartsKey = GlobalKey();
   final GlobalKey<FloatingStarsOverlayState> _starsKey = GlobalKey();
-  bool _isFollowing = false;
+  final bool _isFollowing = false;
   late bool _isLiked;
+  late int _likesCount;
+  int _userLikesCount = 0;
+  DateTime? _lastLikeTap;
   late final AnimationController _likeAnimController;
   late final Animation<double> _likeScaleAnimation;
+
+  static int _parseInitialLikes(String countStr) {
+    try {
+      final clean = countStr.trim().toUpperCase();
+      if (clean.endsWith('K')) {
+        final numPart = double.parse(clean.replaceAll('K', ''));
+        return (numPart * 1000).toInt();
+      } else if (clean.endsWith('M')) {
+        final numPart = double.parse(clean.replaceAll('M', ''));
+        return (numPart * 1000000).toInt();
+      }
+      return int.tryParse(clean.replaceAll(',', '')) ?? 10500;
+    } catch (_) {
+      return 10500;
+    }
+  }
+
+  String _formatLikes(int count) {
+    if (count >= 1000000) {
+      return '${(count / 1000000).toStringAsFixed(1)}M';
+    } else if (count >= 10000) {
+      return '${(count / 1000).toStringAsFixed(1)}K';
+    } else if (count >= 1000) {
+      return '${(count / 1000).toStringAsFixed(1)}K';
+    }
+    return count.toString();
+  }
 
   @override
   void initState() {
     super.initState();
     _isLiked = widget.stream.isLiked;
+    _likesCount = _parseInitialLikes(widget.stream.diamondsCount);
     _likeAnimController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 260),
@@ -74,23 +110,42 @@ class _ExploreReelCardState extends ConsumerState<ExploreReelCard>
     super.dispose();
   }
 
-  void _handleDoubleTap() {
-    if (!_isLiked) {
-      setState(() => _isLiked = true);
-      widget.onLikeTap?.call();
+  void _triggerLikeAction() {
+    if (_userLikesCount >= 50) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Limit reached: 50 likes maximum per post! ❤️'),
+          backgroundColor: Color(0xFF192233),
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 1),
+        ),
+      );
+      return;
     }
+
+    final now = DateTime.now();
+    final isRapid = _lastLikeTap != null && now.difference(_lastLikeTap!).inMilliseconds < 400;
+    _lastLikeTap = now;
+    final burstCount = isRapid ? 3 : 1;
+
+    setState(() {
+      _userLikesCount++;
+      _likesCount++;
+      _isLiked = true;
+    });
+
     _likeAnimController.forward(from: 0.0);
-    _heartsKey.currentState?.addHeart();
-    _heartsKey.currentState?.addHeart();
+    _heartsKey.currentState?.addPinkHearts(count: burstCount);
+    widget.onLikeTap?.call();
+  }
+
+  void _handleDoubleTap() {
+    _triggerLikeAction();
   }
 
   void _handleLikeTap() {
-    setState(() => _isLiked = !_isLiked);
-    if (_isLiked) {
-      _likeAnimController.forward(from: 0.0);
-      _heartsKey.currentState?.addHeart();
-    }
-    widget.onLikeTap?.call();
+    _triggerLikeAction();
   }
 
   /// Opens the full Gifts Sheet matching Chat Room and PK Battle screens,
@@ -133,21 +188,6 @@ class _ExploreReelCardState extends ConsumerState<ExploreReelCard>
           ],
         ),
         duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-
-  void _toggleFollow() {
-    setState(() => _isFollowing = !_isFollowing);
-    widget.onFollowTap?.call();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          _isFollowing
-              ? 'Followed ${widget.stream.streamerName} ❤️'
-              : 'Unfollowed ${widget.stream.streamerName}',
-        ),
-        duration: const Duration(seconds: 1),
       ),
     );
   }
@@ -216,74 +256,7 @@ class _ExploreReelCardState extends ConsumerState<ExploreReelCard>
                 ),
               ),
 
-              // 4. Top Reel Viewer Counter Pill (Beneath header, NO LIVE badge)
-              Positioned(
-                top: 104,
-                left: 16,
-                right: 16,
-                child: Row(
-                  children: [
-                    // Viewers counter pill
-                    GlassContainer(
-                      enableBlur: false,
-                      blur: 0,
-                      opacity: 0.45,
-                      borderRadius: BorderRadius.circular(16),
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.remove_red_eye_outlined, color: Colors.white, size: 12),
-                          const SizedBox(width: 4),
-                          Text(
-                            stream.viewersCount,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
 
-                    const Spacer(),
-
-                    // Video indicator badge if this reel has video playback
-                    if (hasVideo)
-                      GlassContainer(
-                        enableBlur: false,
-                        blur: 0,
-                        opacity: 0.55,
-                        borderRadius: BorderRadius.circular(16),
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 6,
-                              height: 6,
-                              decoration: const BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: AppColors.primaryPink,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            const Text(
-                              'REEL',
-                              style: TextStyle(
-                                color: AppColors.primaryPink,
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
-              ),
 
               // 5. Right-side Interactive Action Column with Tactile Glassmorphic Buttons
               Positioned(
@@ -301,7 +274,7 @@ class _ExploreReelCardState extends ConsumerState<ExploreReelCard>
                       size: buttonSize,
                       icon: _isLiked ? Icons.favorite : Icons.favorite_border_rounded,
                       iconColor: _isLiked ? const Color(0xFFFF2D55) : const Color(0xFFFFD700),
-                      label: stream.diamondsCount,
+                      label: _formatLikes(_likesCount),
                       borderColor: _isLiked ? const Color(0xFFFF2D55) : const Color(0x99FFD700),
                       glowColor: _isLiked ? const Color(0x66FF2D55) : const Color(0x55FFD700),
                       onTap: _handleLikeTap,
@@ -376,11 +349,14 @@ class _ExploreReelCardState extends ConsumerState<ExploreReelCard>
                         if (widget.onShareTap != null) {
                           widget.onShareTap!();
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Shared ${stream.streamerName}\'s reel!'),
-                              duration: const Duration(seconds: 1),
-                            ),
+                          final shareUrl = 'https://tivoo.app/reel/${stream.id}';
+                          final shareText = 'Watch ${stream.streamerName}\'s reel on Tivoo! $shareUrl';
+                          TivooShareSheet.show(
+                            context,
+                            title: 'Share Reel',
+                            subtitle: '${stream.streamerName} • ${stream.category}',
+                            shareUrl: shareUrl,
+                            shareText: shareText,
                           );
                         }
                       },
@@ -440,47 +416,15 @@ class _ExploreReelCardState extends ConsumerState<ExploreReelCard>
                         ],
                         const SizedBox(width: 10),
 
-                        // Prominent Follow Button on Explore Reel
-                        GestureDetector(
-                          onTap: _toggleFollow,
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 5),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(16),
-                              gradient: _isFollowing
-                                  ? const LinearGradient(
-                                      colors: [Color(0x55FFFFFF), Color(0x33FFFFFF)],
-                                    )
-                                  : AppColors.followButtonGradient,
-                              boxShadow: _isFollowing
-                                  ? null
-                                  : [
-                                      BoxShadow(
-                                        color: AppColors.primaryYellow.withValues(alpha: 0.35),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (!_isFollowing) ...[
-                                  const Icon(Icons.add, color: Colors.black, size: 13),
-                                  const SizedBox(width: 3),
-                                ],
-                                Text(
-                                  _isFollowing ? 'Following' : 'Follow',
-                                  style: TextStyle(
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w800,
-                                    color: _isFollowing ? Colors.white : Colors.black,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                        // Prominent Instagram Follow Button on Explore Reel
+                        InstagramFollowButton(
+                          userId: stream.id,
+                          userName: stream.streamerName,
+                          userAvatar: stream.avatarAssetPath ?? stream.avatarUrl ?? '',
+                          initialFollowers: 120400,
+                          initialFollowing: _isFollowing,
+                          height: 30,
+                          fontSize: 11.5,
                         ),
                       ],
                     ),
@@ -518,13 +462,41 @@ class _ExploreReelCardState extends ConsumerState<ExploreReelCard>
   }
 
   Widget _buildStreamerAvatarAction() {
-    return GestureDetector(
-      onTap: _toggleFollow,
-      child: Stack(
-        alignment: Alignment.bottomCenter,
-        clipBehavior: Clip.none,
-        children: [
-          Container(
+    final followMap = ref.watch(followControllerProvider);
+    final rel = followMap[widget.stream.id] ??
+        ref.read(followControllerProvider.notifier).getRelationship(
+              widget.stream.id,
+              defaultName: widget.stream.streamerName,
+              defaultAvatar: widget.stream.avatarAssetPath ?? widget.stream.avatarUrl ?? '',
+              initialFollowers: 120400,
+              initialFollowing: _isFollowing,
+            );
+    final isFollowing = rel.isFollowingOrMutual;
+    final isRequested = rel.isRequested;
+
+    return Stack(
+      alignment: Alignment.bottomCenter,
+      clipBehavior: Clip.none,
+      children: [
+        GestureDetector(
+          onTap: () {
+            StreamerIdProfileSheet.show(
+              context,
+              stream: LiveStreamCardModel(
+                id: widget.stream.id,
+                userId: '109284',
+                streamerName: widget.stream.streamerName,
+                streamerBio: widget.stream.subCategory,
+                streamerAssetPath: widget.stream.avatarAssetPath,
+                streamerAvatarUrl: widget.stream.avatarUrl,
+                viewersCount: widget.stream.viewersCount,
+                diamondsCount: widget.stream.diamondsCount,
+                isFollowing: isFollowing,
+                isVerified: widget.stream.isVerified,
+              ),
+            );
+          },
+          child: Container(
             padding: const EdgeInsets.all(2),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
@@ -536,23 +508,69 @@ class _ExploreReelCardState extends ConsumerState<ExploreReelCard>
               imageUrl: widget.stream.avatarUrl,
             ),
           ),
-          Positioned(
-            bottom: -5,
+        ),
+        Positioned(
+          bottom: -5,
+          child: GestureDetector(
+            onTap: () {
+              if (rel.isNotFollowing) {
+                ref.read(followControllerProvider.notifier).sendFollowRequest(
+                      widget.stream.id,
+                      targetName: widget.stream.streamerName,
+                      targetAvatar: widget.stream.avatarAssetPath ?? widget.stream.avatarUrl ?? '',
+                      onStatusNotify: (msg) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(msg),
+                            backgroundColor: const Color(0xFF192233),
+                            behavior: SnackBarBehavior.floating,
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      },
+                    );
+              } else if (rel.isRequested) {
+                InstagramFollowActionsSheet.showRequestedSheet(
+                  context,
+                  relationship: rel,
+                  streamerId: widget.stream.id,
+                  onCancelRequest: () {
+                    ref.read(followControllerProvider.notifier).cancelFollowRequest(widget.stream.id);
+                  },
+                );
+              } else {
+                InstagramFollowActionsSheet.show(
+                  context,
+                  relationship: rel,
+                  streamerId: widget.stream.id,
+                );
+              }
+            },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               padding: const EdgeInsets.all(2),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: _isFollowing
+                gradient: isFollowing
                     ? const LinearGradient(colors: [Color(0xFF4CAF50), Color(0xFF2E7D32)])
-                    : AppColors.getStartedButtonGradient,
+                    : isRequested
+                        ? const LinearGradient(colors: [Color(0xFF1E2840), Color(0xFF2B3A5A)])
+                        : AppColors.getStartedButtonGradient,
                 boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 4)],
               ),
-              child: Icon(_isFollowing ? Icons.check : Icons.add, color: Colors.white, size: 12),
+              child: Icon(
+                isFollowing
+                    ? Icons.check
+                    : isRequested
+                        ? Icons.schedule
+                        : Icons.add,
+                color: Colors.white,
+                size: 12,
+              ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

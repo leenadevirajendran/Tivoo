@@ -30,6 +30,7 @@ class _Watch247LiveScreenState extends State<Watch247LiveScreen> with SingleTick
 
   late final List<LiveComment> _comments;
   bool _isFollowing = false;
+  bool _isCommentsPaused = false;
   GiftItem? _activeGiftBanner;
   Timer? _commentTimer;
   int _diamondsCount = 888450;
@@ -52,7 +53,7 @@ class _Watch247LiveScreenState extends State<Watch247LiveScreen> with SingleTick
 
     // Auto-stream comments periodically down side
     _commentTimer = Timer.periodic(const Duration(seconds: 4), (_) {
-      if (!mounted) return;
+      if (!mounted || _isCommentsPaused) return;
       final raw = _simulatedChatters[_simulatedIndex % _simulatedChatters.length];
       _simulatedIndex++;
       final parts = raw.split(': ');
@@ -202,23 +203,16 @@ class _Watch247LiveScreenState extends State<Watch247LiveScreen> with SingleTick
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   const Text(
-                                    'Cordelia cor...',
+                                    'Cordelia',
                                     style: TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.bold),
                                   ),
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: const [
-                                      Text('🔥', style: TextStyle(fontSize: 10)),
-                                      SizedBox(width: 3),
-                                      Text(
-                                        '870',
-                                        style: TextStyle(
-                                          color: Colors.white70,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
+                                  const Text(
+                                    'ID: UID-849201',
+                                    style: TextStyle(
+                                      color: Color(0xFFFFD700),
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -407,14 +401,31 @@ class _Watch247LiveScreenState extends State<Watch247LiveScreen> with SingleTick
                         child: Align(
                           alignment: Alignment.bottomLeft,
                           child: SizedBox(
-                            height: 190,
+                            height: 250,
                             width: MediaQuery.sizeOf(context).width * 0.78,
-                            child: LiveChatListView(comments: _comments),
+                            child: LiveChatListView(
+                              comments: _comments,
+                              onPauseComments: () => setState(() => _isCommentsPaused = true),
+                              onResumeComments: () => setState(() => _isCommentsPaused = false),
+                              onDeleteComment: (id) => setState(() => _comments.removeWhere((c) => c.id == id)),
+                              onReportComment: (id) => setState(() {
+                                final idx = _comments.indexWhere((c) => c.id == id);
+                                if (idx != -1) {
+                                  _comments[idx] = _comments[idx].copyWith(
+                                    message: 'This comment has been reported',
+                                    isReported: true,
+                                  );
+                                }
+                              }),
+                              onBlockUser: (userName) => setState(() {
+                                _comments.removeWhere((c) => c.userName == userName);
+                              }),
+                            ),
                           ),
                         ),
                       ),
 
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 2),
 
                       // Bottom Bar with Comment input, separate Star, separate Gift
                       LiveBottomInputBar(

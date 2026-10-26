@@ -2,6 +2,7 @@
 //
 // Sizes are designed for a 390 px wide phone and scale with the screen ([profileScale]).
 
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -143,14 +144,13 @@ class _RingButton extends StatelessWidget {
   final String label;
   final double size;
   final VoidCallback onTap;
-  final double iconScale;
+  static const double _iconScale = 0.5;
 
   const _RingButton({
     required this.icon,
     required this.label,
     required this.size,
     required this.onTap,
-    this.iconScale = 0.5,
   });
 
   @override
@@ -178,7 +178,7 @@ class _RingButton extends StatelessWidget {
               shape: BoxShape.circle,
               gradient: RadialGradient(center: Alignment(-0.3, -0.4), colors: [Color(0xFF26215A), Color(0xFF0B0920)]),
             ),
-            child: Icon(icon, color: Colors.white, size: size * iconScale),
+            child: Icon(icon, color: Colors.white, size: size * _iconScale),
           ),
         ),
       ),
@@ -186,19 +186,19 @@ class _RingButton extends StatelessWidget {
   }
 }
 
-/// [←] [👑 VIP] ................. [≡] [⚙]
+/// [←] ................. [≡] [⚙]
 class ProfileTopBar extends StatelessWidget {
   final VoidCallback onBack;
-  final VoidCallback onVip;
-  final VoidCallback onMenu;
-  final VoidCallback onSettings;
+  final VoidCallback? onMenu;
+  final VoidCallback? onSettings;
+  final bool showActions;
 
   const ProfileTopBar({
     super.key,
     required this.onBack,
-    required this.onVip,
-    required this.onMenu,
-    required this.onSettings,
+    this.onMenu,
+    this.onSettings,
+    this.showActions = true,
   });
 
   @override
@@ -208,46 +208,13 @@ class ProfileTopBar extends StatelessWidget {
     return Row(
       children: [
         _RingButton(icon: Icons.arrow_back_rounded, label: 'Back', size: size, onTap: onBack),
-        SizedBox(width: 10 * s),
-        Semantics(
-          button: true,
-          label: 'VIP',
-          child: GestureDetector(
-            onTap: onVip,
-            child: Container(
-              height: 34 * s,
-              padding: EdgeInsets.symmetric(horizontal: 14 * s),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                gradient: const LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Color(0xFF2A2210), Color(0xFF120E06)],
-                ),
-                border: Border.all(color: LuxeColors.gold, width: 1.6),
-                boxShadow: const [
-                  BoxShadow(color: Color(0x88FFC928), blurRadius: 14),
-                  BoxShadow(color: Color(0x33FFC928), blurRadius: 24, spreadRadius: 2),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  LuxeCrown(size: 21 * s),
-                  SizedBox(width: 7 * s),
-                  LuxeGoldText(
-                    'VIP',
-                    style: TextStyle(fontSize: 16 * s, fontWeight: FontWeight.w700, letterSpacing: 0.6),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
         const Spacer(),
-        _RingButton(icon: Icons.menu_rounded, label: 'Menu', size: size, onTap: onMenu),
-        SizedBox(width: 9 * s),
-        _RingButton(icon: Icons.settings_rounded, label: 'Settings', size: size, onTap: onSettings),
+        if (showActions && onMenu != null)
+          _RingButton(icon: Icons.menu_rounded, label: 'Menu', size: size, onTap: onMenu!),
+        if (showActions && onMenu != null && onSettings != null)
+          SizedBox(width: 9 * s),
+        if (showActions && onSettings != null)
+          _RingButton(icon: Icons.settings_rounded, label: 'Settings', size: size, onTap: onSettings!),
       ],
     );
   }
@@ -263,12 +230,18 @@ class ProfileIdentityHeader extends StatelessWidget {
   final String username;
   final String avatarAsset;
   final VoidCallback onAvatarCamera;
+  final String followersCount;
+  final String followingCount;
+  final String likesCount;
 
   const ProfileIdentityHeader({
     super.key,
     required this.username,
     required this.avatarAsset,
     required this.onAvatarCamera,
+    this.followersCount = '4.7K',
+    this.followingCount = '300',
+    this.likesCount = '53.1K',
   });
 
   @override
@@ -312,19 +285,22 @@ class ProfileIdentityHeader extends StatelessWidget {
                 style: TextStyle(color: LuxeColors.textMuted, fontSize: 11 * s),
               ),
               SizedBox(height: 9 * s),
-              _StatsCard(s: s),
+              _StatsCard(
+                s: s,
+                followers: followersCount,
+                following: followingCount,
+                likes: likesCount,
+              ),
             ],
           ),
         ),
-        SizedBox(width: 4 * s),
-        _GoodVibes(s: s),
       ],
     );
   }
 }
 
 /// Photo in a thick glowing gold ring with a violet inner rim, a thin white bezel,
-/// lens-flare glints, a tilted crown and a camera button.
+/// lens-flare glints and a tilted crown.
 class _Avatar extends StatelessWidget {
   final double size;
   final String asset;
@@ -334,6 +310,7 @@ class _Avatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final photoInset = size * 0.115;
+    final innerDiameter = size - photoInset * 2;
     return SizedBox(
       width: size,
       height: size,
@@ -356,9 +333,16 @@ class _Avatar extends StatelessWidget {
             child: Padding(
               padding: EdgeInsets.all(photoInset),
               child: ClipOval(
-                child: ColoredBox(
-                  color: Colors.white,
-                  child: Image.asset(asset, fit: BoxFit.cover, alignment: const Alignment(0, -0.6)),
+                child: GestureDetector(
+                  onTap: onCamera,
+                  child: ColoredBox(
+                    color: Colors.white,
+                    child: CustomAvatar(
+                      radius: innerDiameter / 2,
+                      imageUrl: asset,
+                      assetPath: asset.startsWith('assets/') ? asset : null,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -368,17 +352,6 @@ class _Avatar extends StatelessWidget {
             top: -size * 0.24,
             left: size * 0.02,
             child: Transform.rotate(angle: -0.36, child: LuxeCrown(size: size * 0.38)),
-          ),
-          Positioned(
-            right: -size * 0.04,
-            bottom: size * 0.02,
-            child: _RingButton(
-              icon: Icons.camera_alt_rounded,
-              label: 'Change photo',
-              size: size * 0.32,
-              iconScale: 0.5,
-              onTap: onCamera,
-            ),
           ),
         ],
       ),
@@ -524,7 +497,16 @@ class _LevelPill extends StatelessWidget {
 
 class _StatsCard extends StatelessWidget {
   final double s;
-  const _StatsCard({required this.s});
+  final String followers;
+  final String following;
+  final String likes;
+
+  const _StatsCard({
+    required this.s,
+    this.followers = '4.7K',
+    this.following = '300',
+    this.likes = '53.1K',
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -551,43 +533,7 @@ class _StatsCard extends StatelessWidget {
       padding: EdgeInsets.symmetric(vertical: 9 * s, horizontal: 4 * s),
       decoration: _glass(16 * s),
       child: Row(
-        children: [stat('4.7K', 'Followers'), divider(), stat('300', 'Following'), divider(), stat('53.1K', 'Likes')],
-      ),
-    );
-  }
-}
-
-class _GoodVibes extends StatelessWidget {
-  final double s;
-  const _GoodVibes({required this.s});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 50 * s,
-      child: Column(
-        children: [
-          SizedBox(height: 10 * s),
-          Transform.rotate(angle: 0.12, child: LuxeCrown(size: 26 * s)),
-          SizedBox(height: 2 * s),
-          Transform.rotate(
-            angle: -0.12,
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: LuxeGoldText(
-                'Good\nVibes\nOnly',
-                style: TextStyle(
-                  fontFamily: 'KaushanScript',
-                  fontSize: 17 * s,
-                  height: 1.0,
-                  shadows: const [Shadow(color: Color(0x99FFC928), blurRadius: 8)],
-                ),
-              ),
-            ),
-          ),
-          SizedBox(height: 2 * s),
-          Icon(Icons.favorite_border_rounded, color: LuxeColors.gold, size: 20 * s),
-        ],
+        children: [stat(followers, 'Followers'), divider(), stat(following, 'Following'), divider(), stat(likes, 'Likes')],
       ),
     );
   }
@@ -631,97 +577,142 @@ class ProfileBio extends StatelessWidget {
   }
 }
 
-/// [Edit Profile (glossy gold)] [Find Friends (neon glass)] [camera]
+/// [Edit Profile] and [Upload posts] action buttons.
 class ProfileActions extends StatelessWidget {
   final VoidCallback onEdit;
-  final VoidCallback onFindFriends;
-  final VoidCallback onCamera;
+  final VoidCallback onUploadPosts;
 
-  const ProfileActions({super.key, required this.onEdit, required this.onFindFriends, required this.onCamera});
+  const ProfileActions({
+    super.key,
+    required this.onEdit,
+    required this.onUploadPosts,
+  });
 
   @override
   Widget build(BuildContext context) {
     final s = profileScale(context);
     final h = 46 * s;
-    Widget label(IconData icon, String text, Color color) => FittedBox(
-      fit: BoxFit.scaleDown,
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 20 * s),
-          SizedBox(width: 9 * s),
-          Text(
-            text,
-            style: TextStyle(color: color, fontSize: 14 * s, fontWeight: FontWeight.w600),
-          ),
-        ],
-      ),
-    );
-
     return Row(
       children: [
+        // Edit Profile Button
         Expanded(
-          flex: 40,
           child: Semantics(
             button: true,
             child: GestureDetector(
               onTap: onEdit,
-              child: _GlossyGoldButton(height: h, child: label(Icons.person_rounded, 'Edit Profile', _ink)),
+              child: _GlossyGlassButton(
+                height: h,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.edit_outlined, color: LuxeColors.gold, size: 18 * s),
+                      SizedBox(width: 7 * s),
+                      Text(
+                        'Edit Profile',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 13.5 * s,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
         ),
         SizedBox(width: 10 * s),
+        // Upload Posts Button
         Expanded(
-          flex: 34,
           child: Semantics(
             button: true,
             child: GestureDetector(
-              onTap: onFindFriends,
-              child: Container(
+              onTap: onUploadPosts,
+              child: _GlossyGoldButton(
                 height: h,
-                padding: const EdgeInsets.all(1.3),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(h / 2),
-                  gradient: const LinearGradient(colors: [Color(0xFF7B4DFF), Color(0xFF5B3CFF), LuxeColors.blue]),
-                  boxShadow: const [BoxShadow(color: Color(0x557B4DFF), blurRadius: 12)],
-                ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(h / 2),
-                    gradient: const LinearGradient(colors: [Color(0xFF1C1650), Color(0xFF100D33), Color(0xFF14184A)]),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.cloud_upload_rounded, color: _ink, size: 19 * s),
+                      SizedBox(width: 7 * s),
+                      Text(
+                        'Upload posts',
+                        style: TextStyle(
+                          color: _ink,
+                          fontSize: 13.5 * s,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ],
                   ),
-                  alignment: Alignment.center,
-                  child: label(Icons.group_rounded, 'Find Friends', Colors.white),
                 ),
-              ),
-            ),
-          ),
-        ),
-        SizedBox(width: 10 * s),
-        Semantics(
-          button: true,
-          label: 'Camera',
-          child: GestureDetector(
-            onTap: onCamera,
-            child: Container(
-              width: h * 1.08,
-              height: h,
-              padding: const EdgeInsets.all(1.3),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(h / 2),
-                gradient: const LinearGradient(colors: [Color(0xFF7B4DFF), LuxeColors.blue]),
-                boxShadow: const [BoxShadow(color: Color(0x557B4DFF), blurRadius: 12)],
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(h / 2),
-                  gradient: const LinearGradient(colors: [Color(0xFF1C1650), Color(0xFF100D33)]),
-                ),
-                child: Icon(Icons.camera_alt_rounded, color: Colors.white, size: 22 * s),
               ),
             ),
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Glass pill button with a subtle gold border and glossy top highlight.
+class _GlossyGlassButton extends StatelessWidget {
+  final double height;
+  final Widget child;
+  const _GlossyGlassButton({required this.height, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final r = BorderRadius.circular(height / 2);
+    return Container(
+      height: height,
+      decoration: BoxDecoration(
+        color: const Color(0x331C1645),
+        borderRadius: r,
+        border: Border.all(color: LuxeColors.gold.withValues(alpha: 0.55), width: 1.2),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x44000000),
+            blurRadius: 10,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: r,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Align(
+              alignment: Alignment.topCenter,
+              child: FractionallySizedBox(
+                heightFactor: 0.45,
+                widthFactor: 1,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.white.withValues(alpha: 0.16),
+                        Colors.white.withValues(alpha: 0),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Center(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 10), child: child)),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -806,13 +797,7 @@ class ProfileBadgesRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = profileScale(context);
-    final h = 46 * s;
-    Widget divider() => Container(
-      width: 1,
-      height: 30 * s,
-      margin: EdgeInsets.symmetric(horizontal: 4 * s),
-      color: Colors.white.withValues(alpha: 0.12),
-    );
+    final h = 56 * s;
     Widget cell(Widget child, VoidCallback onTap, int flex, {bool framed = true}) => Expanded(
       flex: flex,
       child: GestureDetector(
@@ -824,20 +809,25 @@ class ProfileBadgesRow extends StatelessWidget {
           decoration: framed
               ? BoxDecoration(
                   borderRadius: BorderRadius.circular(h / 2),
-                  color: Colors.white.withValues(alpha: 0.03),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                  color: Colors.white.withValues(alpha: 0.05),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.16), width: 1.1),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x22000000), blurRadius: 6, offset: Offset(0, 2)),
+                  ],
                 )
               : null,
-          child: FittedBox(fit: BoxFit.scaleDown, child: child),
+          child: Center(
+            child: FittedBox(fit: BoxFit.scaleDown, child: child),
+          ),
         ),
       ),
     );
 
     return Container(
-      padding: EdgeInsets.all(6 * s),
-      decoration: _glass(22 * s).copyWith(
-        boxShadow: const [BoxShadow(color: Color(0x337B4DFF), blurRadius: 12)],
-        border: Border.all(color: const Color(0x557B4DFF)),
+      padding: EdgeInsets.symmetric(horizontal: 8 * s, vertical: 8 * s),
+      decoration: _glass(26 * s).copyWith(
+        boxShadow: const [BoxShadow(color: Color(0x3D7B4DFF), blurRadius: 16)],
+        border: Border.all(color: const Color(0x667B4DFF), width: 1.2),
       ),
       child: Row(
         children: [
@@ -849,57 +839,61 @@ class ProfileBadgesRow extends StatelessWidget {
               value: 'No.500+',
             ),
             onTivooStar ?? onTikiStar,
-            28,
+            30,
           ),
-          divider(),
+          SizedBox(width: 5 * s),
           cell(
             _BadgeCell(
               s: s,
               title: 'Angels',
               valueWidget: SizedBox(
-                width: 40 * s,
-                height: 20 * s,
+                width: 44 * s,
+                height: 22 * s,
                 child: Stack(
                   children: [
                     Positioned(
                       left: 0,
-                      child: CustomAvatar(radius: 10 * s, assetPath: AppAssets.avatarPriya),
+                      child: CustomAvatar(radius: 11 * s, assetPath: AppAssets.avatarPriya),
                     ),
                     Positioned(
-                      left: 17 * s,
-                      child: CustomAvatar(radius: 10 * s, assetPath: AppAssets.avatarNeha),
+                      left: 18 * s,
+                      child: CustomAvatar(radius: 11 * s, assetPath: AppAssets.avatarNeha),
                     ),
                   ],
                 ),
               ),
             ),
             onAngels,
-            20,
+            22,
           ),
-          divider(),
+          SizedBox(width: 5 * s),
           cell(
             Container(
-              padding: EdgeInsets.symmetric(horizontal: 16 * s, vertical: 7 * s),
+              height: h - 8 * s,
+              padding: EdgeInsets.symmetric(horizontal: 14 * s),
+              alignment: Alignment.center,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(colors: [Color(0xFFFFE34D), LuxeColors.gold]),
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(h / 2),
                 boxShadow: const [BoxShadow(color: Color(0x77FFC928), blurRadius: 10)],
               ),
               child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.push_pin_rounded, color: _ink, size: 15 * s),
+                  Icon(Icons.push_pin_rounded, color: _ink, size: 16 * s),
                   SizedBox(width: 5 * s),
                   Text(
                     'Share',
-                    style: TextStyle(color: _ink, fontSize: 13 * s, fontWeight: FontWeight.w600),
+                    style: TextStyle(color: _ink, fontSize: 13.5 * s, fontWeight: FontWeight.w700),
                   ),
                 ],
               ),
             ),
             onShare,
             22,
+            framed: false,
           ),
-          divider(),
+          SizedBox(width: 5 * s),
           cell(
             _BadgeCell(
               s: s,
@@ -908,7 +902,7 @@ class ProfileBadgesRow extends StatelessWidget {
               value: 'RS TECH',
             ),
             onFamily,
-            28,
+            30,
           ),
         ],
       ),
@@ -928,20 +922,23 @@ class _BadgeCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        if (leading != null) ...[leading!, SizedBox(width: 7 * s)],
+        if (leading != null) ...[leading!, SizedBox(width: 6 * s)],
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               title,
-              style: TextStyle(color: const Color(0xFFD9D6EE), fontSize: 11 * s),
+              style: TextStyle(color: const Color(0xFFD9D6EE), fontSize: 12 * s, fontWeight: FontWeight.w500),
             ),
+            SizedBox(height: 1 * s),
             valueWidget ??
                 Text(
                   value ?? '',
-                  style: TextStyle(color: Colors.white, fontSize: 13 * s, fontWeight: FontWeight.w600),
+                  style: TextStyle(color: Colors.white, fontSize: 13.5 * s, fontWeight: FontWeight.w700),
                 ),
           ],
         ),
@@ -961,18 +958,18 @@ class _RoundIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 32 * s,
-      height: 32 * s,
+      width: 35 * s,
+      height: 35 * s,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: const RadialGradient(colors: [Color(0xFF2A2366), Color(0xFF0E0B2C)]),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
-        boxShadow: [BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 8)],
+        border: Border.all(color: Colors.white.withValues(alpha: 0.22), width: 1.1),
+        boxShadow: [BoxShadow(color: color.withValues(alpha: 0.35), blurRadius: 8)],
       ),
       child: Icon(
         icon,
         color: color,
-        size: 20 * s,
+        size: 21 * s,
         shadows: [Shadow(color: color.withValues(alpha: 0.6), blurRadius: 6)],
       ),
     );
@@ -1093,168 +1090,190 @@ class ProfileStatsBar extends StatelessWidget {
 
 class ProfileVideo {
   final String asset;
+  final String? filePath;
   final String? views;
   final bool pinned;
   final bool draft;
+  final bool isDraftFolder;
+  final int draftCount;
 
-  const ProfileVideo(this.asset, {this.views, this.pinned = false, this.draft = false});
+  const ProfileVideo(
+    this.asset, {
+    this.filePath,
+    this.views,
+    this.pinned = false,
+    this.draft = false,
+    this.isDraftFolder = false,
+    this.draftCount = 6,
+  });
 }
 
-/// Glass panel with [Drafts 7] [Pinned] [My Posts] tabs and a 3-column grid.
+/// Model representing a draft video.
+class DraftVideoItem {
+  final String id;
+  final String asset;
+  final String title;
+  final String duration;
+  final String date;
+
+  const DraftVideoItem({
+    required this.id,
+    required this.asset,
+    required this.title,
+    required this.duration,
+    required this.date,
+  });
+}
+
+/// Glass panel with a video/posts grid, supporting in-place Drafts viewing.
 class ProfileContentPanel extends StatelessWidget {
-  final int tab;
-  final ValueChanged<int> onTab;
+  final bool isViewingDrafts;
   final List<ProfileVideo> videos;
+  final List<DraftVideoItem> draftVideos;
   final ValueChanged<ProfileVideo> onOpen;
+  final ValueChanged<ProfileVideo>? onLongPressVideo;
+  final VoidCallback? onOpenDrafts;
+  final VoidCallback? onCloseDrafts;
+  final ValueChanged<DraftVideoItem>? onOpenDraft;
 
   const ProfileContentPanel({
     super.key,
-    required this.tab,
-    required this.onTab,
+    this.isViewingDrafts = false,
     required this.videos,
+    this.draftVideos = const [],
     required this.onOpen,
+    this.onLongPressVideo,
+    this.onOpenDrafts,
+    this.onCloseDrafts,
+    this.onOpenDraft,
   });
 
   @override
   Widget build(BuildContext context) {
     final s = profileScale(context);
     final width = MediaQuery.sizeOf(context).width;
+
     return Container(
-      padding: EdgeInsets.fromLTRB(6 * s, 10 * s, 6 * s, 6 * s),
+      padding: EdgeInsets.all(6 * s),
       decoration: _glass(22 * s).copyWith(border: Border.all(color: const Color(0x447B4DFF))),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 8 * s),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _ContentTab(
-                    s: s,
-                    icon: Icons.inventory_2_outlined,
-                    label: 'Drafts',
-                    count: 7,
-                    selected: tab == 0,
-                    onTap: () => onTab(0),
+          if (isViewingDrafts) ...[
+            Padding(
+              padding: EdgeInsets.fromLTRB(4 * s, 4 * s, 6 * s, 8 * s),
+              child: Row(
+                children: [
+                  Semantics(
+                    button: true,
+                    label: 'Back to all posts',
+                    child: GestureDetector(
+                      onTap: onCloseDrafts,
+                      behavior: HitTestBehavior.opaque,
+                      child: Container(
+                        padding: EdgeInsets.symmetric(horizontal: 10 * s, vertical: 6 * s),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(16 * s),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.arrow_back_rounded, color: Colors.white, size: 16 * s),
+                            SizedBox(width: 5 * s),
+                            Text(
+                              'All Posts',
+                              style: TextStyle(color: Colors.white, fontSize: 12 * s, fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-                SizedBox(width: 14 * s),
-                Expanded(
-                  child: _ContentTab(
-                    s: s,
-                    icon: Icons.push_pin_rounded,
-                    label: 'Pinned',
-                    selected: tab == 1,
-                    onTap: () => onTab(1),
+                  SizedBox(width: 10 * s),
+                  Text(
+                    'Drafts',
+                    style: TextStyle(color: Colors.white, fontSize: 15 * s, fontWeight: FontWeight.bold),
                   ),
-                ),
-                SizedBox(width: 14 * s),
-                Expanded(
-                  child: _ContentTab(
-                    s: s,
-                    icon: Icons.grid_view_rounded,
-                    label: 'My Posts',
-                    selected: tab == 2,
-                    onTap: () => onTab(2),
+                  SizedBox(width: 6 * s),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 7 * s, vertical: 2 * s),
+                    decoration: BoxDecoration(
+                      gradient: LuxeColors.goldGradient,
+                      borderRadius: BorderRadius.circular(10 * s),
+                    ),
+                    child: Text(
+                      '${draftVideos.length}',
+                      style: const TextStyle(color: _ink, fontSize: 11, fontWeight: FontWeight.w800),
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(height: 10 * s),
-          GridView.builder(
-            shrinkWrap: true,
-            padding: EdgeInsets.zero,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: videos.length,
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: width >= 700 ? 4 : 3,
-              childAspectRatio: width >= 700 ? 1.0 : 0.86,
-              crossAxisSpacing: 6 * s,
-              mainAxisSpacing: 6 * s,
-            ),
-            itemBuilder: (_, i) => _VideoTile(video: videos[i], onTap: () => onOpen(videos[i])),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ContentTab extends StatelessWidget {
-  final double s;
-  final IconData icon;
-  final String label;
-  final int? count;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _ContentTab({
-    required this.s,
-    required this.icon,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-    this.count,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final h = 36 * s;
-    final fg = selected ? _ink : Colors.white;
-    final content = FittedBox(
-      fit: BoxFit.scaleDown,
-      child: Row(
-        children: [
-          Icon(icon, color: fg, size: 17 * s),
-          SizedBox(width: 7 * s),
-          Text(
-            label,
-            style: TextStyle(color: fg, fontSize: 13.5 * s, fontWeight: FontWeight.w500),
-          ),
-          if (count != null) ...[
-            SizedBox(width: 7 * s),
-            Container(
-              width: 19 * s,
-              height: 19 * s,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: (selected ? _ink : Colors.white).withValues(alpha: 0.16),
+                  const Spacer(),
+                  Icon(Icons.lock_rounded, color: LuxeColors.gold, size: 14 * s),
+                  SizedBox(width: 4 * s),
+                  Text(
+                    'Private',
+                    style: TextStyle(color: Colors.white60, fontSize: 11 * s, fontWeight: FontWeight.w500),
+                  ),
+                ],
               ),
-              child: Text(
-                '$count',
-                style: TextStyle(color: fg, fontSize: 11 * s, fontWeight: FontWeight.w600),
+            ),
+            GridView.builder(
+              shrinkWrap: true,
+              padding: EdgeInsets.zero,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: draftVideos.length,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: width >= 700 ? 4 : 3,
+                childAspectRatio: width >= 700 ? 1.0 : 0.86,
+                crossAxisSpacing: 6 * s,
+                mainAxisSpacing: 6 * s,
               ),
+              itemBuilder: (_, i) {
+                final draft = draftVideos[i];
+                return _DraftVideoTile(
+                  draft: draft,
+                  onTap: () {
+                    if (onOpenDraft != null) {
+                      onOpenDraft!(draft);
+                    }
+                  },
+                );
+              },
+            ),
+          ] else ...[
+            GridView.builder(
+              shrinkWrap: true,
+              padding: EdgeInsets.zero,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: videos.length,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: width >= 700 ? 4 : 3,
+                childAspectRatio: width >= 700 ? 1.0 : 0.86,
+                crossAxisSpacing: 6 * s,
+                mainAxisSpacing: 6 * s,
+              ),
+              itemBuilder: (_, i) {
+                final video = videos[i];
+                return _VideoTile(
+                  video: video,
+                  onTap: () {
+                    if (video.isDraftFolder && onOpenDrafts != null) {
+                      onOpenDrafts!();
+                    } else {
+                      onOpen(video);
+                    }
+                  },
+                  onLongPress: () {
+                    if (!video.isDraftFolder && onLongPressVideo != null) {
+                      onLongPressVideo!(video);
+                    }
+                  },
+                );
+              },
             ),
           ],
         ],
-      ),
-    );
-    return Semantics(
-      button: true,
-      selected: selected,
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          height: h,
-          alignment: Alignment.center,
-          padding: EdgeInsets.symmetric(horizontal: 8 * s),
-          decoration: selected
-              ? BoxDecoration(
-                  borderRadius: BorderRadius.circular(h / 2),
-                  gradient: const LinearGradient(colors: [Color(0xFFFFE34D), LuxeColors.gold, Color(0xFFF2B200)]),
-                  boxShadow: const [BoxShadow(color: Color(0x77FFC928), blurRadius: 12)],
-                )
-              : BoxDecoration(
-                  borderRadius: BorderRadius.circular(h / 2),
-                  color: const Color(0xFF110E2E),
-                  border: Border.all(color: const Color(0xAA7B4DFF)),
-                  boxShadow: const [BoxShadow(color: Color(0x337B4DFF), blurRadius: 8)],
-                ),
-          child: content,
-        ),
       ),
     );
   }
@@ -1263,12 +1282,14 @@ class _ContentTab extends StatelessWidget {
 class _VideoTile extends StatelessWidget {
   final ProfileVideo video;
   final VoidCallback onTap;
-  const _VideoTile({required this.video, required this.onTap});
+  final VoidCallback? onLongPress;
+  const _VideoTile({required this.video, required this.onTap, this.onLongPress});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
+      onLongPress: onLongPress,
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(10),
@@ -1280,10 +1301,65 @@ class _VideoTile extends StatelessWidget {
             builder: (context, c) {
               final u = (c.maxWidth / 110).clamp(0.85, 1.4);
               final label = TextStyle(color: Colors.white, fontSize: 10.5 * u, fontWeight: FontWeight.w500);
+
+              if (video.isDraftFolder) {
+                return Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.asset(video.asset, fit: BoxFit.cover, cacheWidth: 360),
+                    // Light subtle transparent gradient to keep image crisp and clear
+                    const DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [Color(0x33000000), Colors.transparent, Color(0x44000000)],
+                          stops: [0, 0.5, 1],
+                        ),
+                      ),
+                    ),
+                    // Top folder badge only
+                    Positioned(
+                      left: 6 * u,
+                      top: 6 * u,
+                      child: Container(
+                        padding: EdgeInsets.symmetric(horizontal: 7 * u, vertical: 3 * u),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.45),
+                          borderRadius: BorderRadius.circular(6 * u),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 0.8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.folder_rounded, color: LuxeColors.gold, size: 12 * u),
+                            SizedBox(width: 4 * u),
+                            Text(
+                              'Drafts',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10.5 * u,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }
+
               return Stack(
                 fit: StackFit.expand,
                 children: [
-                  Image.asset(video.asset, fit: BoxFit.cover, cacheWidth: 360),
+                  video.filePath != null
+                      ? Image.file(
+                          File(video.filePath!),
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Image.asset(video.asset, fit: BoxFit.cover),
+                        )
+                      : Image.asset(video.asset, fit: BoxFit.cover, cacheWidth: 360),
                   const DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -1294,74 +1370,107 @@ class _VideoTile extends StatelessWidget {
                       ),
                     ),
                   ),
-                  if (video.draft || video.pinned)
-                    Positioned(
-                      left: 5 * u,
-                      top: 5 * u,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 7 * u, vertical: 2.5 * u),
-                            decoration: BoxDecoration(
-                              color: const Color(0x8C0B0A1E),
-                              borderRadius: BorderRadius.circular(8 * u),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (video.draft) ...[
-                                  Icon(Icons.folder_rounded, color: Colors.white, size: 12 * u),
-                                  SizedBox(width: 4 * u),
-                                ],
-                                Text(video.draft ? 'Drafts' : 'Pinned', style: label),
-                              ],
-                            ),
+                  Positioned(
+                    left: 6 * u,
+                    bottom: 5 * u,
+                    child: Row(
+                      children: [
+                        Icon(Icons.play_arrow_rounded, color: Colors.white, size: 16 * u),
+                        SizedBox(width: 2 * u),
+                        Text(video.views ?? '', style: label.copyWith(fontSize: 11 * u)),
+                      ],
+                    ),
+                  ),
+                  Positioned(
+                    right: 6 * u,
+                    bottom: 6 * u,
+                    child: LuxeCrown(size: 15 * u),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DraftVideoTile extends StatelessWidget {
+  final DraftVideoItem draft;
+  final VoidCallback onTap;
+  const _DraftVideoTile({required this.draft, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
+          boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 6, offset: Offset(0, 2))],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(9),
+          child: LayoutBuilder(
+            builder: (context, c) {
+              final u = (c.maxWidth / 110).clamp(0.85, 1.4);
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.asset(draft.asset, fit: BoxFit.cover, cacheWidth: 360),
+                  const DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Color(0x66000000), Colors.transparent, Color(0xDD0B0924)],
+                        stops: [0, 0.45, 1],
+                      ),
+                    ),
+                  ),
+                  // Center play/preview icon
+                  Center(
+                    child: Container(
+                      width: 32 * u,
+                      height: 32 * u,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.black.withValues(alpha: 0.45),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
+                      ),
+                      child: Icon(Icons.play_arrow_rounded, color: Colors.white, size: 18 * u),
+                    ),
+                  ),
+                  // Bottom duration & date
+                  Positioned(
+                    left: 6 * u,
+                    right: 6 * u,
+                    bottom: 5 * u,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          draft.duration,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10.5 * u,
+                            fontWeight: FontWeight.w600,
+                            shadows: const [Shadow(color: Colors.black, blurRadius: 4)],
                           ),
-                          if (video.draft)
-                            Padding(
-                              padding: EdgeInsets.only(left: 5 * u, top: 2 * u),
-                              child: Text('12 Videos', style: label),
-                            ),
-                        ],
-                      ),
-                    ),
-                  if (video.draft)
-                    Positioned(
-                      left: 6 * u,
-                      bottom: 6 * u,
-                      child: Container(
-                        width: 18 * u,
-                        height: 18 * u,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFD600),
-                          borderRadius: BorderRadius.circular(4 * u),
                         ),
-                        child: Text(
-                          'T',
-                          style: TextStyle(color: _ink, fontSize: 11 * u, fontWeight: FontWeight.w800),
+                        Text(
+                          draft.date,
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 9 * u,
+                            shadows: const [Shadow(color: Colors.black, blurRadius: 4)],
+                          ),
                         ),
-                      ),
-                    )
-                  else ...[
-                    Positioned(
-                      left: 6 * u,
-                      bottom: 5 * u,
-                      child: Row(
-                        children: [
-                          Icon(Icons.play_arrow_rounded, color: Colors.white, size: 16 * u),
-                          SizedBox(width: 2 * u),
-                          Text(video.views ?? '', style: label.copyWith(fontSize: 11 * u)),
-                        ],
-                      ),
+                      ],
                     ),
-                    Positioned(
-                      right: 6 * u,
-                      bottom: 6 * u,
-                      child: LuxeCrown(size: 15 * u),
-                    ),
-                  ],
+                  ),
                 ],
               );
             },

@@ -479,172 +479,184 @@ class _TivooFilterSetSheet extends StatelessWidget {
         ],
       ),
       child: SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 38,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(2),
+        child: SingleChildScrollView(
+          physics: const ClampingScrollPhysics(),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 38,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                const Text(
-                  'Live Stream Filters & Effects',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 15.5,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: const Color(0x33FFD21F),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0x66FFD21F), width: 0.8),
-                  ),
-                  child: const Text(
-                    'Tivoo Studio',
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  const Text(
+                    'Live Stream Filters & Effects',
                     style: TextStyle(
-                      color: Color(0xFFFFD21F),
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      fontSize: 15.5,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0x33FFD21F),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0x66FFD21F), width: 0.8),
+                    ),
+                    child: const Text(
+                      'Tivoo Studio',
+                      style: TextStyle(
+                        color: Color(0xFFFFD21F),
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
 
-            // Horizontal Scrollable Filter Icon Set (10 Items)
-            SizedBox(
-              height: 94,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: kTivooFilterIconSet.length,
-                separatorBuilder: (context, index) => const SizedBox(width: 12),
-                itemBuilder: (context, index) {
-                  final item = kTivooFilterIconSet[index];
-                  final isSelected = item.type == activeFilter;
+              // Horizontal Scrollable Filter Icon Set (10 Items)
+              SizedBox(
+                height: 100,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: kTivooFilterIconSet.length,
+                  separatorBuilder: (context, index) => const SizedBox(width: 12),
+                  itemBuilder: (context, index) {
+                    final item = kTivooFilterIconSet[index];
+                    final isSelected = item.type == activeFilter;
 
-                  return GestureDetector(
-                    onTap: () => onSelectFilter(item.type),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Glassmorphic Icon Container with Unique Neon Gradient Glow
-                        Container(
-                          width: 56,
-                          height: 56,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(16),
-                            color: const Color(0xCC101827),
-                            border: Border.all(
-                              color: isSelected
-                                  ? item.gradient.first
-                                  : item.gradient.first.withValues(alpha: 0.35),
-                              width: isSelected ? 2.0 : 1.2,
-                            ),
-                            boxShadow: [
-                              if (isSelected) ...[
-                                BoxShadow(
-                                  color: item.glowColor.withValues(alpha: 0.65),
-                                  blurRadius: 14,
-                                  spreadRadius: 1.5,
-                                ),
-                              ] else ...[
-                                BoxShadow(
-                                  color: item.glowColor.withValues(alpha: 0.15),
-                                  blurRadius: 6,
-                                ),
-                              ],
-                            ],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(15),
-                            child: BackdropFilter(
-                              filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  // Gradient Overlay
-                                  Positioned.fill(
-                                    child: DecoratedBox(
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                          colors: item.gradient
-                                              .map((c) => c.withValues(alpha: isSelected ? 0.35 : 0.15))
-                                              .toList(),
-                                        ),
-                                      ),
-                                    ),
+                    return GestureDetector(
+                      onTap: () => onSelectFilter(item.type),
+                      behavior: HitTestBehavior.opaque,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Glassmorphic Icon Container with Unique Neon Gradient Glow
+                          Container(
+                            width: 52,
+                            height: 52,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              color: const Color(0xCC101827),
+                              border: Border.all(
+                                color: isSelected
+                                    ? item.gradient.first
+                                    : item.gradient.first.withValues(alpha: 0.35),
+                                width: isSelected ? 2.0 : 1.2,
+                              ),
+                              boxShadow: [
+                                if (isSelected) ...[
+                                  BoxShadow(
+                                    color: item.glowColor.withValues(alpha: 0.65),
+                                    blurRadius: 12,
+                                    spreadRadius: 1,
                                   ),
-                                  // White Icon Detail with Shader
-                                  ShaderMask(
-                                    shaderCallback: (bounds) => LinearGradient(
-                                      colors: isSelected
-                                          ? [Colors.white, item.gradient.first]
-                                          : [Colors.white, Colors.white70],
-                                    ).createShader(bounds),
-                                    child: Icon(
-                                      item.icon,
-                                      color: Colors.white,
-                                      size: 26,
-                                    ),
+                                ] else ...[
+                                  BoxShadow(
+                                    color: item.glowColor.withValues(alpha: 0.15),
+                                    blurRadius: 6,
                                   ),
-                                  // Active Golden Sparkle on top-right
-                                  if (isSelected)
-                                    Positioned(
-                                      top: 4,
-                                      right: 4,
-                                      child: Container(
-                                        width: 6,
-                                        height: 6,
-                                        decoration: const BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: Color(0xFFFFD21F),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Color(0xFFFFD21F),
-                                              blurRadius: 6,
-                                              spreadRadius: 1,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
                                 ],
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(15),
+                              child: BackdropFilter(
+                                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    // Gradient Overlay
+                                    Positioned.fill(
+                                      child: DecoratedBox(
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                            colors: item.gradient
+                                                .map((c) => c.withValues(alpha: isSelected ? 0.35 : 0.15))
+                                                .toList(),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    // White Icon Detail with Shader
+                                    ShaderMask(
+                                      shaderCallback: (bounds) => LinearGradient(
+                                        colors: isSelected
+                                            ? [Colors.white, item.gradient.first]
+                                            : [Colors.white, Colors.white70],
+                                      ).createShader(bounds),
+                                      child: Icon(
+                                        item.icon,
+                                        color: Colors.white,
+                                        size: 24,
+                                      ),
+                                    ),
+                                    // Active Golden Sparkle on top-right
+                                    if (isSelected)
+                                      Positioned(
+                                        top: 4,
+                                        right: 4,
+                                        child: Container(
+                                          width: 6,
+                                          height: 6,
+                                          decoration: const BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: Color(0xFFFFD21F),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Color(0xFFFFD21F),
+                                                blurRadius: 6,
+                                                spreadRadius: 1,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          item.title,
-                          style: TextStyle(
-                            color: isSelected ? Colors.white : Colors.white60,
-                            fontSize: 10.5,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                          const SizedBox(height: 4),
+                          SizedBox(
+                            width: 60,
+                            child: Text(
+                              item.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: isSelected ? Colors.white : Colors.white60,
+                                fontSize: 10.5,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                height: 1.2,
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+                        ],
+                      ),
+                    );
+                  },
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

@@ -684,6 +684,8 @@ class TransactionActivityTile extends StatelessWidget {
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -809,12 +811,14 @@ class WalletScaffold extends StatelessWidget {
   final Widget body;
   final PreferredSizeWidget? appBar;
   final Widget? bottomNavigationBar;
+  final bool? resizeToAvoidBottomInset;
 
   const WalletScaffold({
     super.key,
     required this.body,
     this.appBar,
     this.bottomNavigationBar,
+    this.resizeToAvoidBottomInset,
   });
 
   @override
@@ -822,6 +826,7 @@ class WalletScaffold extends StatelessWidget {
     return Scaffold(
       backgroundColor: WalletPalette.bgBottom,
       extendBodyBehindAppBar: false,
+      resizeToAvoidBottomInset: resizeToAvoidBottomInset,
       appBar: appBar,
       bottomNavigationBar: bottomNavigationBar,
       body: Stack(

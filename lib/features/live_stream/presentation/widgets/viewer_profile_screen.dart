@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_assets.dart';
 import '../../../../core/widgets/custom_avatar.dart';
+import 'user_profile_bottom_sheet.dart';
+import '../../../profile/domain/models/follow_relationship.dart';
+import '../../../profile/presentation/controllers/follow_controller.dart';
+import '../../../profile/presentation/widgets/instagram_follow_actions_sheet.dart';
 
 /// Viewer Profile Screen matching Image 2 (Screen 3) & Image 3 (Screen 3):
 /// - Header: Back arrow [<] and More [...]
@@ -12,7 +17,7 @@ import '../../../../core/widgets/custom_avatar.dart';
 /// - Action Buttons: Wide pink [Follow] button + Direct Message / Share button
 /// - Content Tabs: Videos (with cyan active indicator), Live, Liked
 /// - 3-Column Video Grid with play count badges (▶ 125K, ▶ 98K, etc.)
-class ViewerProfileScreen extends StatefulWidget {
+class ViewerProfileScreen extends ConsumerStatefulWidget {
   final String userName;
   final String? handle;
   final String? avatarAsset;
@@ -48,43 +53,19 @@ class ViewerProfileScreen extends StatefulWidget {
     bool isVerified = true,
     bool initialFollowing = false,
   }) {
-    return Navigator.of(context).push(
-      PageRouteBuilder(
-        opaque: false,
-        barrierDismissible: true,
-        barrierColor: Colors.black.withValues(alpha: 0.5),
-        transitionDuration: const Duration(milliseconds: 320),
-        reverseTransitionDuration: const Duration(milliseconds: 260),
-        pageBuilder: (context, animation, secondaryAnimation) {
-          return ViewerProfileScreen(
-            userName: userName,
-            handle: handle,
-            avatarAsset: avatarAsset,
-            bio: bio,
-            postsCount: postsCount,
-            followersCount: followersCount,
-            followingCount: followingCount,
-            isVerified: isVerified,
-            initialFollowing: initialFollowing,
-          );
-        },
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          const begin = Offset(1.0, 0.0);
-          const end = Offset.zero;
-          const curve = Curves.easeOutCubic;
-          var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-          return SlideTransition(position: animation.drive(tween), child: child);
-        },
-      ),
+    return UserProfileBottomSheet.show(
+      context,
+      userName: userName,
+      avatarAsset: avatarAsset,
+      userId: 'user_${userName.toLowerCase().replaceAll(' ', '_')}',
     );
   }
 
   @override
-  State<ViewerProfileScreen> createState() => _ViewerProfileScreenState();
+  ConsumerState<ViewerProfileScreen> createState() => _ViewerProfileScreenState();
 }
 
-class _ViewerProfileScreenState extends State<ViewerProfileScreen> {
-  late bool _isFollowing;
+class _ViewerProfileScreenState extends ConsumerState<ViewerProfileScreen> {
   int _selectedTab = 0; // 0 = Videos, 1 = Live, 2 = Liked
 
   final List<Map<String, String>> _videoPosts = [
@@ -96,14 +77,30 @@ class _ViewerProfileScreenState extends State<ViewerProfileScreen> {
     {'image': AppAssets.avatarSneha, 'views': '320K'},
   ];
 
-  @override
-  void initState() {
-    super.initState();
-    _isFollowing = widget.initialFollowing;
+  int _parseFollowers(String raw) {
+    final clean = raw.trim().toUpperCase();
+    if (clean.endsWith('M')) {
+      final val = double.tryParse(clean.replaceAll('M', '')) ?? 1.2;
+      return (val * 1000000).toInt();
+    } else if (clean.endsWith('K')) {
+      final val = double.tryParse(clean.replaceAll('K', '')) ?? 10.0;
+      return (val * 1000).toInt();
+    }
+    return int.tryParse(clean.replaceAll(',', '')) ?? 12500;
   }
 
   @override
   Widget build(BuildContext context) {
+    final streamerId = 'user_${widget.userName.toLowerCase().replaceAll(' ', '_')}';
+    final followMap = ref.watch(followControllerProvider);
+    final relationship = followMap[streamerId] ??
+        ref.read(followControllerProvider.notifier).getRelationship(
+              streamerId,
+              defaultName: widget.userName,
+              defaultAvatar: widget.avatarAsset ?? '',
+              initialFollowers: _parseFollowers(widget.followersCount),
+              initialFollowing: widget.initialFollowing,
+            );
     final avatar = widget.avatarAsset ?? AppAssets.status4;
     final handle = widget.handle ??
         '@${widget.userName.toLowerCase().replaceAll(' ', '_').replaceAll('👑', '').trim()}';
@@ -252,12 +249,12 @@ class _ViewerProfileScreenState extends State<ViewerProfileScreen> {
                           const SizedBox(height: 18),
 
                           // Stats Row: Posts, Followers, Following
-                          _buildStatsRow(),
+                          _buildStatsRow(relationship),
 
                           const SizedBox(height: 20),
 
                           // Action Buttons: Pink [Follow] + Direct Message
-                          _buildActionButtons(),
+                          _buildActionButtons(relationship, streamerId),
 
                           const SizedBox(height: 22),
 
@@ -411,13 +408,13 @@ class _ViewerProfileScreenState extends State<ViewerProfileScreen> {
     );
   }
 
-  Widget _buildStatsRow() {
+  Widget _buildStatsRow(FollowRelationship rel) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
         _buildStatItem(widget.postsCount, 'Posts'),
         Container(width: 1, height: 26, color: Colors.white12),
-        _buildStatItem(widget.followersCount, 'Followers'),
+        _buildStatItem(rel.formattedFollowers, 'Followers'),
         Container(width: 1, height: 26, color: Colors.white12),
         _buildStatItem(widget.followingCount, 'Following'),
       ],
@@ -449,57 +446,128 @@ class _ViewerProfileScreenState extends State<ViewerProfileScreen> {
     );
   }
 
-  Widget _buildActionButtons() {
+  Widget _buildActionButtons(FollowRelationship rel, String streamerId) {
     return Row(
       children: [
-        // Follow / Following Button
+        // Follow / Requested / Following Button (Backed by followControllerProvider)
         Expanded(
           child: GestureDetector(
             onTap: () {
-              setState(() {
-                _isFollowing = !_isFollowing;
-              });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    _isFollowing
-                        ? 'Now following ${widget.userName} ❤️'
-                        : 'Unfollowed ${widget.userName}',
-                  ),
-                  duration: const Duration(seconds: 1),
-                ),
-              );
+              if (rel.isNotFollowing) {
+                ref.read(followControllerProvider.notifier).sendFollowRequest(
+                      streamerId,
+                      targetName: widget.userName,
+                      targetAvatar: widget.avatarAsset ?? '',
+                      initialFollowers: _parseFollowers(widget.followersCount),
+                      onStatusNotify: (msg) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(msg),
+                            backgroundColor: const Color(0xFF192233),
+                            behavior: SnackBarBehavior.floating,
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      },
+                    );
+              } else if (rel.isRequested) {
+                InstagramFollowActionsSheet.showRequestedSheet(
+                  context,
+                  relationship: rel,
+                  streamerId: streamerId,
+                  onCancelRequest: () {
+                    ref.read(followControllerProvider.notifier).cancelFollowRequest(
+                          streamerId,
+                          onStatusNotify: (msg) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(msg),
+                                backgroundColor: const Color(0xFF192233),
+                                behavior: SnackBarBehavior.floating,
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                          },
+                        );
+                  },
+                );
+              } else if (rel.isFollowingOrMutual) {
+                InstagramFollowActionsSheet.show(
+                  context,
+                  relationship: rel,
+                  streamerId: streamerId,
+                );
+              } else if (rel.isBlocked) {
+                ref.read(followControllerProvider.notifier).unblockUser(
+                      streamerId,
+                      onStatusNotify: (msg) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(msg),
+                            backgroundColor: const Color(0xFF192233),
+                            behavior: SnackBarBehavior.floating,
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      },
+                    );
+              }
             },
             child: Container(
               height: 46,
               decoration: BoxDecoration(
-                gradient: _isFollowing
+                gradient: rel.isFollowingOrMutual
                     ? const LinearGradient(
                         colors: [Color(0xFF2A2B3C), Color(0xFF1E1F2C)],
                       )
-                    : const LinearGradient(
-                        colors: [Color(0xFFFF2D78), Color(0xFFE91E63)],
-                      ),
+                    : (rel.isRequested
+                        ? const LinearGradient(
+                            colors: [Color(0xFF1F2839), Color(0xFF151C28)],
+                          )
+                        : const LinearGradient(
+                            colors: [Color(0xFFFF2D78), Color(0xFFE91E63)],
+                          )),
                 borderRadius: BorderRadius.circular(24),
-                boxShadow: _isFollowing
+                border: rel.isRequested
+                    ? Border.all(color: const Color(0xFFFFD700), width: 1.2)
+                    : null,
+                boxShadow: rel.isFollowingOrMutual
                     ? null
                     : [
                         BoxShadow(
-                          color: const Color(0xFFFF2D78).withValues(alpha: 0.45),
+                          color: (rel.isRequested
+                                  ? const Color(0xFFFFD700)
+                                  : const Color(0xFFFF2D78))
+                              .withValues(alpha: 0.45),
                           blurRadius: 14,
                           offset: const Offset(0, 4),
                         ),
                       ],
               ),
               child: Center(
-                child: Text(
-                  _isFollowing ? 'Following' : 'Follow',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.4,
-                  ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (rel.isFollowingOrMutual) ...[
+                      const Icon(Icons.check_rounded, color: Colors.white, size: 18),
+                      const SizedBox(width: 6),
+                    ] else if (rel.isRequested) ...[
+                      const Icon(Icons.schedule_rounded, color: Color(0xFFFFD700), size: 16),
+                      const SizedBox(width: 6),
+                    ],
+                    Text(
+                      rel.isFollowingOrMutual
+                          ? 'Following'
+                          : (rel.isRequested ? 'Requested' : 'Follow'),
+                      style: TextStyle(
+                        color: rel.isRequested ? const Color(0xFFFFD700) : Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

@@ -37,6 +37,7 @@ class GiftItem {
   final int diamonds;
   final String category;
   final String tagline;
+  final bool isSceneArt;
   final GiftAnimationType? animationTypeOverride;
 
   const GiftItem({
@@ -47,6 +48,7 @@ class GiftItem {
     required this.diamonds,
     this.category = 'Popular',
     this.tagline = '',
+    this.isSceneArt = false,
     this.animationTypeOverride,
   });
 
@@ -177,6 +179,7 @@ class GiftItem {
     int? diamonds,
     String? category,
     String? tagline,
+    bool? isSceneArt,
     GiftAnimationType? animationTypeOverride,
   }) {
     return GiftItem(
@@ -187,6 +190,7 @@ class GiftItem {
       diamonds: diamonds ?? this.diamonds,
       category: category ?? this.category,
       tagline: tagline ?? this.tagline,
+      isSceneArt: isSceneArt ?? this.isSceneArt,
       animationTypeOverride: animationTypeOverride ?? this.animationTypeOverride,
     );
   }
@@ -200,6 +204,7 @@ class GiftItem {
       'diamonds': diamonds,
       'category': category,
       'tagline': tagline,
+      'isSceneArt': isSceneArt,
     };
   }
 
@@ -212,6 +217,7 @@ class GiftItem {
       diamonds: map['diamonds'] as int,
       category: (map['category'] as String?) ?? 'Popular',
       tagline: (map['tagline'] as String?) ?? '',
+      isSceneArt: (map['isSceneArt'] as bool?) ?? false,
     );
   }
 

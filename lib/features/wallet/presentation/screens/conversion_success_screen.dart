@@ -41,98 +41,113 @@ class ConversionSuccessScreen extends StatelessWidget {
             },
           ),
         ),
-        body: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          child: Column(
-            children: [
-              const Spacer(flex: 1),
-
-              // Radiant Celebration Star Graphic matching reference image 9
-              const Center(
-                child: CelebrationStarWidget(size: 170),
-              ),
-
-              const SizedBox(height: 24),
-              Text(
-                'Conversion Successful!',
-                style: GoogleFonts.outfit(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            final isCompactHeight = constraints.maxHeight < 680;
+            return SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight - 24,
                 ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'You have received ',
-                    style: GoogleFonts.outfit(
-                      color: WalletPalette.textSecondary,
-                      fontSize: 15,
-                    ),
-                  ),
-                  Text(
-                    receivedTitle,
-                    style: GoogleFonts.outfit(
-                      color: WalletPalette.goldAccent,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
-              ),
+                child: IntrinsicHeight(
+                  child: Column(
+                    children: [
+                      const Spacer(flex: 1),
 
-              const Spacer(flex: 1),
+                      // Radiant Celebration Star Graphic matching reference image 9
+                      Center(
+                        child: CelebrationStarWidget(size: isCompactHeight ? 120 : 150),
+                      ),
 
-              // Details Card matching reference image 9
-              WalletNeonCard(
-                padding: const EdgeInsets.all(20),
-                borderColor: const Color(0xFF24326A),
-                child: Column(
-                  children: [
-                    _buildDetailRow(
-                      isStarToTCoin ? 'Stars Converted' : 'T Coins Converted',
-                      '$sourceAmount',
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 10),
-                      child: Divider(color: Color(0xFF1E2856), height: 1),
-                    ),
-                    _buildDetailRow(
-                      isStarToTCoin ? 'T Coins Received' : 'Stars Received',
-                      '$targetAmount',
-                      isHighlight: true,
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 10),
-                      child: Divider(color: Color(0xFF1E2856), height: 1),
-                    ),
-                    _buildDetailRow(
-                      isStarToTCoin ? 'Remaining Stars' : 'Remaining T Coins',
-                      '$remainingSourceBalance',
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 10),
-                      child: Divider(color: Color(0xFF1E2856), height: 1),
-                    ),
-                    _buildDetailRow('Transaction ID', transaction.id),
-                  ],
+                      SizedBox(height: isCompactHeight ? 16 : 24),
+                      Text(
+                        'Conversion Successful!',
+                        style: GoogleFonts.outfit(
+                          color: Colors.white,
+                          fontSize: isCompactHeight ? 22 : 24,
+                          fontWeight: FontWeight.w800,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'You have received ',
+                            style: GoogleFonts.outfit(
+                              color: WalletPalette.textSecondary,
+                              fontSize: 14,
+                            ),
+                          ),
+                          Text(
+                            receivedTitle,
+                            style: GoogleFonts.outfit(
+                              color: WalletPalette.goldAccent,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const Spacer(flex: 1),
+                      const SizedBox(height: 12),
+
+                      // Details Card matching reference image 9
+                      WalletNeonCard(
+                        padding: const EdgeInsets.all(18),
+                        borderColor: const Color(0xFF24326A),
+                        child: Column(
+                          children: [
+                            _buildDetailRow(
+                              isStarToTCoin ? 'Stars Converted' : 'T Coins Converted',
+                              '$sourceAmount',
+                            ),
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 8),
+                              child: Divider(color: Color(0xFF1E2856), height: 1),
+                            ),
+                            _buildDetailRow(
+                              isStarToTCoin ? 'T Coins Received' : 'Stars Received',
+                              '$targetAmount',
+                              isHighlight: true,
+                            ),
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 8),
+                              child: Divider(color: Color(0xFF1E2856), height: 1),
+                            ),
+                            _buildDetailRow(
+                              isStarToTCoin ? 'Remaining Stars' : 'Remaining T Coins',
+                              '$remainingSourceBalance',
+                            ),
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 8),
+                              child: Divider(color: Color(0xFF1E2856), height: 1),
+                            ),
+                            _buildDetailRow('Transaction ID', transaction.id),
+                          ],
+                        ),
+                      ),
+
+                      const Spacer(flex: 2),
+                      const SizedBox(height: 16),
+
+                      WalletActionButton(
+                        label: 'Back to Wallet',
+                        onPressed: () {
+                          Navigator.of(context).popUntil((route) => route.isFirst);
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                  ),
                 ),
               ),
-
-              const Spacer(flex: 2),
-
-              WalletActionButton(
-                label: 'Back to Wallet',
-                onPressed: () {
-                  Navigator.of(context).popUntil((route) => route.isFirst);
-                },
-              ),
-              const SizedBox(height: 12),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );

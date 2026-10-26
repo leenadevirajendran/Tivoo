@@ -137,18 +137,10 @@ class StarWalletState {
         );
   }
 
-  /// Formatted stars balance (e.g. '1,000K', '250K', or 'No. 0' when 0)
+  /// Formatted stars balance with commas without decimal/K count (e.g. '100,600', or '0' when 0)
   String get formattedBalance {
-    if (starBalance == 0) return 'No. 0';
-    if (starBalance >= 1000000) {
-      final m = starBalance / 1000000;
-      return m % 1 == 0 ? '${m.toInt()}M' : '${m.toStringAsFixed(1)}M';
-    }
-    if (starBalance >= 1000) {
-      final k = starBalance / 1000;
-      return k % 1 == 0 ? '${k.toInt()}K' : '${k.toStringAsFixed(1)}K';
-    }
-    return starBalance.toString();
+    if (starBalance == 0) return '0';
+    return formattedFullBalance;
   }
 
   /// Formatted dollar cash balance (e.g. '$25.00')

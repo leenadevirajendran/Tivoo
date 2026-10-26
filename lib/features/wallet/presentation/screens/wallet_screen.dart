@@ -367,72 +367,76 @@ class WalletScreen extends ConsumerWidget {
             const SizedBox(height: 10),
 
             // -------------------------------------------------------------
-            // Quick Actions (3 Cards side-by-side matching reference)
+            // Quick Actions (3 Cards side-by-side matching reference, mobile-responsive)
             // -------------------------------------------------------------
-            Row(
-              children: [
-                // 1. Convert Star to T Coin (Gold/Amber)
-                Expanded(
-                  child: _buildQuickActionCard(
-                    context: context,
-                    borderColors: WalletPalette.borderGoldAmber,
-                    glowColor: const Color(0xFFFFB300),
-                    icon: const GoldExchangeArrowsIcon(width: 52, height: 42),
-                    title: 'Convert Star\nto T Coin',
-                    subtitle: 'Star → T Coin',
-                    accentColor: const Color(0xFFFFD600),
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const ConvertCurrencyScreen(isStarToTCoin: true),
-                        ),
-                      );
-                    },
-                  ),
-                ),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                return Row(
+                  children: [
+                    // 1. Convert Star to T Coin (Gold/Amber)
+                    Expanded(
+                      child: _buildQuickActionCard(
+                        context: context,
+                        borderColors: WalletPalette.borderGoldAmber,
+                        glowColor: const Color(0xFFFFB300),
+                        icon: const GoldExchangeArrowsIcon(width: 48, height: 38),
+                        title: 'Convert Star\nto T Coin',
+                        subtitle: 'Star → T Coin',
+                        accentColor: const Color(0xFFFFD600),
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const ConvertCurrencyScreen(isStarToTCoin: true),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
 
-                const SizedBox(width: 8),
+                    const SizedBox(width: 6),
 
-                // 2. Convert T Coin to Star (Electric Blue)
-                Expanded(
-                  child: _buildQuickActionCard(
-                    context: context,
-                    borderColors: WalletPalette.borderCyanBlue,
-                    glowColor: const Color(0xFF2979FF),
-                    icon: const CoinsExchangeBlueArrowIcon(width: 52, height: 42),
-                    title: 'Convert T Coin\nto Star',
-                    subtitle: 'T Coin → Star',
-                    accentColor: const Color(0xFF2979FF),
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const ConvertCurrencyScreen(isStarToTCoin: false),
-                        ),
-                      );
-                    },
-                  ),
-                ),
+                    // 2. Convert T Coin to Star (Electric Blue)
+                    Expanded(
+                      child: _buildQuickActionCard(
+                        context: context,
+                        borderColors: WalletPalette.borderCyanBlue,
+                        glowColor: const Color(0xFF2979FF),
+                        icon: const CoinsExchangeBlueArrowIcon(width: 48, height: 38),
+                        title: 'Convert T Coin\nto Star',
+                        subtitle: 'T Coin → Star',
+                        accentColor: const Color(0xFF2979FF),
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const ConvertCurrencyScreen(isStarToTCoin: false),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
 
-                const SizedBox(width: 8),
+                    const SizedBox(width: 6),
 
-                // 3. Withdraw T Coin (Mint/Cyan Bank)
-                Expanded(
-                  child: _buildQuickActionCard(
-                    context: context,
-                    borderColors: WalletPalette.borderNeonCyan,
-                    glowColor: const Color(0xFF00E5FF),
-                    icon: const BankTempleCyanIcon(width: 52, height: 42),
-                    title: 'Withdraw\nT Coin',
-                    subtitle: 'T Coin to Bank',
-                    accentColor: const Color(0xFF00E5FF),
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const WithdrawCoinScreen()),
-                      );
-                    },
-                  ),
-                ),
-              ],
+                    // 3. Withdraw T Coin (Mint/Cyan Bank)
+                    Expanded(
+                      child: _buildQuickActionCard(
+                        context: context,
+                        borderColors: WalletPalette.borderNeonCyan,
+                        glowColor: const Color(0xFF00E5FF),
+                        icon: const BankTempleCyanIcon(width: 48, height: 38),
+                        title: 'Withdraw\nT Coin',
+                        subtitle: 'T Coin to Bank',
+                        accentColor: const Color(0xFF00E5FF),
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const WithdrawCoinScreen()),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
 
             const SizedBox(height: 20),
@@ -529,7 +533,7 @@ class WalletScreen extends ConsumerWidget {
     required VoidCallback onTap,
   }) {
     return WalletNeonCard(
-      padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 10),
       borderColors: borderColors,
       glowColor: glowColor,
       glowOpacity: 0.35,
@@ -538,42 +542,55 @@ class WalletScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Center(child: icon),
-          const SizedBox(height: 10),
-          Text(
-            title,
-            style: GoogleFonts.outfit(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              height: 1.25,
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 32,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  title,
+                  style: GoogleFonts.outfit(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    height: 1.2,
+                  ),
+                  maxLines: 2,
+                ),
+              ),
             ),
-            maxLines: 2,
           ),
           const SizedBox(height: 4),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: Text(
-                  subtitle,
-                  style: GoogleFonts.outfit(
-                    color: WalletPalette.textSecondary,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w500,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    subtitle,
+                    style: GoogleFonts.outfit(
+                      color: WalletPalette.textSecondary,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
+              const SizedBox(width: 4),
               Container(
-                width: 22,
-                height: 22,
+                width: 20,
+                height: 20,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: accentColor.withValues(alpha: 0.2),
                   border: Border.all(color: accentColor.withValues(alpha: 0.6), width: 1),
                 ),
-                child: Icon(Icons.arrow_forward_rounded, size: 12, color: accentColor),
+                child: Icon(Icons.arrow_forward_rounded, size: 11, color: accentColor),
               ),
             ],
           ),

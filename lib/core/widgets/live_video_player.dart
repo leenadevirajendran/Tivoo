@@ -138,6 +138,12 @@ class _LiveVideoPlayerState extends State<LiveVideoPlayer> {
     } else if (oldWidget.isMuted != widget.isMuted) {
       _isMuted = widget.isMuted;
       _controller?.setVolume(_isMuted ? 0.0 : 1.0);
+    } else if (oldWidget.autoPlay != widget.autoPlay) {
+      if (widget.autoPlay && !(_controller?.value.isPlaying ?? false)) {
+        _controller?.play();
+      } else if (!widget.autoPlay && (_controller?.value.isPlaying ?? false)) {
+        _controller?.pause();
+      }
     }
   }
 

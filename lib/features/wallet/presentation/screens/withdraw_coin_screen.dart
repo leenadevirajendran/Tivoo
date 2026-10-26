@@ -61,43 +61,46 @@ class _WithdrawCoinScreenState extends ConsumerState<WithdrawCoinScreen> {
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
             border: Border(top: BorderSide(color: Color(0xFF4C36ED), width: 1.5)),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Add Bank Account',
-                style: GoogleFonts.outfit(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Add Bank Account',
+                  style: GoogleFonts.outfit(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              _buildInput('Bank Name (e.g. HDFC Bank, ICICI)', bankNameController),
-              const SizedBox(height: 12),
-              _buildInput('Account Number', accNumberController, isNumber: true),
-              const SizedBox(height: 12),
-              _buildInput('IFSC Code', ifscController),
-              const SizedBox(height: 20),
-              WalletActionButton(
-                label: 'Save & Select Bank',
-                onPressed: () {
-                  if (bankNameController.text.trim().isNotEmpty &&
-                      accNumberController.text.trim().isNotEmpty) {
-                    final newBank = BankAccount(
-                      id: 'bank-${DateTime.now().millisecondsSinceEpoch}',
-                      bankName: bankNameController.text.trim(),
-                      accountNumber: accNumberController.text.trim(),
-                      ifscCode: ifscController.text.trim().isEmpty ? 'N/A' : ifscController.text.trim(),
-                      accountHolder: 'User Account',
-                    );
-                    ref.read(walletProvider.notifier).addBankAccount(newBank);
-                    Navigator.of(ctx).pop();
-                  }
-                },
-              ),
-            ],
+                const SizedBox(height: 16),
+                _buildInput('Bank Name (e.g. HDFC Bank, ICICI)', bankNameController),
+                const SizedBox(height: 12),
+                _buildInput('Account Number', accNumberController, isNumber: true),
+                const SizedBox(height: 12),
+                _buildInput('IFSC Code', ifscController),
+                const SizedBox(height: 20),
+                WalletActionButton(
+                  label: 'Save & Select Bank',
+                  onPressed: () {
+                    if (bankNameController.text.trim().isNotEmpty &&
+                        accNumberController.text.trim().isNotEmpty) {
+                      final newBank = BankAccount(
+                        id: 'bank-${DateTime.now().millisecondsSinceEpoch}',
+                        bankName: bankNameController.text.trim(),
+                        accountNumber: accNumberController.text.trim(),
+                        ifscCode: ifscController.text.trim().isEmpty ? 'N/A' : ifscController.text.trim(),
+                        accountHolder: 'User Account',
+                      );
+                      ref.read(walletProvider.notifier).addBankAccount(newBank);
+                      Navigator.of(ctx).pop();
+                    }
+                  },
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -126,6 +129,7 @@ class _WithdrawCoinScreenState extends ConsumerState<WithdrawCoinScreen> {
   }
 
   Future<void> _handleWithdraw(BankAccount bank) async {
+    FocusScope.of(context).unfocus();
     setState(() => _isProcessing = true);
     await Future.delayed(const Duration(milliseconds: 700));
 
@@ -143,6 +147,7 @@ class _WithdrawCoinScreenState extends ConsumerState<WithdrawCoinScreen> {
     setState(() => _isProcessing = false);
 
     if (tx != null) {
+      FocusScope.of(context).unfocus();
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (_) => WithdrawalStatusScreen(
@@ -212,8 +217,11 @@ class _WithdrawCoinScreenState extends ConsumerState<WithdrawCoinScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      body: Column(
-        children: [
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          children: [
           Expanded(
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
@@ -499,8 +507,9 @@ class _WithdrawCoinScreenState extends ConsumerState<WithdrawCoinScreen> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildSummaryLine(String label, String value, {bool isHighlight = false}) {
     return Row(

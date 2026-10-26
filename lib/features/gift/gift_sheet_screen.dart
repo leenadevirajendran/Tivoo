@@ -7,7 +7,6 @@ import '../live_stream/presentation/controllers/star_wallet_controller.dart';
 import 'gift_options.dart';
 import 'realistic_3d_star.dart';
 import 'buy_stars_sheet.dart';
-import '../wallet/presentation/screens/wallet_screen.dart';
 
 /// Tiki Live Gift Bottom Sheet with complete Coin Top-Up Flow matching Image 2:
 /// - Screen 4 & 8: Gift Store with Coin balance (`🪙 350 +`), tabs (`All`, `Popular`, `Luxury`, `Love`),
@@ -65,7 +64,7 @@ class GiftBottomSheet extends ConsumerStatefulWidget {
 class _GiftBottomSheetState extends ConsumerState<GiftBottomSheet> {
   late GiftItem _selectedGift;
   late String _selectedRecipient;
-  int _quantity = 1;
+  final int _quantity = 1;
   String _selectedCategory = 'All';
   bool _showPreviewAndSend = false;
   String? _deductionFeedbackMessage;
@@ -135,7 +134,7 @@ class _GiftBottomSheetState extends ConsumerState<GiftBottomSheet> {
       setState(() {
         _lastDeductedAmount = totalCost;
         _deductionFeedbackMessage =
-            'Sent ${_selectedGift.name} x$_quantity! -${_formatCost(totalCost)} ⭐ deducted. Remaining: ${_formatCost(remaining)} ⭐';
+            'Sent ${_selectedGift.name} to $_selectedRecipient! -${_formatCost(totalCost)} ⭐ deducted. Remaining: ${_formatCost(remaining)} ⭐';
       });
     }
   }
@@ -242,7 +241,7 @@ class _GiftBottomSheetState extends ConsumerState<GiftBottomSheet> {
       parentContext,
       currentBalance: currentStars,
       onSelectPack: (coins, price) {
-        // Star purchase is smoothly handled with payment selection & celebration directly in BuyStarsSheet
+        _showPaymentMethodSheet(parentContext, {'coins': coins, 'price': price});
       },
     );
   }
@@ -277,9 +276,11 @@ class _GiftBottomSheetState extends ConsumerState<GiftBottomSheet> {
                 border: Border(top: BorderSide(color: Color(0x55FFC928), width: 1.5)),
               ),
               child: SafeArea(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                     Container(
                       width: 38,
                       height: 4,
@@ -407,6 +408,7 @@ class _GiftBottomSheetState extends ConsumerState<GiftBottomSheet> {
                       ),
                     ),
                   ],
+                ),
                 ),
               ),
             );
@@ -555,13 +557,6 @@ class _GiftBottomSheetState extends ConsumerState<GiftBottomSheet> {
   }
 
   String _formatCost(int cost) {
-    if (cost >= 1000000) {
-      final m = cost / 1000000;
-      return '${m.toStringAsFixed(m % 1 == 0 ? 0 : 1)}M';
-    } else if (cost >= 100000) {
-      final k = cost / 1000;
-      return '${k.toStringAsFixed(k % 1 == 0 ? 0 : 1)}K';
-    }
     return cost.toString().replaceAllMapped(
       RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
       (Match m) => '${m[1]},',
@@ -603,13 +598,16 @@ class _GiftBottomSheetState extends ConsumerState<GiftBottomSheet> {
       ),
       child: SafeArea(
         top: false,
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 260),
-          switchInCurve: Curves.easeOutCubic,
-          switchOutCurve: Curves.easeInCubic,
-          child: _showPreviewAndSend
-              ? _buildPreviewAndSendView(context, totalCost, hasEnoughCoins, currentStarBalance)
-              : _buildChooseAGiftView(context, filteredGifts, totalCost, hasEnoughCoins, currentStarBalance),
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 260),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            child: _showPreviewAndSend
+                ? _buildPreviewAndSendView(context, totalCost, hasEnoughCoins, currentStarBalance)
+                : _buildChooseAGiftView(context, filteredGifts, totalCost, hasEnoughCoins, currentStarBalance),
+          ),
         ),
       ),
     );
@@ -695,67 +693,60 @@ class _GiftBottomSheetState extends ConsumerState<GiftBottomSheet> {
                   const Spacer(),
                 const SizedBox(width: 6),
 
-                // Top balance indicator
+                // Top balance indicator with prominent star balance and plus button
                 GestureDetector(
                   onTap: () => _showBuyCoinsSheet(context),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.fromLTRB(10, 4, 5, 4),
                     decoration: BoxDecoration(
                       color: const Color(0xFF2A2008),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFFFC928), width: 1.1),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: const Color(0xFFFFC928), width: 1.3),
                       boxShadow: const [
                         BoxShadow(
                           color: Color(0x33FFC928),
-                          blurRadius: 6,
+                          blurRadius: 8,
                         ),
                       ],
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Realistic3DStar(size: 15),
-                        const SizedBox(width: 4),
+                        const Realistic3DStar(size: 16),
+                        const SizedBox(width: 5),
                         Text(
                           _formatCost(currentStarBalance),
                           style: const TextStyle(
                             color: Color(0xFFFFC928),
-                            fontSize: 12,
+                            fontSize: 13,
                             fontWeight: FontWeight.w900,
                           ),
                         ),
-                        const SizedBox(width: 4),
-                        const Icon(Icons.add_circle, color: Color(0xFFFFC928), size: 13),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 6),
-
-                // Wallet button attached to the right of the Gift screen
-                Tooltip(
-                  message: 'Wallet',
-                  child: GestureDetector(
-                    onTap: () => WalletScreen.push(context),
-                    child: Container(
-                      width: 30,
-                      height: 30,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF2A2008),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0xFFFFC928), width: 1.1),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x33FFC928),
-                            blurRadius: 6,
+                        const SizedBox(width: 6),
+                        Container(
+                          width: 22,
+                          height: 22,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              colors: [Color(0xFFFFDF00), Color(0xFFFF9100)],
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Color(0x66FFD700),
+                                blurRadius: 4,
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.account_balance_wallet_rounded,
-                        color: Color(0xFFFFC928),
-                        size: 15,
-                      ),
+                          child: const Center(
+                            child: Icon(
+                              Icons.add_rounded,
+                              color: Colors.black,
+                              size: 16,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -1091,72 +1082,40 @@ class _GiftBottomSheetState extends ConsumerState<GiftBottomSheet> {
         ),
         const SizedBox(height: 6),
 
-        // "Send this gift to [Recipient]?"
-        Text(
-          'Send this gift to ${_selectedRecipient.split(' ').first}?',
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: 12),
-
-        // Stepper: [- 1 +]
+        // "Send [Gift Name] to [Recipient Name]"
         Container(
-          height: 42,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
           decoration: BoxDecoration(
-            color: const Color(0xFF1A1548),
-            borderRadius: BorderRadius.circular(21),
-            border: Border.all(color: Colors.white24, width: 1),
+            color: Colors.white.withValues(alpha: 0.07),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0x44FFC928), width: 1),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              GestureDetector(
-                onTap: () {
-                  if (_quantity > 1) setState(() => _quantity--);
-                },
-                child: Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.08),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.remove, color: Colors.white, size: 16),
+              Text(
+                'Send ${_selectedGift.name} to ',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
+              Flexible(
                 child: Text(
-                  '$_quantity',
+                  _selectedRecipient,
                   style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w900,
+                    color: Color(0xFFFFD54F),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
                   ),
-                ),
-              ),
-              GestureDetector(
-                onTap: () {
-                  if (_quantity < 99) setState(() => _quantity++);
-                },
-                child: Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.08),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.add, color: Colors.white, size: 16),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
 
         // Live deduction feedback banner
         if (_deductionFeedbackMessage != null) ...[
@@ -1193,7 +1152,7 @@ class _GiftBottomSheetState extends ConsumerState<GiftBottomSheet> {
           ),
         ],
 
-        // Big Send Gift CTA button
+        // Big Send Gift CTA button: "Send [Gift Name] to [Recipient]"
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
@@ -1209,20 +1168,20 @@ class _GiftBottomSheetState extends ConsumerState<GiftBottomSheet> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(24),
               ),
-              padding: const EdgeInsets.symmetric(vertical: 13),
+              padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 12),
             ),
             onPressed: _sendSelectedGift,
             child: Text(
               hasEnoughCoins
-                  ? (_lastDeductedAmount != null
-                      ? 'Send Again (${_formatCost(totalCost)} ⭐)'
-                      : 'Send Gift (${_formatCost(totalCost)} ⭐)')
+                  ? 'Send ${_selectedGift.name} to ${_selectedRecipient.split(' ').first} (${_formatCost(totalCost)} ⭐)'
                   : 'Recharge Stars (Need ${_formatCost(totalCost)} ⭐)',
               style: const TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w900,
-                letterSpacing: 0.5,
+                letterSpacing: 0.3,
               ),
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ),

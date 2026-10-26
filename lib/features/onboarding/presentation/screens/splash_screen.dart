@@ -188,7 +188,7 @@ class SplashScreen extends StatelessWidget {
                                 padding: const EdgeInsets.symmetric(horizontal: 24),
                                 child: GradientButton(
                                   text: AppStrings.getStarted,
-                                  onPressed: () => _navigateToRegister(context),
+                                  onPressed: () => _navigateToLogin(context),
                                   trailingIcon: const Icon(
                                     Icons.arrow_forward_rounded,
                                     color: AppColors.textOnPrimary,
@@ -202,19 +202,19 @@ class SplashScreen extends StatelessWidget {
 
                           const SizedBox(height: 16),
 
-                          // Bottom Login Prompt
+                          // Bottom Sign-Up Prompt
                           Wrap(
                             alignment: WrapAlignment.center,
                             crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               Text(
-                                '${AppStrings.alreadyHaveAccount} ',
+                                "Don't have an account? ",
                                 style: AppTextStyles.heroSubtitle.copyWith(fontSize: 13.5),
                               ),
                               GestureDetector(
-                                onTap: () => _navigateToLogin(context),
+                                onTap: () => _navigateToRegister(context),
                                 child: Text(
-                                  AppStrings.logIn,
+                                  'Sign Up',
                                   style: AppTextStyles.heroSubtitle.copyWith(
                                     fontSize: 13.5,
                                     fontWeight: FontWeight.w700,
