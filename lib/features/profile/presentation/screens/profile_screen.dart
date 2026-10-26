@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -20,6 +19,7 @@ import '../widgets/profile_luxe_sections.dart';
 import '../widgets/tiki_verification_sheet.dart';
 import '../../../wallet/presentation/screens/wallet_screen.dart';
 import '../../../../core/widgets/tivoo_share_sheet.dart';
+import 'package:tivoo/features/messages/messages.dart';
 
 /// VIP profile in the Luxe style: top bar, identity header, bio, actions, badges,
 /// Videos / Likes bar and the Drafts / Pinned / My Posts content grid.
@@ -679,246 +679,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  void _showUploadOptions() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (ctx) {
-        return Container(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-          decoration: BoxDecoration(
-            color: const Color(0xFF100D28),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            border: Border(
-              top: BorderSide(color: LuxeColors.gold.withValues(alpha: 0.4), width: 1.2),
-            ),
-            boxShadow: const [
-              BoxShadow(color: Color(0x99000000), blurRadius: 28, offset: Offset(0, -4)),
-            ],
-          ),
-          child: SafeArea(
-            top: false,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 42,
-                    height: 4.5,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.28),
-                      borderRadius: BorderRadius.circular(2.5),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(9),
-                      decoration: BoxDecoration(
-                        gradient: LuxeColors.goldGradient,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.cloud_upload_rounded, color: Color(0xFF1A1300), size: 20),
-                    ),
-                    const SizedBox(width: 12),
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Upload Posts',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          'Share photo or video to your profile',
-                          style: TextStyle(color: Colors.white54, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                // 1. Upload from gallery
-                _UploadOptionTile(
-                  icon: Icons.photo_library_rounded,
-                  iconColor: const Color(0xFFFFB800),
-                  iconBg: const Color(0x26FFB800),
-                  title: 'Upload from gallery',
-                  subtitle: 'Select photos or videos from your album',
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _pickFromGallery();
-                  },
-                ),
-                const SizedBox(height: 10),
-                // 2. File manager
-                _UploadOptionTile(
-                  icon: Icons.folder_open_rounded,
-                  iconColor: const Color(0xFF2E9BFF),
-                  iconBg: const Color(0x262E9BFF),
-                  title: 'File manager',
-                  subtitle: 'Choose media files directly from device storage',
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _pickFromFileManager();
-                  },
-                ),
-                const SizedBox(height: 10),
-                // 3. Camera
-                _UploadOptionTile(
-                  icon: Icons.camera_alt_rounded,
-                  iconColor: const Color(0xFFFF4081),
-                  iconBg: const Color(0x26FF4081),
-                  title: 'Camera',
-                  subtitle: 'Capture new photo or record video right now',
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _showCameraChoiceSheet();
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Future<void> _pickFromGallery() async {
-    try {
-      final picker = ImagePicker();
-      final media = await picker.pickMedia();
-      if (media != null) {
-        _addNewPost(filePath: media.path, label: media.name);
-      }
-    } catch (e) {
-      _toast('Unable to open gallery: $e');
-    }
-  }
-
-  Future<void> _pickFromFileManager() async {
-    try {
-      final files = await FilePicker.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['jpg', 'jpeg', 'png', 'webp', 'mp4', 'mov', 'avi', 'mkv'],
-      );
-      if (files.isNotEmpty && files.first.path != null) {
-        final path = files.first.path!;
-        final name = files.first.name;
-        _addNewPost(filePath: path, label: name);
-      }
-    } catch (e) {
-      _toast('Unable to open file manager: $e');
-    }
-  }
-
-  void _showCameraChoiceSheet() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return Container(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 30),
-          decoration: BoxDecoration(
-            color: const Color(0xFF100D28),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
-            border: Border(top: BorderSide(color: LuxeColors.gold.withValues(alpha: 0.4), width: 1.2)),
-          ),
-          child: SafeArea(
-            top: false,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Camera',
-                  style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 16),
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Color(0x33FF4081),
-                    ),
-                    child: const Icon(Icons.camera_rounded, color: Color(0xFFFF4081), size: 20),
-                  ),
-                  title: const Text('Take Photo', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                  subtitle: const Text('Capture a picture with your camera', style: TextStyle(color: Colors.white54, fontSize: 12)),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _captureWithCamera(isVideo: false);
-                  },
-                ),
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Color(0x332E9BFF),
-                    ),
-                    child: const Icon(Icons.videocam_rounded, color: Color(0xFF2E9BFF), size: 20),
-                  ),
-                  title: const Text('Record Video', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                  subtitle: const Text('Shoot a video reel with your camera', style: TextStyle(color: Colors.white54, fontSize: 12)),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _captureWithCamera(isVideo: true);
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Future<void> _captureWithCamera({required bool isVideo}) async {
-    try {
-      final picker = ImagePicker();
-      final XFile? file = isVideo
-          ? await picker.pickVideo(source: ImageSource.camera)
-          : await picker.pickImage(source: ImageSource.camera);
-      if (file != null) {
-        _addNewPost(filePath: file.path, label: file.name);
-      }
-    } catch (e) {
-      _toast('Unable to open camera: $e');
-    }
-  }
-
-  void _addNewPost({required String filePath, required String label}) {
-    setState(() {
-      final insertIndex = _videos.length > 1 ? 1 : _videos.length;
-      _videos.insert(
-        insertIndex,
-        ProfileVideo(
-          AppAssets.status2,
-          filePath: filePath,
-          views: 'Just now',
-        ),
-      );
-    });
-    _toast('Post uploaded successfully! 🎉');
-  }
-
   @override
   Widget build(BuildContext context) {
     final isViewingStreamer = widget.streamer != null;
@@ -967,8 +727,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           ProfileTopBar(
                             onBack: _goBack,
                             onMenu: isViewingStreamer ? null : _showMenu,
+                            onMessages: () => _open(const MessagesInboxScreen()),
                             onSettings: isViewingStreamer ? null : () => _open(const SettingsScreen()),
-                            showActions: !isViewingStreamer,
+                            unreadCount: ref.watch(messagesControllerProvider).totalUnreadCount,
+                            showActions: true,
                           ),
                           SizedBox(height: 20 * s),
                           ProfileIdentityHeader(
@@ -998,6 +760,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             Row(
                               children: [
                                 Expanded(
+                                  flex: 4,
                                   child: InstagramFollowButton(
                                     userId: streamer!.id,
                                     userName: streamer.streamerName,
@@ -1009,50 +772,40 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 ),
                                 SizedBox(width: 8 * s),
                                 Expanded(
-                                  child: SizedBox(
+                                  flex: 4,
+                                  child: ProfileMessageButton(
+                                    userId: streamer.id,
+                                    userName: streamer.streamerName,
+                                    userAvatar: streamer.streamerAssetPath ?? streamer.streamerAvatarUrl ?? '',
+                                    isVerified: streamer.isVerified,
                                     height: 44 * s,
-                                    child: ElevatedButton.icon(
-                                      onPressed: () => _toggleBlock(
-                                        context,
-                                        streamer.id,
-                                        streamer.streamerName,
-                                        relationship?.isBlocked ?? false,
-                                      ),
-                                      icon: Icon(
-                                        (relationship?.isBlocked ?? false)
-                                            ? Icons.lock_open_rounded
-                                            : Icons.block_rounded,
-                                        size: 15,
-                                        color: (relationship?.isBlocked ?? false)
-                                            ? Colors.white70
-                                            : const Color(0xFFFF4B6E),
-                                      ),
-                                      label: Text(
-                                        (relationship?.isBlocked ?? false) ? 'Unblock' : 'Block',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 13,
-                                          color: (relationship?.isBlocked ?? false)
-                                              ? Colors.white70
-                                              : const Color(0xFFFF4B6E),
-                                        ),
-                                      ),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: (relationship?.isBlocked ?? false)
-                                            ? const Color(0xFF1E2840)
-                                            : const Color(0x22FF4B6E),
-                                        foregroundColor: (relationship?.isBlocked ?? false)
-                                            ? Colors.white
-                                            : const Color(0xFFFF4B6E),
-                                        elevation: 0,
-                                        side: BorderSide(
-                                          color: (relationship?.isBlocked ?? false)
-                                              ? Colors.white24
-                                              : const Color(0x66FF4B6E),
-                                        ),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                                      ),
+                                  ),
+                                ),
+                                SizedBox(width: 8 * s),
+                                SizedBox(
+                                  width: 44 * s,
+                                  height: 44 * s,
+                                  child: IconButton(
+                                    style: IconButton.styleFrom(
+                                      backgroundColor: Colors.white.withValues(alpha: 0.08),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                                     ),
+                                    onPressed: () => _toggleBlock(
+                                      context,
+                                      streamer.id,
+                                      streamer.streamerName,
+                                      relationship?.isBlocked ?? false,
+                                    ),
+                                    icon: Icon(
+                                      (relationship?.isBlocked ?? false)
+                                          ? Icons.lock_open_rounded
+                                          : Icons.block_rounded,
+                                      size: 18,
+                                      color: (relationship?.isBlocked ?? false)
+                                          ? Colors.white70
+                                          : const Color(0xFFFF4B6E),
+                                    ),
+                                    tooltip: (relationship?.isBlocked ?? false) ? 'Unblock' : 'Block',
                                   ),
                                 ),
                               ],
@@ -1060,7 +813,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           else
                             ProfileActions(
                               onEdit: _editProfile,
-                              onUploadPosts: _showUploadOptions,
+                              onMessagesTap: () => _open(const MessagesInboxScreen()),
+                              unreadCount: ref.watch(messagesControllerProvider).totalUnreadCount,
                             ),
                           if (!isViewingStreamer) ...[
                             gap,

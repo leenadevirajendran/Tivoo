@@ -1,15 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/constants/app_assets.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/services/reel_video_manager.dart';
 import '../../../../core/widgets/custom_avatar.dart';
 import '../../../../core/widgets/reel_media_view.dart';
-import '../../../gift/gift_options.dart';
-import '../../../gift/gift_sheet_screen.dart';
 import '../../../live_stream/presentation/widgets/floating_hearts_overlay.dart';
-import '../../../live_stream/presentation/widgets/floating_stars_overlay.dart';
 import '../../../../core/widgets/tivoo_share_sheet.dart';
 import '../../domain/models/explore_stream_model.dart';
 import '../../../home/presentation/widgets/streamer_id_profile_sheet.dart';
@@ -45,7 +41,6 @@ class ExploreReelCard extends ConsumerStatefulWidget {
 class _ExploreReelCardState extends ConsumerState<ExploreReelCard>
     with SingleTickerProviderStateMixin {
   final GlobalKey<FloatingHeartsOverlayState> _heartsKey = GlobalKey();
-  final GlobalKey<FloatingStarsOverlayState> _starsKey = GlobalKey();
   final bool _isFollowing = false;
   late bool _isLiked;
   late int _likesCount;
@@ -148,50 +143,6 @@ class _ExploreReelCardState extends ConsumerState<ExploreReelCard>
     _triggerLikeAction();
   }
 
-  /// Opens the full Gifts Sheet matching Chat Room and PK Battle screens,
-  /// allowing users to send gifts to the streamer, host, or other users.
-  void _handleGiftTap() {
-    GiftBottomSheet.show(
-      context,
-      (gift) => _onGiftSent(gift, 1, widget.stream.streamerName),
-      recipients: [widget.stream.streamerName, 'Host', 'All'],
-      initialRecipient: widget.stream.streamerName,
-      onGiftWithQuantitySelected: (gift, qty) => _onGiftSent(gift, qty, widget.stream.streamerName),
-      onGiftWithRecipientSelected: (gift, qty, recipient) => _onGiftSent(gift, qty, recipient),
-    );
-  }
-
-  void _onGiftSent(GiftItem gift, int quantity, String recipient) {
-    _starsKey.currentState?.addStars(gift.diamonds * quantity * 2);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: const Color(0xFF1F1836),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: Color(0xFFFFD700), width: 1.2),
-        ),
-        content: Row(
-          children: [
-            Text(gift.icon, style: const TextStyle(fontSize: 22)),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Sent ${quantity > 1 ? "$quantity " : ""}${gift.name} to $recipient! 🎉',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        ),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final stream = widget.stream;
@@ -205,12 +156,10 @@ class _ExploreReelCardState extends ConsumerState<ExploreReelCard>
 
     return FloatingHeartsOverlay(
       key: _heartsKey,
-      child: FloatingStarsOverlay(
-        key: _starsKey,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onDoubleTap: _handleDoubleTap,
-          child: Stack(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onDoubleTap: _handleDoubleTap,
+        child: Stack(
             fit: StackFit.expand,
             children: [
               // 1. Full Reel Media (Video Player or Cover Image)
@@ -303,37 +252,12 @@ class _ExploreReelCardState extends ConsumerState<ExploreReelCard>
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('Join conversation on ${stream.streamerName}\'s reel! 💬'),
+                              content: Text('Join conversation on ${stream.streamerName}\'s video! 💬'),
                               duration: const Duration(seconds: 1),
                             ),
                           );
                         }
                       },
-                    ),
-                    SizedBox(height: actionSpacing),
-
-                    // Gift Button (Using gstar.png and launching Gift Store)
-                    _ReelActionButton(
-                      size: buttonSize,
-                      icon: Icons.star_rounded,
-                      iconColor: const Color(0xFFFFD700),
-                      label: 'Stars',
-                      borderColor: const Color(0x99FFD700),
-                      glowColor: const Color(0x55FFD700),
-                      onTap: _handleGiftTap,
-                      customIcon: SizedBox(
-                        width: isCompact ? 24 : 27,
-                        height: isCompact ? 24 : 27,
-                        child: Image.asset(
-                          AppAssets.glossyStar,
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) => const Icon(
-                            Icons.card_giftcard_rounded,
-                            color: Color(0xFFFFD700),
-                            size: 22,
-                          ),
-                        ),
-                      ),
                     ),
                     SizedBox(height: actionSpacing),
 
@@ -349,11 +273,11 @@ class _ExploreReelCardState extends ConsumerState<ExploreReelCard>
                         if (widget.onShareTap != null) {
                           widget.onShareTap!();
                         } else {
-                          final shareUrl = 'https://tivoo.app/reel/${stream.id}';
-                          final shareText = 'Watch ${stream.streamerName}\'s reel on Tivoo! $shareUrl';
+                          final shareUrl = 'https://tivoo.app/video/${stream.id}';
+                          final shareText = 'Watch ${stream.streamerName}\'s video on Tivoo! $shareUrl';
                           TivooShareSheet.show(
                             context,
-                            title: 'Share Reel',
+                            title: 'Share Video',
                             subtitle: '${stream.streamerName} • ${stream.category}',
                             shareUrl: shareUrl,
                             shareText: shareText,
@@ -448,8 +372,7 @@ class _ExploreReelCardState extends ConsumerState<ExploreReelCard>
             ],
           ),
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildMediaBackground() {

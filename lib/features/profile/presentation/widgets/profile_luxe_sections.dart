@@ -186,18 +186,22 @@ class _RingButton extends StatelessWidget {
   }
 }
 
-/// [←] ................. [≡] [⚙]
+/// [←] ................. [💬] [≡] [⚙]
 class ProfileTopBar extends StatelessWidget {
   final VoidCallback onBack;
   final VoidCallback? onMenu;
+  final VoidCallback? onMessages;
   final VoidCallback? onSettings;
+  final int unreadCount;
   final bool showActions;
 
   const ProfileTopBar({
     super.key,
     required this.onBack,
     this.onMenu,
+    this.onMessages,
     this.onSettings,
+    this.unreadCount = 0,
     this.showActions = true,
   });
 
@@ -209,6 +213,43 @@ class ProfileTopBar extends StatelessWidget {
       children: [
         _RingButton(icon: Icons.arrow_back_rounded, label: 'Back', size: size, onTap: onBack),
         const Spacer(),
+        if (showActions && onMessages != null) ...[
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              _RingButton(
+                icon: Icons.chat_bubble_outline_rounded,
+                label: 'Messages',
+                size: size,
+                onTap: onMessages!,
+              ),
+              if (unreadCount > 0)
+                Positioned(
+                  top: -2,
+                  right: -2,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFF2D55),
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                    child: Center(
+                      child: Text(
+                        '$unreadCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          SizedBox(width: 9 * s),
+        ],
         if (showActions && onMenu != null)
           _RingButton(icon: Icons.menu_rounded, label: 'Menu', size: size, onTap: onMenu!),
         if (showActions && onMenu != null && onSettings != null)
@@ -577,15 +618,17 @@ class ProfileBio extends StatelessWidget {
   }
 }
 
-/// [Edit Profile] and [Upload posts] action buttons.
+/// [Edit Profile] and [Messages] action buttons.
 class ProfileActions extends StatelessWidget {
   final VoidCallback onEdit;
-  final VoidCallback onUploadPosts;
+  final VoidCallback onMessagesTap;
+  final int unreadCount;
 
   const ProfileActions({
     super.key,
     required this.onEdit,
-    required this.onUploadPosts,
+    required this.onMessagesTap,
+    this.unreadCount = 0,
   });
 
   @override
@@ -626,12 +669,12 @@ class ProfileActions extends StatelessWidget {
           ),
         ),
         SizedBox(width: 10 * s),
-        // Upload Posts Button
+        // Messages Panel Button
         Expanded(
           child: Semantics(
             button: true,
             child: GestureDetector(
-              onTap: onUploadPosts,
+              onTap: onMessagesTap,
               child: _GlossyGoldButton(
                 height: h,
                 child: FittedBox(
@@ -639,10 +682,10 @@ class ProfileActions extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.cloud_upload_rounded, color: _ink, size: 19 * s),
+                      Icon(Icons.chat_bubble_outline_rounded, color: _ink, size: 18 * s),
                       SizedBox(width: 7 * s),
                       Text(
-                        'Upload posts',
+                        'Messages',
                         style: TextStyle(
                           color: _ink,
                           fontSize: 13.5 * s,
@@ -650,6 +693,24 @@ class ProfileActions extends StatelessWidget {
                           letterSpacing: 0.2,
                         ),
                       ),
+                      if (unreadCount > 0) ...[
+                        SizedBox(width: 6 * s),
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 6 * s, vertical: 2 * s),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF161200),
+                            borderRadius: BorderRadius.circular(10 * s),
+                          ),
+                          child: Text(
+                            '$unreadCount',
+                            style: TextStyle(
+                              color: LuxeColors.gold,
+                              fontSize: 10.5 * s,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),

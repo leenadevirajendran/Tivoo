@@ -4,6 +4,7 @@ import '../../../../core/widgets/custom_avatar.dart';
 import '../../../profile/presentation/controllers/follow_controller.dart';
 import '../../../profile/presentation/screens/profile_screen.dart';
 import '../../../profile/presentation/widgets/instagram_follow_button.dart';
+import '../../../messages/presentation/widgets/profile_message_button.dart';
 import '../../domain/models/live_stream_card_model.dart';
 
 /// Interactive Streamer ID Profile Sheet.
@@ -312,11 +313,12 @@ class _StreamerIdProfileSheetState extends ConsumerState<StreamerIdProfileSheet>
 
             const SizedBox(height: 18),
 
-            // Action Buttons: Follow button and Message button
+            // Action Buttons: Follow button, Message button, and Block
             Row(
               children: [
                 // Instagram-style Follow Button
                 Expanded(
+                  flex: 5,
                   child: InstagramFollowButton(
                     userId: stream.id,
                     userName: stream.streamerName,
@@ -326,38 +328,37 @@ class _StreamerIdProfileSheetState extends ConsumerState<StreamerIdProfileSheet>
                     height: 44,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
 
-                // Block / Unblock Button
+                // Direct Message Button
                 Expanded(
-                  child: SizedBox(
+                  flex: 5,
+                  child: ProfileMessageButton(
+                    userId: stream.id,
+                    userName: stream.streamerName,
+                    userAvatar: stream.streamerAssetPath ?? stream.streamerAvatarUrl ?? '',
+                    isVerified: stream.isVerified,
                     height: 44,
-                    child: ElevatedButton.icon(
-                      onPressed: () => _toggleBlock(context, stream.id, stream.streamerName, relationship.isBlocked),
-                      icon: Icon(
-                        relationship.isBlocked ? Icons.lock_open_rounded : Icons.block_rounded,
-                        size: 16,
-                        color: relationship.isBlocked ? Colors.white70 : const Color(0xFFFF4B6E),
-                      ),
-                      label: Text(
-                        relationship.isBlocked ? 'Unblock' : 'Block',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
-                          color: relationship.isBlocked ? Colors.white70 : const Color(0xFFFF4B6E),
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: relationship.isBlocked ? const Color(0xFF1B2338) : const Color(0x22FF4B6E),
-                        foregroundColor: relationship.isBlocked ? Colors.white : const Color(0xFFFF4B6E),
-                        elevation: 0,
-                        side: BorderSide(
-                          color: relationship.isBlocked ? Colors.white24 : const Color(0x66FF4B6E),
-                          width: 1,
-                        ),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+
+                // Block / Unblock Icon Button
+                SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: IconButton(
+                    style: IconButton.styleFrom(
+                      backgroundColor: relationship.isBlocked ? const Color(0xFF1B2338) : Colors.white.withValues(alpha: 0.08),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
+                    onPressed: () => _toggleBlock(context, stream.id, stream.streamerName, relationship.isBlocked),
+                    icon: Icon(
+                      relationship.isBlocked ? Icons.lock_open_rounded : Icons.block_rounded,
+                      size: 18,
+                      color: relationship.isBlocked ? Colors.white70 : const Color(0xFFFF4B6E),
+                    ),
+                    tooltip: relationship.isBlocked ? 'Unblock' : 'Block',
                   ),
                 ),
               ],

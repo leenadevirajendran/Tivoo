@@ -6,6 +6,7 @@ import 'user_profile_bottom_sheet.dart';
 import '../../../profile/domain/models/follow_relationship.dart';
 import '../../../profile/presentation/controllers/follow_controller.dart';
 import '../../../profile/presentation/widgets/instagram_follow_actions_sheet.dart';
+import '../../../messages/presentation/widgets/profile_message_button.dart';
 
 /// Viewer Profile Screen matching Image 2 (Screen 3) & Image 3 (Screen 3):
 /// - Header: Back arrow [<] and More [...]
@@ -576,14 +577,16 @@ class _ViewerProfileScreenState extends ConsumerState<ViewerProfileScreen> {
 
         const SizedBox(width: 12),
 
-        // Direct Message / Share button (Paper plane icon pointing up-right - Image 1 Step 3)
+        // Direct Message button
         GestureDetector(
           onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Share or message ${widget.userName} ✈️'),
-                duration: const Duration(milliseconds: 900),
-              ),
+            ProfileMessageButton.openChat(
+              context,
+              ref,
+              userId: streamerId,
+              userName: widget.userName,
+              userAvatar: widget.avatarAsset ?? '',
+              userUsername: widget.handle ?? '',
             );
           },
           child: Container(
@@ -606,9 +609,9 @@ class _ViewerProfileScreenState extends ConsumerState<ViewerProfileScreen> {
             ),
             child: const Center(
               child: Icon(
-                Icons.near_me_rounded,
+                Icons.chat_bubble_outline_rounded,
                 color: Colors.white,
-                size: 22,
+                size: 20,
               ),
             ),
           ),

@@ -13,6 +13,7 @@ class ExploreHeader extends ConsumerWidget {
   final VoidCallback? onFilterTap;
   final VoidCallback? onViewModeToggle;
   final VoidCallback? onWalletTap;
+  final VoidCallback? onUploadTap;
 
   /// Top-left back arrow (hidden when null).
   final VoidCallback? onBackTap;
@@ -24,6 +25,7 @@ class ExploreHeader extends ConsumerWidget {
     this.onFilterTap,
     this.onViewModeToggle,
     this.onWalletTap,
+    this.onUploadTap,
     this.onBackTap,
     this.isReelsView = true,
   });
@@ -57,7 +59,7 @@ class ExploreHeader extends ConsumerWidget {
             SizedBox(width: buttonGap + 2),
           ],
 
-          // 2. Title & Subtitle (Auto-scaled so it never truncates to "Expl...")
+          // 2. Title & Subtitle (Never mentions 'reels')
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -78,7 +80,7 @@ class ExploreHeader extends ConsumerWidget {
                 ),
                 const SizedBox(height: 1),
                 Text(
-                  isReelsView ? 'Swipe to discover reels' : 'Discover amazing reels',
+                  isReelsView ? 'Swipe to discover videos' : 'Discover amazing videos',
                   style: AppTextStyles.heroSubtitle.copyWith(
                     fontSize: isCompact ? 10.5 : 11.5,
                     color: isDark ? AppColors.textSecondary : const Color(0xFF6B6B78),
@@ -91,7 +93,7 @@ class ExploreHeader extends ConsumerWidget {
           ),
           SizedBox(width: buttonGap),
 
-          // 3. Action Buttons: Search only
+          // 3. Action Buttons: Search + Upload '+' Button
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -105,6 +107,21 @@ class ExploreHeader extends ConsumerWidget {
                     : Colors.white.withValues(alpha: 0.85),
                 onTap: onSearchTap,
               ),
+
+              // Upload Video '+' Button
+              if (onUploadTap != null) ...[
+                SizedBox(width: buttonGap),
+                GlowIconButton(
+                  icon: Icons.add_rounded,
+                  size: buttonSize,
+                  iconSize: isCompact ? 20 : 22,
+                  iconColor: const Color(0xFF161200),
+                  glow: true,
+                  glowColor: AppColors.primaryYellow.withValues(alpha: 0.4),
+                  backgroundColor: AppColors.primaryYellow,
+                  onTap: onUploadTap,
+                ),
+              ],
             ],
           ),
         ],

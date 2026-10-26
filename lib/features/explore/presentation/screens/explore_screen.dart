@@ -11,6 +11,7 @@ import '../controllers/explore_controller.dart';
 import '../widgets/explore_header.dart';
 import '../widgets/explore_reel_card.dart';
 import '../widgets/explore_stream_card.dart';
+import '../widgets/video_upload_sheet.dart';
 
 LiveStreamCardModel _toLiveStreamCardModel(ExploreStreamModel stream) {
   return LiveStreamCardModel(
@@ -185,6 +186,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                   onBackTap: Navigator.of(context).canPop() ? () => Navigator.of(context).pop() : null,
                   onSearchTap: () => _showSearchDialog(context, ref),
                   onFilterTap: () => _showFilterInfo(context),
+                  onUploadTap: () => VideoUploadSheet.show(context),
                 ),
               ),
             ),
@@ -209,6 +211,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
               onBackTap: Navigator.of(context).canPop() ? () => Navigator.of(context).pop() : null,
               onSearchTap: () => _showSearchDialog(context, ref),
               onFilterTap: () => _showFilterInfo(context),
+              onUploadTap: () => VideoUploadSheet.show(context),
             ),
           ),
 

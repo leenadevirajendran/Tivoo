@@ -6,6 +6,7 @@ import '../../../home/domain/models/live_stream_card_model.dart';
 import '../../../profile/presentation/controllers/follow_controller.dart';
 import '../../../profile/presentation/screens/profile_screen.dart';
 import '../../../profile/presentation/widgets/instagram_follow_button.dart';
+import '../../../messages/presentation/widgets/profile_message_button.dart';
 
 /// Interactive User Profile Bottom Sheet.
 /// Opened when tapping any commenter's avatar or username in live comments,
@@ -318,11 +319,12 @@ class _UserProfileBottomSheetState extends ConsumerState<UserProfileBottomSheet>
             ),
             const SizedBox(height: 20),
 
-            // Action Buttons: Follow button and Message button
+            // Action Buttons: Follow button, Message button, and Block
             Row(
               children: [
                 // Follow / Requested / Following Button
                 Expanded(
+                  flex: 5,
                   child: InstagramFollowButton(
                     userId: displayId,
                     userName: widget.userName,
@@ -331,40 +333,36 @@ class _UserProfileBottomSheetState extends ConsumerState<UserProfileBottomSheet>
                     height: 44,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
 
-                // Block / Unblock Button
+                // Direct Message Button
                 Expanded(
-                  child: SizedBox(
+                  flex: 5,
+                  child: ProfileMessageButton(
+                    userId: displayId,
+                    userName: widget.userName,
+                    userAvatar: widget.avatarAsset ?? widget.avatarUrl ?? '',
                     height: 44,
-                    child: ElevatedButton.icon(
-                      onPressed: () => _toggleBlock(context, displayId, widget.userName, rel.isBlocked),
-                      icon: Icon(
-                        rel.isBlocked ? Icons.lock_open_rounded : Icons.block_rounded,
-                        size: 16,
-                        color: rel.isBlocked ? Colors.white70 : const Color(0xFFFF4B6E),
-                      ),
-                      label: Text(
-                        rel.isBlocked ? 'Unblock' : 'Block',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: rel.isBlocked ? Colors.white70 : const Color(0xFFFF4B6E),
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: rel.isBlocked ? const Color(0xFF1B2338) : const Color(0x22FF4B6E),
-                        foregroundColor: rel.isBlocked ? Colors.white : const Color(0xFFFF4B6E),
-                        elevation: 0,
-                        side: BorderSide(
-                          color: rel.isBlocked ? Colors.white24 : const Color(0x66FF4B6E),
-                          width: 1,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+
+                // Block / Unblock Icon Button
+                SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: IconButton(
+                    style: IconButton.styleFrom(
+                      backgroundColor: rel.isBlocked ? const Color(0xFF1B2338) : Colors.white.withValues(alpha: 0.08),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
+                    onPressed: () => _toggleBlock(context, displayId, widget.userName, rel.isBlocked),
+                    icon: Icon(
+                      rel.isBlocked ? Icons.lock_open_rounded : Icons.block_rounded,
+                      size: 18,
+                      color: rel.isBlocked ? Colors.white70 : const Color(0xFFFF4B6E),
+                    ),
+                    tooltip: rel.isBlocked ? 'Unblock' : 'Block',
                   ),
                 ),
               ],

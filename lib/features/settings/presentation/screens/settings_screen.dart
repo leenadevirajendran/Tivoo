@@ -15,6 +15,8 @@ import 'help_support_screen.dart';
 import 'legal_policy_screen.dart';
 import 'live_content_settings_screen.dart';
 import 'notifications_settings_screen.dart';
+import '../../../messages/domain/models/message_privacy_settings.dart';
+import '../../../messages/presentation/controllers/messages_controller.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -297,9 +299,201 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
+  void _showDirectMessagePrivacySheet(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.cardBackground,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Consumer(
+        builder: (context, ref, _) {
+          final currentMode =
+              ref.watch(messagesControllerProvider).privacySettings.mode;
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 38,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: const [
+                      Icon(Icons.chat_bubble_outline_rounded,
+                          color: AppColors.primaryYellow, size: 22),
+                      SizedBox(width: 10),
+                      Text(
+                        'Direct Messaging Privacy',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Choose who can send you direct private messages on Tivoo.',
+                    style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                  ),
+                  const SizedBox(height: 18),
+                  _buildPrivacyOptionTile(
+                    context,
+                    ref,
+                    mode: MessagePrivacyMode.everyone,
+                    title: 'Everyone (Open DMs) 🌐',
+                    subtitle:
+                        'Receive messages from anyone on Tivoo, even if you are not following each other.',
+                    badge: 'POPULAR & OPEN',
+                    isSelected: currentMode == MessagePrivacyMode.everyone,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildPrivacyOptionTile(
+                    context,
+                    ref,
+                    mode: MessagePrivacyMode.followersOnly,
+                    title: 'Followers Only (Protected) 🔒',
+                    subtitle:
+                        'Only accounts that follow you can send you direct messages. Keep your inbox safe.',
+                    badge: 'SAFE & FOCUSED',
+                    isSelected: currentMode == MessagePrivacyMode.followersOnly,
+                  ),
+                  const SizedBox(height: 14),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildPrivacyOptionTile(
+    BuildContext context,
+    WidgetRef ref, {
+    required MessagePrivacyMode mode,
+    required String title,
+    required String subtitle,
+    required String badge,
+    required bool isSelected,
+  }) {
+    return Material(
+      color: isSelected
+          ? AppColors.primaryYellow.withValues(alpha: 0.12)
+          : Colors.white.withValues(alpha: 0.04),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () {
+          ref.read(messagesControllerProvider.notifier).setPrivacyMode(mode);
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(mode == MessagePrivacyMode.everyone
+                  ? 'Private messages are now OPEN to everyone!'
+                  : 'Private messages are now restricted to FOLLOWERS only!'),
+              backgroundColor: const Color(0xFF192233),
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        },
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isSelected
+                  ? AppColors.primaryYellow
+                  : Colors.white.withValues(alpha: 0.08),
+              width: isSelected ? 1.5 : 1,
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                isSelected
+                    ? Icons.radio_button_checked_rounded
+                    : Icons.radio_button_off_rounded,
+                color: isSelected ? AppColors.primaryYellow : Colors.white38,
+                size: 20,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: TextStyle(
+                              color: isSelected ? Colors.white : Colors.white70,
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? AppColors.primaryYellow
+                                : Colors.white12,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            badge,
+                            style: TextStyle(
+                              color: isSelected
+                                  ? const Color(0xFF161200)
+                                  : Colors.white70,
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(profileControllerProvider).profile;
+    final messagePrivacy = ref.watch(messagesControllerProvider).privacySettings;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -476,6 +670,63 @@ class SettingsScreen extends ConsumerWidget {
             SettingsSectionCard(
               title: 'Preferences & Interactions',
               children: [
+                SettingsTile(
+                  icon: Icons.chat_bubble_outline_rounded,
+                  title: 'Direct Messaging',
+                  subtitle: messagePrivacy.isEveryoneAllowed
+                      ? 'Everyone • Open DMs from anyone on Tivoo'
+                      : 'Followers Only • Messages from followers only',
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: messagePrivacy.isEveryoneAllowed
+                              ? AppColors.primaryYellow.withValues(alpha: 0.18)
+                              : Colors.white.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: messagePrivacy.isEveryoneAllowed
+                                ? AppColors.primaryYellow.withValues(alpha: 0.4)
+                                : Colors.white12,
+                          ),
+                        ),
+                        child: Text(
+                          messagePrivacy.badgeLabel,
+                          style: TextStyle(
+                            color: messagePrivacy.isEveryoneAllowed
+                                ? AppColors.primaryYellow
+                                : Colors.white70,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Switch(
+                        value: messagePrivacy.isEveryoneAllowed,
+                        activeThumbColor: AppColors.primaryYellow,
+                        onChanged: (val) {
+                          ref.read(messagesControllerProvider.notifier).setPrivacyMode(
+                                val ? MessagePrivacyMode.everyone : MessagePrivacyMode.followersOnly,
+                              );
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(val
+                                  ? 'Private messaging is now OPEN to everyone! 🌐'
+                                  : 'Private messaging is now restricted to FOLLOWERS only! 🔒'),
+                              backgroundColor: const Color(0xFF192233),
+                              behavior: SnackBarBehavior.floating,
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                  onTap: () => _showDirectMessagePrivacySheet(context, ref),
+                ),
                 SettingsTile(
                   icon: Icons.notifications_none_rounded,
                   title: 'Notifications',
