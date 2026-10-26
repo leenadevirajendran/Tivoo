@@ -190,18 +190,14 @@ class _RingButton extends StatelessWidget {
 class ProfileTopBar extends StatelessWidget {
   final VoidCallback onBack;
   final VoidCallback? onMenu;
-  final VoidCallback? onMessages;
   final VoidCallback? onSettings;
-  final int unreadCount;
   final bool showActions;
 
   const ProfileTopBar({
     super.key,
     required this.onBack,
     this.onMenu,
-    this.onMessages,
     this.onSettings,
-    this.unreadCount = 0,
     this.showActions = true,
   });
 
@@ -213,43 +209,6 @@ class ProfileTopBar extends StatelessWidget {
       children: [
         _RingButton(icon: Icons.arrow_back_rounded, label: 'Back', size: size, onTap: onBack),
         const Spacer(),
-        if (showActions && onMessages != null) ...[
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              _RingButton(
-                icon: Icons.chat_bubble_outline_rounded,
-                label: 'Messages',
-                size: size,
-                onTap: onMessages!,
-              ),
-              if (unreadCount > 0)
-                Positioned(
-                  top: -2,
-                  right: -2,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFFF2D55),
-                      shape: BoxShape.circle,
-                    ),
-                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                    child: Center(
-                      child: Text(
-                        '$unreadCount',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          SizedBox(width: 9 * s),
-        ],
         if (showActions && onMenu != null)
           _RingButton(icon: Icons.menu_rounded, label: 'Menu', size: size, onTap: onMenu!),
         if (showActions && onMenu != null && onSettings != null)

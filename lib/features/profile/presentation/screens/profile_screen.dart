@@ -727,9 +727,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           ProfileTopBar(
                             onBack: _goBack,
                             onMenu: isViewingStreamer ? null : _showMenu,
-                            onMessages: () => _open(const MessagesInboxScreen()),
                             onSettings: isViewingStreamer ? null : () => _open(const SettingsScreen()),
-                            unreadCount: ref.watch(messagesControllerProvider).totalUnreadCount,
                             showActions: true,
                           ),
                           SizedBox(height: 20 * s),
