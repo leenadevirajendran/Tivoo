@@ -62,6 +62,8 @@ class PkStage extends StatelessWidget {
         const control = 31.0;
         const headerH = 72.0;
 
+        final pillW = (width * 0.28).clamp(100.0, 122.0);
+
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -107,10 +109,10 @@ class PkStage extends StatelessWidget {
                     ),
                   ),
 
-                  // 3. Left host pill (Priya) on the left side of the PK logo
+                  // 3. Left host pill (Priya) with reduced, compact outline width
                   Positioned(
                     left: 10,
-                    right: (width / 2) + (emblemW * 0.28),
+                    width: pillW,
                     bottom: 2,
                     child: _HostGlassPill(
                       host: left,
@@ -123,10 +125,10 @@ class PkStage extends StatelessWidget {
                     ),
                   ),
 
-                  // 4. Right host pill (Anu) on the right side of the PK logo
+                  // 4. Right host pill (Anu) with reduced, compact outline width
                   Positioned(
                     right: 10,
-                    left: (width / 2) + (emblemW * 0.28),
+                    width: pillW,
                     bottom: 2,
                     child: _HostGlassPill(
                       host: right,
@@ -429,9 +431,9 @@ class _HostGlassPill extends StatelessWidget {
                 ? [const Color(0xDD2A0E5E), const Color(0xBB180B3A)]
                 : [const Color(0xBB0A1A4A), const Color(0xDD0E1A66)],
           ),
-          border: Border.all(color: accent.withValues(alpha: 0.9), width: 1.3),
+          border: Border.all(color: accent.withValues(alpha: 0.9), width: 1.0),
           boxShadow: [
-            BoxShadow(color: accent.withValues(alpha: 0.4), blurRadius: 8, spreadRadius: 0.5),
+            BoxShadow(color: accent.withValues(alpha: 0.35), blurRadius: 6, spreadRadius: 0.5),
           ],
         ),
         child: Stack(

@@ -4,7 +4,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_assets.dart';
-import '../../../core/utils/responsive.dart';
 import '../../../core/widgets/custom_avatar.dart';
 import '../../live_stream/domain/models/live_comment.dart';
 import '../core/pk_common_widgets.dart';
@@ -30,11 +29,15 @@ class PkLowerSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final media = MediaQuery.sizeOf(context);
-    final viewInsetsBottom = context.viewInsets.bottom;
+    final media = MediaQuery.of(context);
+    final viewInsetsBottom = media.viewInsets.bottom;
     final isKeyboardOpen = viewInsetsBottom > 50;
-    final isSmall = media.width < 376;
-    final effectiveBottom = isKeyboardOpen ? 6.0 : (context.padding.bottom + (isSmall ? 4.0 : 8.0));
+    final isSmall = media.size.width < 376;
+    final isShort = media.size.height < 700;
+    final bottomPadding = media.padding.bottom;
+    final effectiveBottom = isKeyboardOpen
+        ? 4.0
+        : (bottomPadding > 0 ? (bottomPadding + 2.0).clamp(4.0, 24.0) : (isSmall ? 4.0 : 6.0));
     final horizontalPad = isSmall ? 8.0 : 10.0;
 
     return AnimatedPadding(
@@ -45,11 +48,11 @@ class PkLowerSection extends StatelessWidget {
         padding: EdgeInsets.fromLTRB(horizontalPad, 0, horizontalPad, effectiveBottom),
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final circle = (constraints.maxWidth / 9.8).clamp(36.0, 42.0);
-            final starSize = (circle * 1.30).clamp(48.0, 56.0);
-            final rightWidth = starSize;
-            final hasEnoughHeight = constraints.maxHeight > 100;
+            final circle = (constraints.maxWidth / 9.8).clamp(34.0, 42.0);
+            final rightWidth = circle;
+            final hasEnoughHeight = constraints.maxHeight >= (circle + 36.0);
             return Column(
+              mainAxisSize: MainAxisSize.max,
               children: [
                 if (hasEnoughHeight)
                   Expanded(
@@ -64,7 +67,7 @@ class PkLowerSection extends StatelessWidget {
                       ),
                     ),
                   ),
-                if (hasEnoughHeight) SizedBox(height: isSmall ? 6.0 : 8.0),
+                if (hasEnoughHeight) SizedBox(height: isShort ? 4.0 : (isSmall ? 6.0 : 8.0)),
                 inputBar,
               ],
             );
@@ -84,7 +87,7 @@ class _GlassCommentPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      padding: const EdgeInsets.fromLTRB(4, 2, 0, 2),
       child: child,
     );
   }
@@ -164,7 +167,12 @@ const List<_NeonStyle> _styles = [
   (border: [Color(0xFF00E5FF), Color(0xFFFF2DC0)], name: Color(0xFFFF82DC)), // cyan/magenta (Meena)
 ];
 
-_NeonStyle _styleFor(String name) => _styles[name.codeUnits.fold<int>(0, (a, b) => a + b) % _styles.length];
+_NeonStyle _styleFor(String name) {
+  if (name == 'System') {
+    return (border: const [Color(0xFFFFD600), Color(0xFFFF2DC0)], name: const Color(0xFFFFD600));
+  }
+  return _styles[name.codeUnits.fold<int>(0, (a, b) => a + b) % _styles.length];
+}
 
 /// Pill with the neon tubular gradient border, glassmorphism fill and top specular gloss.
 class _Pill extends StatelessWidget {
@@ -300,7 +308,13 @@ class _CommentPill extends StatelessWidget {
                   ),
                 ),
               ),
-              if (isVip) ...[const SizedBox(width: 3.5), const PkGoldCrown(size: 11)],
+              if (comment.userName == 'System') ...[
+                const SizedBox(width: 3.5),
+                const Icon(Icons.verified_rounded, color: Color(0xFFFFD600), size: 12),
+              ] else if (isVip) ...[
+                const SizedBox(width: 3.5),
+                const PkGoldCrown(size: 11),
+              ],
             ],
           ),
           Text(

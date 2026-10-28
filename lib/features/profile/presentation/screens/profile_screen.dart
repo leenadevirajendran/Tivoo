@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -20,6 +19,8 @@ import '../widgets/tiki_verification_sheet.dart';
 import '../../../wallet/presentation/screens/wallet_screen.dart';
 import '../../../../core/widgets/tivoo_share_sheet.dart';
 import 'package:tivoo/features/messages/messages.dart';
+import 'package:tivoo/features/explore/presentation/controllers/posts_controller.dart';
+import 'package:tivoo/features/explore/presentation/screens/video_post_viewer_screen.dart';
 
 /// VIP profile in the Luxe style: top bar, identity header, bio, actions, badges,
 /// Videos / Likes bar and the Drafts / Pinned / My Posts content grid.
@@ -35,28 +36,7 @@ class ProfileScreen extends ConsumerStatefulWidget {
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _isViewingDrafts = false;
 
-  late final List<ProfileVideo> _videos = [
-    // 1st item: Drafts folder tile (with draft1 as cover)
-    ProfileVideo(
-      AppAssets.draft1,
-      isDraftFolder: true,
-      draftCount: 6,
-    ),
-    // 1st set of posts
-    ProfileVideo(AppAssets.status2, views: '4.9K'),
-    ProfileVideo(AppAssets.status3, views: '6.3K'),
-    ProfileVideo(AppAssets.status4, views: '8.2K'),
-    ProfileVideo(AppAssets.avatarNeha, views: '5.7K'),
-    ProfileVideo(AppAssets.status5, views: '9.1K'),
-    // 2nd set of posts (scrollable)
-    ProfileVideo(AppAssets.avatarPriya, views: '12.4K'),
-    ProfileVideo(AppAssets.avatarDiya, views: '3.8K'),
-    ProfileVideo(AppAssets.avatarSneha, views: '15.1K'),
-    ProfileVideo(AppAssets.avatarArun, views: '7.6K'),
-    ProfileVideo(AppAssets.avatarKarthik, views: '18.9K'),
-    ProfileVideo(AppAssets.avatarMeena, views: '22.3K'),
-    ProfileVideo(AppAssets.liveCard1, views: '31.5K'),
-  ];
+  static const _draftsFolder = ProfileVideo(AppAssets.draft1, isDraftFolder: true);
 
   final List<DraftVideoItem> _drafts = [
     const DraftVideoItem(
@@ -429,7 +409,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   void _showDeletePostOption(ProfileVideo video) {
-    if (video.isDraftFolder) return;
+    if (video.post == null) return;
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -470,12 +450,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ),
                   title: const Text('Delete Post', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600, fontSize: 16)),
                   subtitle: const Text('This post will be permanently removed', style: TextStyle(color: Colors.white54, fontSize: 12)),
-                  onTap: () {
+                  onTap: () async {
                     Navigator.pop(ctx);
-                    setState(() {
-                      _videos.remove(video);
-                    });
-                    _toast('Post deleted successfully 🗑️');
+                    final post = video.post;
+                    if (post == null) return;
+
+                    try {
+                      await ref.read(postsControllerProvider.notifier).delete(post);
+                      _toast('Post deleted successfully 🗑️');
+                    } catch (e) {
+                      _toast('Could not delete: $e');
+                    }
                   },
                 ),
                 const SizedBox(height: 8),
@@ -499,184 +484,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  void _openInstagramPostViewer(ProfileVideo video) {
-    if (video.isDraftFolder) return;
-    final profile = ref.read(profileControllerProvider).profile;
-    bool isLiked = false;
-    int likesCount = int.tryParse(video.views?.replaceAll(RegExp(r'[^0-9]'), '') ?? '49') ?? 49;
-    likesCount = (likesCount * 12);
-
-    Navigator.of(context).push(
-      PageRouteBuilder(
-        opaque: false,
-        barrierDismissible: true,
-        barrierColor: Colors.black.withValues(alpha: 0.92),
-        pageBuilder: (ctx, anim, secAnim) {
-          return StatefulBuilder(
-            builder: (ctx, setModalState) {
-              return Scaffold(
-                backgroundColor: Colors.transparent,
-                body: SafeArea(
-                  child: Stack(
-                    children: [
-                      // Center media
-                      Center(
-                        child: GestureDetector(
-                          onDoubleTap: () {
-                            setModalState(() {
-                              isLiked = true;
-                              likesCount += 1;
-                            });
-                          },
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: AspectRatio(
-                              aspectRatio: 9 / 16,
-                              child: Stack(
-                                fit: StackFit.expand,
-                                children: [
-                                  video.filePath != null
-                                      ? Image.file(
-                                          File(video.filePath!),
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (context, error, stackTrace) => Image.asset(video.asset, fit: BoxFit.cover),
-                                        )
-                                      : Image.asset(video.asset, fit: BoxFit.cover),
-                                  const DecoratedBox(
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        begin: Alignment.topCenter,
-                                        end: Alignment.bottomCenter,
-                                        colors: [Color(0x66000000), Colors.transparent, Color(0xAA000000)],
-                                        stops: [0, 0.45, 1],
-                                      ),
-                                    ),
-                                  ),
-                                  // Bottom user details & caption
-                                  Positioned(
-                                    left: 16,
-                                    bottom: 24,
-                                    right: 70,
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            CustomAvatar(
-                                              radius: 16,
-                                              imageUrl: profile.avatarUrl.isNotEmpty ? profile.avatarUrl : null,
-                                              assetPath: profile.avatarUrl.isEmpty ? AppAssets.status5 : null,
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Text(
-                                              '@${profile.username}',
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 6),
-                                            const Icon(Icons.verified_rounded, color: Color(0xFF2E9BFF), size: 14),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 8),
-                                        const Text(
-                                          'Living the dream on Tivoo! ✨ #live #streamer #moments',
-                                          style: TextStyle(color: Colors.white, fontSize: 13),
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        const SizedBox(height: 6),
-                                        const Row(
-                                          children: [
-                                            Icon(Icons.music_note_rounded, color: Color(0xFFFFDF00), size: 14),
-                                            SizedBox(width: 4),
-                                            Text(
-                                              'Original Audio • Tivoo Vibes',
-                                              style: TextStyle(color: Color(0xFFFFDF00), fontSize: 11),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  // Right side actions (Like, Comment, Share, More)
-                                  Positioned(
-                                    right: 12,
-                                    bottom: 24,
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        IconButton(
-                                          icon: Icon(
-                                            isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                                            color: isLiked ? Colors.redAccent : Colors.white,
-                                            size: 30,
-                                          ),
-                                          onPressed: () {
-                                            setModalState(() {
-                                              isLiked = !isLiked;
-                                              if (isLiked) {
-                                                likesCount += 1;
-                                              } else {
-                                                likesCount = (likesCount - 1).clamp(0, 999999);
-                                              }
-                                            });
-                                          },
-                                        ),
-                                        Text(
-                                          '$likesCount',
-                                          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                                        ),
-                                        const SizedBox(height: 14),
-                                        IconButton(
-                                          icon: const Icon(Icons.chat_bubble_outline_rounded, color: Colors.white, size: 26),
-                                          onPressed: () => _toast('Opening comments...'),
-                                        ),
-                                        const Text('48', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-                                        const SizedBox(height: 14),
-                                        IconButton(
-                                          icon: const Icon(Icons.share_rounded, color: Colors.white, size: 26),
-                                          onPressed: () => _toast('Sharing post... 🚀'),
-                                        ),
-                                        const Text('Share', style: TextStyle(color: Colors.white, fontSize: 11)),
-                                        const SizedBox(height: 14),
-                                        IconButton(
-                                          icon: const Icon(Icons.more_vert_rounded, color: Colors.white, size: 24),
-                                          onPressed: () {
-                                            Navigator.pop(ctx);
-                                            _showDeletePostOption(video);
-                                          },
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      // Top back button
-                      Positioned(
-                        top: 10,
-                        left: 10,
-                        child: IconButton(
-                          icon: const Icon(Icons.close_rounded, color: Colors.white, size: 28),
-                          onPressed: () => Navigator.pop(ctx),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          );
-        },
-      ),
-    );
+  void _openVideo(ProfileVideo video) {
+    final post = video.post;
+    if (post == null) return;
+    final myPosts = ref.read(postsControllerProvider).myPosts;
+    VideoPostViewerScreen.open(context, myPosts, initialIndex: myPosts.indexOf(post).clamp(0, myPosts.length - 1));
   }
 
   @override
@@ -695,6 +507,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   initialFollowing: streamer.isFollowing,
                 ))
         : null;
+
+    final myPosts = ref.watch(postsControllerProvider).myPosts;
 
     final s = profileScale(context);
     final gap = SizedBox(height: 12 * s);
@@ -837,9 +651,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           SizedBox(height: 24 * s),
                           ProfileContentPanel(
                             isViewingDrafts: _isViewingDrafts,
-                            videos: isViewingStreamer ? _videos.where((v) => !v.isDraftFolder).toList() : _videos,
+                            // Videos only: your uploads after the Drafts folder (other creators have none yet).
+                            videos: isViewingStreamer
+                                ? const []
+                                : [_draftsFolder, ...myPosts.map(ProfileVideo.uploaded)],
                             draftVideos: _drafts,
-                            onOpen: _openInstagramPostViewer,
+                            onOpen: _openVideo,
                             onLongPressVideo: isViewingStreamer ? null : _showDeletePostOption,
                             onOpenDrafts: () => setState(() => _isViewingDrafts = true),
                             onCloseDrafts: () => setState(() => _isViewingDrafts = false),

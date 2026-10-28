@@ -1,6 +1,7 @@
 // PK battle live screen: vertical swipe scrolling feed, state, timers and layout.
 
 import 'dart:async';
+import 'dart:math';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -9,7 +10,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_assets.dart';
 import '../../core/services/reel_video_manager.dart';
-import '../../core/utils/responsive.dart';
 import '../../core/widgets/comment_action_sheet.dart';
 import '../gift/gift.dart' as store;
 import '../home/domain/models/live_stream_card_model.dart';
@@ -21,6 +21,8 @@ import '../live_stream/presentation/widgets/active_gift_animation_overlay.dart';
 import '../live_stream/presentation/widgets/floating_hearts_overlay.dart';
 import '../live_stream/presentation/widgets/live_stream_viewers_sheet.dart';
 import '../live_stream/presentation/widgets/user_profile_bottom_sheet.dart';
+import '../live_stream/presentation/widgets/viewer_more_options_sheet.dart';
+import '../../core/theme/luxe_theme.dart';
 import '../profile/presentation/controllers/follow_controller.dart';
 import '../profile/presentation/widgets/instagram_follow_actions_sheet.dart';
 import 'commands/pk_chat_controller.dart';
@@ -194,15 +196,19 @@ class _PkBattlePageViewState extends ConsumerState<_PkBattlePageView> {
   late final Map<String, PkGifter> _leftGifters;
   late final Map<String, PkGifter> _rightGifters;
   late final PkChatController _chat;
+  late bool _isHostMode;
 
   PkSettings _settings = const PkSettings();
   bool _isBattleEnded = false;
+  bool _showWinnerOverlay = true;
   int _giftSeq = 0;
   bool _showVs = true;
 
   Timer? _countdownTimer;
   Timer? _commentTimer;
+  Timer? _scorePulseTimer;
   Timer? _vsTimer;
+  final _random = Random();
 
   static const _vsDuration = Duration(seconds: 4);
 
@@ -211,13 +217,24 @@ class _PkBattlePageViewState extends ConsumerState<_PkBattlePageView> {
     super.initState();
     _left = widget.feedItem.match.left;
     _right = widget.feedItem.match.right;
-    _leftScore = widget.feedItem.match.leftScore;
-    _rightScore = widget.feedItem.match.rightScore;
+
+    // Distinct starting scores for each battle so no battles look static
+    final itemIndex = widget.feedItem.match.secondsLeft % 7;
+    final baseLeft = widget.feedItem.match.leftScore > 0
+        ? widget.feedItem.match.leftScore
+        : (2450 + (itemIndex * 680));
+    final baseRight = widget.feedItem.match.rightScore > 0
+        ? widget.feedItem.match.rightScore
+        : (1980 + (itemIndex * 820));
+    _leftScore = baseLeft;
+    _rightScore = baseRight;
+
     _leftGift = widget.feedItem.leftGift;
     _rightGift = widget.feedItem.rightGift;
     _secondsRemaining = ValueNotifier<int>(widget.feedItem.match.secondsLeft);
     _leftGifters = {for (final g in widget.feedItem.leftGifters) g.name: g};
     _rightGifters = {for (final g in widget.feedItem.rightGifters) g.name: g};
+    _isHostMode = widget.isCreator;
     _chat = PkChatController(
       hostName: _left.name,
       initialComments: widget.feedItem.initialComments,
@@ -229,6 +246,7 @@ class _PkBattlePageViewState extends ConsumerState<_PkBattlePageView> {
         if (!mounted) return;
         ReelVideoManager.instance.pauseAll();
         _startCountdown();
+        _startScoreSimulation();
         _flashVs();
         _startCommentTimer();
       });
@@ -242,10 +260,12 @@ class _PkBattlePageViewState extends ConsumerState<_PkBattlePageView> {
       if (widget.isActive) {
         ReelVideoManager.instance.pauseAll();
         _startCountdown();
+        _startScoreSimulation();
         _startCommentTimer();
         _flashVs();
       } else {
         _countdownTimer?.cancel();
+        _scorePulseTimer?.cancel();
         _commentTimer?.cancel();
         _vsTimer?.cancel();
       }
@@ -255,6 +275,7 @@ class _PkBattlePageViewState extends ConsumerState<_PkBattlePageView> {
   @override
   void dispose() {
     _countdownTimer?.cancel();
+    _scorePulseTimer?.cancel();
     _commentTimer?.cancel();
     _vsTimer?.cancel();
     _chat.dispose();
@@ -267,9 +288,42 @@ class _PkBattlePageViewState extends ConsumerState<_PkBattlePageView> {
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (_secondsRemaining.value > 0) {
         _secondsRemaining.value--;
-      } else if (!_isBattleEnded && _settings.autoEnd) {
+        if (_secondsRemaining.value == 0 && !_isBattleEnded) {
+          _endBattle();
+        }
+      } else if (!_isBattleEnded) {
         _endBattle();
       }
+    });
+  }
+
+  /// Actively simulates dynamic battle star fluctuations (increases & counter-surges)
+  /// so stars count bar is alive and clashing in every battle on the UI.
+  void _startScoreSimulation() {
+    _scorePulseTimer?.cancel();
+    _scorePulseTimer = Timer.periodic(const Duration(milliseconds: 2200), (_) {
+      if (!mounted || _isBattleEnded || !widget.isActive) return;
+      setState(() {
+        final randVal = _random.nextInt(100);
+        final starAmounts = [20, 35, 60, 110, 180, 320, 550];
+        final stars = starAmounts[_random.nextInt(starAmounts.length)];
+
+        if (randVal < 48) {
+          _leftScore += stars;
+          final supporters = ['Rohit Sharma', 'Pooja Hegde', 'Vijay Sethupathi', 'Ananya Panday'];
+          final name = supporters[_random.nextInt(supporters.length)];
+          _recordGift(name, AppAssets.status1, stars, toLeft: true);
+        } else if (randVal < 92) {
+          _rightScore += stars;
+          final supporters = ['Suresh Raina', 'Kiara Advani', 'Dulquer Salmaan', 'Samantha Ruth'];
+          final name = supporters[_random.nextInt(supporters.length)];
+          _recordGift(name, AppAssets.status2, stars, toLeft: false);
+        } else {
+          // Surge clash: both sides gain points with tension
+          _leftScore += (stars * 0.85).round();
+          _rightScore += stars;
+        }
+      });
     });
   }
 
@@ -288,8 +342,12 @@ class _PkBattlePageViewState extends ConsumerState<_PkBattlePageView> {
 
   void _endBattle() {
     _countdownTimer?.cancel();
+    _scorePulseTimer?.cancel();
     _giftOverlayKey.currentState?.clear();
-    setState(() => _isBattleEnded = true);
+    setState(() {
+      _isBattleEnded = true;
+      _showWinnerOverlay = true;
+    });
   }
 
   void _restartBattle({PkHost? opponent}) {
@@ -298,9 +356,11 @@ class _PkBattlePageViewState extends ConsumerState<_PkBattlePageView> {
       _leftScore = 0;
       _rightScore = 0;
       _isBattleEnded = false;
+      _showWinnerOverlay = true;
       _secondsRemaining.value = _settings.durationSeconds;
     });
     _startCountdown();
+    _startScoreSimulation();
     _flashVs();
   }
 
@@ -597,6 +657,99 @@ class _PkBattlePageViewState extends ConsumerState<_PkBattlePageView> {
     ).start();
   }
 
+  Future<void> _confirmSwitchActiveProfile() async {
+    final shouldSwitch = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1B1638),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(22),
+          side: const BorderSide(color: LuxeColors.purple, width: 1.2),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.swap_horiz_rounded, color: LuxeColors.gold, size: 24),
+            SizedBox(width: 10),
+            Text(
+              'Switch active profile?',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Make ${_right.name} the active host profile? All profile-related actions, gifts, and comments will target ${_right.name}.',
+          style: const TextStyle(color: Colors.white70, fontSize: 13.5, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white60, fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: LuxeColors.gold,
+              foregroundColor: Colors.black,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Confirm', style: TextStyle(fontWeight: FontWeight.w900)),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldSwitch == true && mounted) {
+      _switchActiveProfiles();
+    }
+  }
+
+  void _switchActiveProfiles() {
+    setState(() {
+      final tempHost = _left;
+      _left = _right;
+      _right = tempHost;
+
+      final tempScore = _leftScore;
+      _leftScore = _rightScore;
+      _rightScore = tempScore;
+
+      final tempGift = _leftGift;
+      _leftGift = _rightGift;
+      _rightGift = tempGift;
+
+      final tempGifters = Map<String, PkGifter>.from(_leftGifters);
+      _leftGifters
+        ..clear()
+        ..addAll(_rightGifters);
+      _rightGifters
+        ..clear()
+        ..addAll(tempGifters);
+    });
+
+    _chat.add(
+      userName: 'System',
+      avatar: _left.avatarAsset,
+      message: 'Active profile switched to ${_left.name}',
+      isGift: false,
+    );
+
+    PkSheets.showBanner(
+      context,
+      title: 'Active Profile Switched',
+      message: '${_left.name} is now your active host!',
+      icon: Icons.swap_horiz_rounded,
+      color: const Color(0xFFFFD600),
+      avatarAsset: _left.avatarAsset,
+      badgeText: 'ACTIVE',
+      isBottom: true,
+    );
+  }
+
   void _openLiveTools() {
     LiveToolsBottomSheet.show(
       context,
@@ -604,18 +757,69 @@ class _PkBattlePageViewState extends ConsumerState<_PkBattlePageView> {
       onInviteTap: _openMatchFlow,
       onGuestsTap: _openMatchFlow,
       onRankingTap: () => PkSheets.showMoreOptions(context, onSettings: _openPkSettings, onPreviewWinner: _endBattle),
+      onReportTap: _openViewerMoreOptions,
+    );
+  }
+
+  void _openViewerMoreOptions() {
+    final leftId = 'host_${_left.name.toLowerCase().replaceAll(' ', '_')}';
+    ViewerMoreOptionsSheet.show(
+      context,
+      streamerName: _left.name,
+      streamerId: leftId,
+      streamerAvatar: _left.avatarAsset,
+      category: 'PK Battle',
+      onReport: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Report submitted for ${_left.name}'),
+            backgroundColor: const Color(0xFF192233),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      },
+      onBlock: () {
+        ref.read(followControllerProvider.notifier).blockUser(
+              leftId,
+              onStatusNotify: (msg) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(msg),
+                    backgroundColor: const Color(0xFF192233),
+                    behavior: SnackBarBehavior.floating,
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              },
+            );
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final isKeyboardOpen = context.viewInsets.bottom > 50;
-    final usableHeight = context.screenHeight - context.padding.top - context.padding.bottom;
-    final availableHeight = isKeyboardOpen ? (usableHeight - context.viewInsets.bottom) : usableHeight;
+    final media = MediaQuery.of(context);
+    final screenWidth = media.size.width;
+    final screenHeight = media.size.height;
+    final topPadding = media.padding.top;
+    final bottomPadding = media.padding.bottom;
+    final viewInsetsBottom = media.viewInsets.bottom;
+    final isKeyboardOpen = viewInsetsBottom > 50;
+
+    final usableHeight = screenHeight - topPadding - bottomPadding;
+    final availableHeight = isKeyboardOpen ? (usableHeight - viewInsetsBottom) : usableHeight;
+
+    // Responsive stage height using MediaQuery:
+    // Increased length of the livescreens in the battle for an immersive cinematic experience
+    final double maxStageRatio = screenHeight < 680
+        ? 0.46
+        : (screenHeight < 760 ? 0.52 : 0.56);
+    final double minStageRatio = screenHeight < 680 ? 0.42 : 0.46;
+
     final stageHeight = isKeyboardOpen
-        ? (availableHeight * 0.28).clamp(90.0, 260.0)
-        : (context.screenWidth * 1.05).clamp(availableHeight * 0.44, availableHeight * 0.53);
-    final leftWins = _leftScore >= _rightScore;
+        ? (availableHeight * 0.25).clamp(80.0, 210.0)
+        : (screenWidth * 1.15).clamp(availableHeight * minStageRatio, availableHeight * maxStageRatio);
 
     final leftId = 'host_${_left.name.toLowerCase().replaceAll(' ', '_')}';
     final rightId = 'host_${_right.name.toLowerCase().replaceAll(' ', '_')}';
@@ -681,6 +885,7 @@ class _PkBattlePageViewState extends ConsumerState<_PkBattlePageView> {
                             showVs: _showVs,
                             isPlaying: widget.isActive,
                             onViewersTap: () => LiveStreamViewersSheet.show(context),
+                            onRightVideoTap: _confirmSwitchActiveProfile,
                             timer: ValueListenableBuilder<int>(
                               valueListenable: _secondsRemaining,
                               builder: (context, seconds, _) {
@@ -751,7 +956,7 @@ class _PkBattlePageViewState extends ConsumerState<_PkBattlePageView> {
                         inputBar: PkInputBar(
                           onSend: _sendComment,
                           onEmojiTap: () => PkSheets.showMessageInput(context, onSend: _sendComment),
-                          onShareTap: () => PkSheets.showShare(context),
+                          onShareTap: () => PkSheets.showShare(context, hostName: _left.name, rivalName: _right.name),
                           onMoreTap: _openLiveTools,
                         ),
                       ),
@@ -759,16 +964,17 @@ class _PkBattlePageViewState extends ConsumerState<_PkBattlePageView> {
                   ],
                 ),
               ),
-              if (_isBattleEnded)
+              if (_isBattleEnded && _showWinnerOverlay)
                 PkWinnerOverlay(
-                  winner: leftWins ? _left : _right,
-                  loser: leftWins ? _right : _left,
-                  isLeftWinner: leftWins,
-                  winnerScore: leftWins ? _leftScore : _rightScore,
-                  loserScore: leftWins ? _rightScore : _leftScore,
+                  left: _left,
+                  right: _right,
+                  leftScore: _leftScore,
+                  rightScore: _rightScore,
+                  isHost: _isHostMode,
                   onPlayAgain: _restartBattle,
                   onSkip: widget.onBack,
                   onBackToLive: widget.onBack,
+                  onStay: () => setState(() => _showWinnerOverlay = false),
                 ),
             ],
           ),

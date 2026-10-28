@@ -17,6 +17,8 @@ import '../widgets/filter_overlay_widget.dart';
 import '../widgets/filter_selection_carousel.dart';
 import '../widgets/live_filter_bottom_sheet.dart';
 import '../../../live_stream/presentation/widgets/creator_more_options_sheet.dart';
+import '../../../pk_battle/core/pk_models.dart';
+import '../../../pk_battle/sheets/pk_match_flow.dart';
 
 enum _BroadcastStatus { requesting, denied, error, ready }
 
@@ -167,6 +169,19 @@ class _GoLiveBroadcastScreenState extends State<GoLiveBroadcastScreen>
         setState(() => _selectedFilter = newFilter);
       },
     );
+  }
+
+  void _openPkBattle() {
+    PkMatchFlow(
+      context: context,
+      host: PkHost(
+        name: 'Leena',
+        avatarAsset: AppAssets.avatarPriya,
+        videoAsset: AppAssets.video1,
+        likes: '24.5K',
+        viewers: _formattedViewers,
+      ),
+    ).start();
   }
 
   void _endLiveConfirm() {
@@ -502,25 +517,33 @@ class _GoLiveBroadcastScreenState extends State<GoLiveBroadcastScreen>
           ),
         ),
 
-        // Right Floating Action Column: Flip, Flash, Filter Wand, More Options
+        // Right Floating Action Column: PK Battle, Flip, Flash, Filter Wand, More Options
         Positioned(
           right: 16,
-          top: topPadding + 80,
+          top: topPadding + 64,
           child: Column(
             children: [
+              _buildRightAction(
+                icon: Icons.flash_on_rounded,
+                color: const Color(0xFFFF2D55),
+                onTap: _openPkBattle,
+                label: 'PK',
+                hasGlow: true,
+              ),
+              const SizedBox(height: 12),
               _buildRightAction(
                 icon: Icons.cameraswitch_rounded,
                 onTap: _flipCamera,
                 label: 'Flip',
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               _buildRightAction(
                 icon: _isFlashOn ? Icons.flash_on_rounded : Icons.flash_off_rounded,
                 color: _isFlashOn ? const Color(0xFFFFD600) : Colors.white,
                 onTap: _toggleFlash,
                 label: 'Flash',
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               _buildRightAction(
                 icon: Icons.auto_awesome_rounded,
                 color: const Color(0xFFFF2DC0),
@@ -528,10 +551,14 @@ class _GoLiveBroadcastScreenState extends State<GoLiveBroadcastScreen>
                 label: 'Filters',
                 hasGlow: true,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               _buildRightAction(
                 icon: Icons.more_horiz_rounded,
-                onTap: () => CreatorMoreOptionsSheet.show(context, streamTitle: 'My Live Broadcast'),
+                onTap: () => CreatorMoreOptionsSheet.show(
+                  context,
+                  streamTitle: 'My Live Broadcast',
+                  onPkBattleTap: _openPkBattle,
+                ),
                 label: 'More',
               ),
             ],

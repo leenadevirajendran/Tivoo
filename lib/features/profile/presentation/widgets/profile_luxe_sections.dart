@@ -2,7 +2,6 @@
 //
 // Sizes are designed for a 390 px wide phone and scale with the screen ([profileScale]).
 
-import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -10,6 +9,8 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_assets.dart';
 import '../../../../core/theme/luxe_theme.dart';
 import '../../../../core/widgets/custom_avatar.dart';
+import 'package:tivoo/features/explore/domain/models/video_post.dart';
+import 'package:tivoo/features/explore/presentation/widgets/video_thumbnail_view.dart';
 
 /// Ink used on gold surfaces.
 const Color _ink = Color(0xFF1A1300);
@@ -186,7 +187,7 @@ class _RingButton extends StatelessWidget {
   }
 }
 
-/// [←] ................. [💬] [≡] [⚙]
+/// [←] ................. [≡] [⚙]
 class ProfileTopBar extends StatelessWidget {
   final VoidCallback onBack;
   final VoidCallback? onMenu;
@@ -997,135 +998,25 @@ class _RoundIcon extends StatelessWidget {
 }
 
 // =============================================================================
-// VIDEOS / LIKES BAR
+// CONTENT GRID (Instagram style)
 // =============================================================================
 
-/// Gold → blue glowing bar: [▶ Videos 411] [♥ Likes 39637], the active side underlined in gold.
-class ProfileStatsBar extends StatelessWidget {
-  final int videos;
-  final int likes;
-  final bool showVideos;
-  final ValueChanged<bool> onChanged;
-
-  const ProfileStatsBar({
-    super.key,
-    required this.videos,
-    required this.likes,
-    required this.showVideos,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final s = profileScale(context);
-    final h = 50 * s;
-    Widget side(bool isVideos) {
-      final active = isVideos == showVideos;
-      return Expanded(
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () => onChanged(isVideos),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Row(
-                  children: [
-                    Container(
-                      width: 28 * s,
-                      height: 28 * s,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: const Color(0x55000000),
-                        boxShadow: [
-                          BoxShadow(
-                            color: (isVideos ? Colors.black : LuxeColors.blue).withValues(alpha: 0.5),
-                            blurRadius: 8,
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        isVideos ? Icons.play_arrow_rounded : Icons.favorite_rounded,
-                        color: Colors.white,
-                        size: (isVideos ? 24 : 19) * s,
-                      ),
-                    ),
-                    SizedBox(width: 9 * s),
-                    Text(
-                      isVideos ? 'Videos $videos' : 'Likes $likes',
-                      style: TextStyle(color: Colors.white, fontSize: 15 * s, fontWeight: FontWeight.w500),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: 4 * s),
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 250),
-                width: active ? 72 * s : 0,
-                height: 2.6,
-                decoration: BoxDecoration(
-                  gradient: LuxeColors.goldGradient,
-                  borderRadius: BorderRadius.circular(2),
-                  boxShadow: const [BoxShadow(color: Color(0xAAFFC928), blurRadius: 6)],
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return Container(
-      height: h,
-      padding: const EdgeInsets.all(1.6),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(h / 2),
-        gradient: const LinearGradient(
-          colors: [LuxeColors.goldLight, LuxeColors.gold, Color(0xFF9B3CFF), Color(0xFF3D8BFF), Color(0xFF8FC8FF)],
-          stops: [0, 0.18, 0.5, 0.82, 1],
-        ),
-        boxShadow: const [
-          BoxShadow(color: Color(0x66FFC928), blurRadius: 14, offset: Offset(-6, 0)),
-          BoxShadow(color: Color(0x663D8BFF), blurRadius: 14, offset: Offset(6, 0)),
-        ],
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(h / 2),
-          gradient: const LinearGradient(
-            colors: [Color(0xFF3A2A08), Color(0xFF15102E), Color(0xFF151848), Color(0xFF1F3FB8)],
-            stops: [0, 0.3, 0.62, 1],
-          ),
-        ),
-        child: Row(children: [side(true), side(false)]),
-      ),
-    );
-  }
-}
-
-// =============================================================================
-// CONTENT: TABS + GRID
-// =============================================================================
-
+/// One tile in the profile grid: a photo post, an uploaded video, or the Drafts folder.
 class ProfileVideo {
   final String asset;
-  final String? filePath;
-  final String? views;
-  final bool pinned;
-  final bool draft;
-  final bool isDraftFolder;
-  final int draftCount;
 
-  const ProfileVideo(
-    this.asset, {
-    this.filePath,
-    this.views,
-    this.pinned = false,
-    this.draft = false,
-    this.isDraftFolder = false,
-    this.draftCount = 6,
-  });
+  /// Likes (photos) or views (videos), e.g. "3.5K".
+  final String? views;
+  final bool isDraftFolder;
+
+  /// Set for videos the user uploaded.
+  final VideoPost? post;
+
+  const ProfileVideo(this.asset, {this.views, this.isDraftFolder = false, this.post});
+
+  ProfileVideo.uploaded(VideoPost post) : this(AppAssets.liveCard1, views: post.formattedViews, post: post);
+
+  bool get isVideo => post != null;
 }
 
 /// Model representing a draft video.
@@ -1145,7 +1036,7 @@ class DraftVideoItem {
   });
 }
 
-/// Glass panel with a video/posts grid, supporting in-place Drafts viewing.
+/// Posts grid (3 columns on phones, 4 on tablets) with in-place Drafts viewing.
 class ProfileContentPanel extends StatelessWidget {
   final bool isViewingDrafts;
   final List<ProfileVideo> videos;
@@ -1171,331 +1062,199 @@ class ProfileContentPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = profileScale(context);
-    final width = MediaQuery.sizeOf(context).width;
+    final columns = MediaQuery.sizeOf(context).width >= 700 ? 4 : 3;
 
-    return Container(
-      padding: EdgeInsets.all(6 * s),
-      decoration: _glass(22 * s).copyWith(border: Border.all(color: const Color(0x447B4DFF))),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (isViewingDrafts) ...[
-            Padding(
-              padding: EdgeInsets.fromLTRB(4 * s, 4 * s, 6 * s, 8 * s),
-              child: Row(
-                children: [
-                  Semantics(
-                    button: true,
-                    label: 'Back to all posts',
-                    child: GestureDetector(
-                      onTap: onCloseDrafts,
-                      behavior: HitTestBehavior.opaque,
-                      child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 10 * s, vertical: 6 * s),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(16 * s),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.arrow_back_rounded, color: Colors.white, size: 16 * s),
-                            SizedBox(width: 5 * s),
-                            Text(
-                              'All Posts',
-                              style: TextStyle(color: Colors.white, fontSize: 12 * s, fontWeight: FontWeight.w600),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 10 * s),
-                  Text(
-                    'Drafts',
-                    style: TextStyle(color: Colors.white, fontSize: 15 * s, fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(width: 6 * s),
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 7 * s, vertical: 2 * s),
-                    decoration: BoxDecoration(
-                      gradient: LuxeColors.goldGradient,
-                      borderRadius: BorderRadius.circular(10 * s),
-                    ),
-                    child: Text(
-                      '${draftVideos.length}',
-                      style: const TextStyle(color: _ink, fontSize: 11, fontWeight: FontWeight.w800),
-                    ),
-                  ),
-                  const Spacer(),
-                  Icon(Icons.lock_rounded, color: LuxeColors.gold, size: 14 * s),
-                  SizedBox(width: 4 * s),
-                  Text(
-                    'Private',
-                    style: TextStyle(color: Colors.white60, fontSize: 11 * s, fontWeight: FontWeight.w500),
-                  ),
-                ],
-              ),
-            ),
-            GridView.builder(
-              shrinkWrap: true,
-              padding: EdgeInsets.zero,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: draftVideos.length,
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: width >= 700 ? 4 : 3,
-                childAspectRatio: width >= 700 ? 1.0 : 0.86,
-                crossAxisSpacing: 6 * s,
-                mainAxisSpacing: 6 * s,
-              ),
-              itemBuilder: (_, i) {
-                final draft = draftVideos[i];
-                return _DraftVideoTile(
-                  draft: draft,
-                  onTap: () {
-                    if (onOpenDraft != null) {
-                      onOpenDraft!(draft);
-                    }
-                  },
-                );
-              },
-            ),
-          ] else ...[
-            GridView.builder(
-              shrinkWrap: true,
-              padding: EdgeInsets.zero,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: videos.length,
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: width >= 700 ? 4 : 3,
-                childAspectRatio: width >= 700 ? 1.0 : 0.86,
-                crossAxisSpacing: 6 * s,
-                mainAxisSpacing: 6 * s,
-              ),
-              itemBuilder: (_, i) {
-                final video = videos[i];
-                return _VideoTile(
-                  video: video,
-                  onTap: () {
-                    if (video.isDraftFolder && onOpenDrafts != null) {
-                      onOpenDrafts!();
-                    } else {
-                      onOpen(video);
-                    }
-                  },
-                  onLongPress: () {
-                    if (!video.isDraftFolder && onLongPressVideo != null) {
-                      onLongPressVideo!(video);
-                    }
-                  },
-                );
-              },
-            ),
-          ],
-        ],
+    Widget grid(int count, Widget Function(int) tile) => GridView.builder(
+      shrinkWrap: true,
+      padding: EdgeInsets.zero,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: count,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: columns,
+        childAspectRatio: 0.9, // a little taller than wide
+        crossAxisSpacing: 8 * s,
+        mainAxisSpacing: 8 * s,
       ),
+      itemBuilder: (_, i) => tile(i),
+    );
+
+    if (!isViewingDrafts && !videos.any((v) => v.isVideo)) {
+      return Column(
+        children: [
+          if (videos.isNotEmpty) grid(videos.length, (i) => _tileFor(videos[i])),
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: 28 * s),
+            child: Column(
+              children: [
+                Icon(Icons.video_library_outlined, color: Colors.white38, size: 40 * s),
+                SizedBox(height: 10 * s),
+                Text(
+                  'No videos yet',
+                  style: TextStyle(color: Colors.white, fontSize: 15 * s, fontWeight: FontWeight.w700),
+                ),
+                SizedBox(height: 4 * s),
+                Text(
+                  onLongPressVideo == null ? 'Videos will appear here.' : 'Tap + below to upload your first video.',
+                  style: TextStyle(color: Colors.white54, fontSize: 12.5 * s),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
+    if (!isViewingDrafts) {
+      return grid(videos.length, (i) => _tileFor(videos[i]));
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: EdgeInsets.only(bottom: 10 * s),
+          child: Row(
+            children: [
+              IconButton(
+                onPressed: onCloseDrafts,
+                tooltip: 'Back to posts',
+                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                style: IconButton.styleFrom(backgroundColor: Colors.white.withValues(alpha: 0.08)),
+              ),
+              SizedBox(width: 8 * s),
+              Text(
+                'Drafts · ${draftVideos.length}',
+                style: TextStyle(color: Colors.white, fontSize: 15 * s, fontWeight: FontWeight.w700),
+              ),
+              const Spacer(),
+              Icon(Icons.lock_rounded, color: LuxeColors.gold, size: 14 * s),
+              SizedBox(width: 4 * s),
+              Text('Only you', style: TextStyle(color: Colors.white60, fontSize: 11.5 * s)),
+            ],
+          ),
+        ),
+        grid(draftVideos.length, (i) {
+          final d = draftVideos[i];
+          return _GridTile(
+            onTap: () => onOpenDraft?.call(d),
+            image: _asset(d.asset),
+            topRight: Icons.edit_rounded,
+            bottomIcon: Icons.schedule_rounded,
+            bottomText: d.duration,
+          );
+        }),
+      ],
     );
   }
+
+  /// The Drafts folder or an uploaded video.
+  Widget _tileFor(ProfileVideo v) {
+    if (v.isDraftFolder) {
+      return _GridTile(
+        onTap: () => onOpenDrafts?.call(),
+        image: _asset(v.asset),
+        bottomIcon: Icons.folder_rounded,
+        bottomText: 'Drafts',
+      );
+    }
+    return _GridTile(
+      onTap: () => onOpen(v),
+      onLongPress: onLongPressVideo == null ? null : () => onLongPressVideo!(v),
+      image: VideoThumbnailView(key: ValueKey(v.post!.id), post: v.post!),
+      topRight: Icons.smart_display_rounded,
+      bottomIcon: Icons.play_arrow_rounded,
+      bottomText: v.views ?? '',
+    );
+  }
+
+  static Widget _asset(String path) => Image.asset(path, fit: BoxFit.cover, cacheWidth: 420);
 }
 
-class _VideoTile extends StatelessWidget {
-  final ProfileVideo video;
+/// Rounded tile with a type icon at the top right and a stat at the bottom left.
+class _GridTile extends StatelessWidget {
+  final Widget image;
+  final IconData? topRight;
+  final IconData bottomIcon;
+  final String bottomText;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
-  const _VideoTile({required this.video, required this.onTap, this.onLongPress});
+
+  const _GridTile({
+    required this.image,
+    required this.bottomIcon,
+    required this.bottomText,
+    required this.onTap,
+    this.topRight,
+    this.onLongPress,
+  });
+
+  static const _shadow = [Shadow(color: Color(0xAA000000), blurRadius: 6)];
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       onLongPress: onLongPress,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(9),
-          child: LayoutBuilder(
-            builder: (context, c) {
-              final u = (c.maxWidth / 110).clamp(0.85, 1.4);
-              final label = TextStyle(color: Colors.white, fontSize: 10.5 * u, fontWeight: FontWeight.w500);
-
-              if (video.isDraftFolder) {
-                return Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Image.asset(video.asset, fit: BoxFit.cover, cacheWidth: 360),
-                    // Light subtle transparent gradient to keep image crisp and clear
-                    const DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [Color(0x33000000), Colors.transparent, Color(0x44000000)],
-                          stops: [0, 0.5, 1],
-                        ),
-                      ),
-                    ),
-                    // Top folder badge only
-                    Positioned(
-                      left: 6 * u,
-                      top: 6 * u,
-                      child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 7 * u, vertical: 3 * u),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.45),
-                          borderRadius: BorderRadius.circular(6 * u),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 0.8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.folder_rounded, color: LuxeColors.gold, size: 12 * u),
-                            SizedBox(width: 4 * u),
-                            Text(
-                              'Drafts',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10.5 * u,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              }
-
-              return Stack(
+      child: LayoutBuilder(
+        builder: (context, c) {
+          final u = (c.maxWidth / 120).clamp(0.85, 1.4);
+          return Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14 * u),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+              boxShadow: const [BoxShadow(color: Color(0x44000000), blurRadius: 8, offset: Offset(0, 3))],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(13 * u),
+              child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  video.filePath != null
-                      ? Image.file(
-                          File(video.filePath!),
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Image.asset(video.asset, fit: BoxFit.cover),
-                        )
-                      : Image.asset(video.asset, fit: BoxFit.cover, cacheWidth: 360),
+                  image,
                   const DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [Color(0x33000000), Colors.transparent, Color(0x99000000)],
-                        stops: [0, 0.5, 1],
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    left: 6 * u,
-                    bottom: 5 * u,
-                    child: Row(
-                      children: [
-                        Icon(Icons.play_arrow_rounded, color: Colors.white, size: 16 * u),
-                        SizedBox(width: 2 * u),
-                        Text(video.views ?? '', style: label.copyWith(fontSize: 11 * u)),
-                      ],
-                    ),
-                  ),
-                  Positioned(
-                    right: 6 * u,
-                    bottom: 6 * u,
-                    child: LuxeCrown(size: 15 * u),
-                  ),
-                ],
-              );
-            },
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DraftVideoTile extends StatelessWidget {
-  final DraftVideoItem draft;
-  final VoidCallback onTap;
-  const _DraftVideoTile({required this.draft, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
-          boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 6, offset: Offset(0, 2))],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(9),
-          child: LayoutBuilder(
-            builder: (context, c) {
-              final u = (c.maxWidth / 110).clamp(0.85, 1.4);
-              return Stack(
-                fit: StackFit.expand,
-                children: [
-                  Image.asset(draft.asset, fit: BoxFit.cover, cacheWidth: 360),
-                  const DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [Color(0x66000000), Colors.transparent, Color(0xDD0B0924)],
                         stops: [0, 0.45, 1],
                       ),
                     ),
                   ),
-                  // Center play/preview icon
-                  Center(
-                    child: Container(
-                      width: 32 * u,
-                      height: 32 * u,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.black.withValues(alpha: 0.45),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
-                      ),
-                      child: Icon(Icons.play_arrow_rounded, color: Colors.white, size: 18 * u),
+                  if (topRight != null)
+                    Positioned(
+                      top: 7 * u,
+                      right: 7 * u,
+                      child: Icon(topRight, color: Colors.white, size: 17 * u, shadows: _shadow),
                     ),
-                  ),
-                  // Bottom duration & date
                   Positioned(
-                    left: 6 * u,
-                    right: 6 * u,
-                    bottom: 5 * u,
+                    left: 8 * u,
+                    bottom: 6 * u,
+                    right: 8 * u,
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          draft.duration,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 10.5 * u,
-                            fontWeight: FontWeight.w600,
-                            shadows: const [Shadow(color: Colors.black, blurRadius: 4)],
-                          ),
-                        ),
-                        Text(
-                          draft.date,
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 9 * u,
-                            shadows: const [Shadow(color: Colors.black, blurRadius: 4)],
+                        Icon(bottomIcon, color: Colors.white, size: 15 * u, shadows: _shadow),
+                        SizedBox(width: 4 * u),
+                        Flexible(
+                          child: Text(
+                            bottomText,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12.5 * u,
+                              fontWeight: FontWeight.w700,
+                              shadows: _shadow,
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
                 ],
-              );
-            },
-          ),
-        ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

@@ -20,6 +20,7 @@ class PkVideoArena extends StatefulWidget {
   final PkGiftEvent? rightGift;
   final bool showVs;
   final VoidCallback? onViewersTap;
+  final VoidCallback? onRightVideoTap;
   final Widget? timer;
 
   const PkVideoArena({
@@ -30,6 +31,7 @@ class PkVideoArena extends StatefulWidget {
     this.rightGift,
     this.showVs = true,
     this.onViewersTap,
+    this.onRightVideoTap,
     this.timer,
     this.isPlaying = true,
   });
@@ -84,6 +86,7 @@ class _PkVideoArenaState extends State<PkVideoArena> with SingleTickerProviderSt
                       energy: _energy,
                       gift: widget.rightGift ?? PkDemoData.rightGift,
                       onViewersTap: widget.onViewersTap,
+                      onTap: widget.onRightVideoTap,
                       isPlaying: widget.isPlaying,
                     ),
                   ),
@@ -126,6 +129,7 @@ class _LiveCard extends StatelessWidget {
   final Animation<double> energy;
   final PkGiftEvent gift;
   final VoidCallback? onViewersTap;
+  final VoidCallback? onTap;
   final bool isPlaying;
 
   const _LiveCard({
@@ -134,6 +138,7 @@ class _LiveCard extends StatelessWidget {
     required this.energy,
     required this.gift,
     this.onViewersTap,
+    this.onTap,
     this.isPlaying = true,
   });
 
@@ -147,22 +152,25 @@ class _LiveCard extends StatelessWidget {
     const cardRadius = BorderRadius.all(Radius.circular(20.0));
     const clipRadius = BorderRadius.all(Radius.circular(17.5));
 
-    return AnimatedBuilder(
-      animation: energy,
-      builder: (context, child) {
-        final pulse = 0.7 + 0.25 * sin(energy.value * 2 * pi);
-        return Container(
-          padding: const EdgeInsets.all(2.5),
-          decoration: BoxDecoration(
-            borderRadius: cardRadius,
-            gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: borderColors),
-            boxShadow: [BoxShadow(color: glow.withValues(alpha: pulse), blurRadius: 14, spreadRadius: 0.5)],
-          ),
-          child: child,
-        );
-      },
-      child: ClipRRect(
-        borderRadius: clipRadius,
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedBuilder(
+        animation: energy,
+        builder: (context, child) {
+          final pulse = 0.7 + 0.25 * sin(energy.value * 2 * pi);
+          return Container(
+            padding: const EdgeInsets.all(2.5),
+            decoration: BoxDecoration(
+              borderRadius: cardRadius,
+              gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: borderColors),
+              boxShadow: [BoxShadow(color: glow.withValues(alpha: pulse), blurRadius: 14, spreadRadius: 0.5)],
+            ),
+            child: child,
+          );
+        },
+        child: ClipRRect(
+          borderRadius: clipRadius,
         child: LayoutBuilder(
           builder: (context, c) {
             final pill = (c.maxWidth * 0.11).clamp(18.0, 24.0);
@@ -216,6 +224,7 @@ class _LiveCard extends StatelessWidget {
               ],
             );
           },
+        ),
         ),
       ),
     );

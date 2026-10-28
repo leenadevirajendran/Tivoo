@@ -2,6 +2,8 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:video_player/video_player.dart';
 
+import '../utils/video_source.dart';
+
 /// Centralized manager for Reels video controllers with 3-slot Sliding Window Pool.
 ///
 /// Ultra-Fast Performance Architecture:
@@ -80,10 +82,7 @@ class ReelVideoManager {
     }
 
     try {
-      final controller = VideoPlayerController.asset(
-        videoPath,
-        videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
-      );
+      final controller = videoControllerFor(videoPath);
 
       await controller.initialize();
       await controller.setLooping(true);
@@ -150,10 +149,7 @@ class ReelVideoManager {
     }
 
     try {
-      final controller = VideoPlayerController.asset(
-        videoPath,
-        videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
-      );
+      final controller = videoControllerFor(videoPath);
 
       await controller.initialize();
       if (_activePath != videoPath) {
@@ -178,6 +174,37 @@ class ReelVideoManager {
       _notify();
     } catch (e) {
       debugPrint('ReelVideoManager: Init error for $videoPath: $e');
+      // On devices with limited hardware decoders (especially when decoding 4K/UHD),
+      // background pooled decoders may cause MediaCodec exhaustion.
+      // Purge all other controllers to release decoder slots and retry once.
+      if (_pool.isNotEmpty) {
+        debugPrint('ReelVideoManager: Freeing decoders and retrying for 4K/high-res playback');
+        final keys = _pool.keys.toList();
+        for (final k in keys) {
+          final c = _pool.remove(k);
+          c?.pause();
+          c?.dispose();
+        }
+        try {
+          final retryController = videoControllerFor(videoPath);
+          await retryController.initialize();
+          if (_activePath != videoPath) {
+            retryController.dispose();
+            return;
+          }
+          await retryController.setLooping(true);
+          await retryController.setVolume(isMuted ? 0.0 : 1.0);
+          await retryController.play();
+          _pool[videoPath] = retryController;
+          _isLoading = false;
+          _hasError = false;
+          _notify();
+          return;
+        } catch (retryError) {
+          debugPrint('ReelVideoManager: Single-decoder retry failed: $retryError');
+        }
+      }
+
       if (_activePath == videoPath) {
         _hasError = true;
         _isLoading = false;

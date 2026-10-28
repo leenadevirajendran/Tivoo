@@ -255,8 +255,13 @@ class _HostCard extends StatelessWidget {
                     ],
                   ],
                 ),
-                const SizedBox(height: 4),
-                GoldTagPill(text: room.tag, icon: room.tagIcon, fontSize: 10.5),
+                const Row(
+                  children: [
+                    Icon(Icons.mic_rounded, color: LuxeColors.gold, size: 13),
+                    SizedBox(width: 4),
+                    Text('Audio Room • 9 Seats', style: TextStyle(color: LuxeColors.gold, fontSize: 11, fontWeight: FontWeight.w600)),
+                  ],
+                ),
                 const SizedBox(height: 4),
                 Text(
                   room.tagline,

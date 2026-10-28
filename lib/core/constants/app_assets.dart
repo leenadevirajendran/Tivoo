@@ -61,6 +61,7 @@ class AppAssets {
   static const String giftBoxBlue = 'assets/gift_box_blue.png';
   static const String goldStar3D = 'assets/gold_star_3d.png';
   static const String glossyStar = 'assets/glossy_star.png';
+  static const String star = 'assets/star.png';
   static const String pkStarPortal = 'assets/pk_star_portal.png';
   static const String goldenStar = 'assets/glossy_star.png';
   static const String goldenstar = 'assets/glossy_star.png';
