@@ -81,14 +81,7 @@ class PkStage extends StatelessWidget {
                     child: _BackButton(size: control, onTap: onBack),
                   ),
 
-                  // 2. Explore PK button at top-right
-                  Positioned(
-                    right: 10,
-                    top: 4,
-                    child: _ExplorePkButton(size: control, onTap: onExplorePk ?? () {}),
-                  ),
-
-                  // 3. PK BATTLE emblem in the center, spanning vertically between rows
+                  // 2. PK BATTLE emblem in the center, spanning vertically between rows
                   Positioned(
                     top: 0,
                     left: (width - emblemW) / 2,
@@ -211,73 +204,6 @@ class _BackButton extends StatelessWidget {
                 Icons.arrow_back_ios_new_rounded,
                 color: const Color(0xFFBAE6FD),
                 size: size * 0.38,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Small "Explore PK" button near the PK Battle header
-class _ExplorePkButton extends StatelessWidget {
-  final double size;
-  final VoidCallback onTap;
-  const _ExplorePkButton({required this.size, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: 'Explore PK',
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: const Color(0xFFFF2DB4),
-              width: 1.6,
-            ),
-            gradient: const RadialGradient(
-              colors: [Color(0xFF38104E), Color(0xFF0F0A28)],
-            ),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0xAAFF2DB4),
-                blurRadius: 10,
-                spreadRadius: 0.5,
-              ),
-            ],
-          ),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Specular curved gloss reflection on top half
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                height: size * 0.45,
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(size / 2)),
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [Colors.white.withValues(alpha: 0.45), Colors.transparent],
-                    ),
-                  ),
-                ),
-              ),
-              Icon(
-                Icons.explore_rounded,
-                color: const Color(0xFF00E5FF),
-                size: size * 0.52,
               ),
             ],
           ),

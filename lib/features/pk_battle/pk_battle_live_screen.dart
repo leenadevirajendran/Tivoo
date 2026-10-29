@@ -12,6 +12,7 @@ import '../../core/constants/app_assets.dart';
 import '../../core/services/reel_video_manager.dart';
 import '../../core/widgets/comment_action_sheet.dart';
 import '../gift/gift.dart' as store;
+import '../gift/gift_session_summary_dialog.dart';
 import '../home/domain/models/live_stream_card_model.dart';
 import '../home/presentation/widgets/live_tools_bottom_sheet.dart';
 import '../home/presentation/widgets/streamer_id_profile_sheet.dart';
@@ -21,7 +22,6 @@ import '../live_stream/presentation/widgets/active_gift_animation_overlay.dart';
 import '../live_stream/presentation/widgets/floating_hearts_overlay.dart';
 import '../live_stream/presentation/widgets/live_stream_viewers_sheet.dart';
 import '../live_stream/presentation/widgets/user_profile_bottom_sheet.dart';
-import '../live_stream/presentation/widgets/viewer_more_options_sheet.dart';
 import '../../core/theme/luxe_theme.dart';
 import '../profile/presentation/controllers/follow_controller.dart';
 import '../profile/presentation/widgets/instagram_follow_actions_sheet.dart';
@@ -35,6 +35,7 @@ import 'lobby/pk_home_screen.dart';
 import 'overlays/pk_winner_overlay.dart';
 import 'sheets/pk_explore_sheet.dart';
 import 'sheets/pk_match_flow.dart';
+import 'sheets/pk_more_options_sheet.dart';
 import 'sheets/pk_sheets.dart';
 import 'stage/pk_score_bar.dart';
 import 'stage/pk_stage.dart';
@@ -203,6 +204,8 @@ class _PkBattlePageViewState extends ConsumerState<_PkBattlePageView> {
   bool _showWinnerOverlay = true;
   int _giftSeq = 0;
   bool _showVs = true;
+  int _sessionUserGiftsCount = 0;
+  int _sessionUserStarsSpent = 0;
 
   Timer? _countdownTimer;
   Timer? _commentTimer;
@@ -467,17 +470,8 @@ class _PkBattlePageViewState extends ConsumerState<_PkBattlePageView> {
     });
 
     final totalCost = gift.diamonds * quantity;
-    void showDetails() {
-      if (!mounted) return;
-      store.GiftBalanceDetailsDialog.show(
-        context: context,
-        gift: gift,
-        quantity: quantity,
-        recipient: recipient,
-        deductedStars: totalCost,
-        onSendMore: _openGiftSheet,
-      );
-    }
+    _sessionUserGiftsCount += quantity;
+    _sessionUserStarsSpent += totalCost;
 
     if (_giftOverlayKey.currentState != null) {
       _giftOverlayKey.currentState?.playGift(
@@ -487,12 +481,24 @@ class _PkBattlePageViewState extends ConsumerState<_PkBattlePageView> {
         toLeft: toLeft,
         recipient: recipient,
         target: _hostVideoPosition(toLeft),
-        onComplete: showDetails,
       );
-    } else {
-      Future.delayed(const Duration(milliseconds: 1500), showDetails);
     }
     _floatingHeartsKey.currentState?.addHeart(toLeft: toLeft);
+  }
+
+  void _showGiftSessionSummaryIfNeeded() {
+    if (!mounted || _sessionUserGiftsCount <= 0) return;
+    final count = _sessionUserGiftsCount;
+    final stars = _sessionUserStarsSpent;
+    _sessionUserGiftsCount = 0;
+    _sessionUserStarsSpent = 0;
+    GiftSessionSummaryDialog.show(
+      context: context,
+      title: 'PK Battle Gift Summary',
+      subtitle: 'Thanks for supporting ${_left.name} in this clash!',
+      totalGiftsSent: count,
+      totalStarsSpent: stars,
+    );
   }
 
   Offset? _hostVideoPosition(bool isLeft) {
@@ -762,26 +768,19 @@ class _PkBattlePageViewState extends ConsumerState<_PkBattlePageView> {
   }
 
   void _openViewerMoreOptions() {
-    final leftId = 'host_${_left.name.toLowerCase().replaceAll(' ', '_')}';
-    ViewerMoreOptionsSheet.show(
+    if (_isHostMode) {
+      _openLiveTools();
+      return;
+    }
+    PkMoreOptionsSheet.show(
       context,
-      streamerName: _left.name,
-      streamerId: leftId,
-      streamerAvatar: _left.avatarAsset,
-      category: 'PK Battle',
-      onReport: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Report submitted for ${_left.name}'),
-            backgroundColor: const Color(0xFF192233),
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      },
+      leftHost: _left,
+      rightHost: _right,
+      onSwitchHost: _confirmSwitchActiveProfile,
       onBlock: () {
+        final rightId = 'host_${_right.name.toLowerCase().replaceAll(' ', '_')}';
         ref.read(followControllerProvider.notifier).blockUser(
-              leftId,
+              rightId,
               onStatusNotify: (msg) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -794,6 +793,7 @@ class _PkBattlePageViewState extends ConsumerState<_PkBattlePageView> {
               },
             );
       },
+      onHelp: () => PkSheets.showRules(context),
     );
   }
 
@@ -808,18 +808,31 @@ class _PkBattlePageViewState extends ConsumerState<_PkBattlePageView> {
     final isKeyboardOpen = viewInsetsBottom > 50;
 
     final usableHeight = screenHeight - topPadding - bottomPadding;
-    final availableHeight = isKeyboardOpen ? (usableHeight - viewInsetsBottom) : usableHeight;
 
     // Responsive stage height using MediaQuery:
-    // Increased length of the livescreens in the battle for an immersive cinematic experience
+    // Full cinematic height when keyboard is closed
     final double maxStageRatio = screenHeight < 680
         ? 0.46
         : (screenHeight < 760 ? 0.52 : 0.56);
     final double minStageRatio = screenHeight < 680 ? 0.42 : 0.46;
+    final double normalStageHeight = (screenWidth * 1.15).clamp(
+      usableHeight * minStageRatio,
+      usableHeight * maxStageRatio,
+    );
 
-    final stageHeight = isKeyboardOpen
-        ? (availableHeight * 0.25).clamp(80.0, 210.0)
-        : (screenWidth * 1.15).clamp(availableHeight * minStageRatio, availableHeight * maxStageRatio);
+    // Height required for controls below the live video arena when keyboard is open:
+    // PkScoreBar (~32-36) + PkInputBar (~42-46) + vertical margins/spacings (~16)
+    final double scoreBarH = (screenWidth * 0.08).clamp(30.0, 36.0);
+    final double bottomControlsHeight = scoreBarH + 58.0;
+
+    // Available vertical space above the keyboard:
+    final double availableAboveKeyboard = usableHeight - viewInsetsBottom;
+
+    // When typing, adapt stage height dynamically so both live screens remain
+    // prominently visible while leaving sufficient space for score bar and comment input:
+    final double stageHeight = isKeyboardOpen
+        ? (availableAboveKeyboard - bottomControlsHeight).clamp(160.0, normalStageHeight)
+        : normalStageHeight;
 
     final leftId = 'host_${_left.name.toLowerCase().replaceAll(' ', '_')}';
     final rightId = 'host_${_right.name.toLowerCase().replaceAll(' ', '_')}';
@@ -957,7 +970,7 @@ class _PkBattlePageViewState extends ConsumerState<_PkBattlePageView> {
                           onSend: _sendComment,
                           onEmojiTap: () => PkSheets.showMessageInput(context, onSend: _sendComment),
                           onShareTap: () => PkSheets.showShare(context, hostName: _left.name, rivalName: _right.name),
-                          onMoreTap: _openLiveTools,
+                          onMoreTap: _openViewerMoreOptions,
                         ),
                       ),
                     ),
@@ -972,9 +985,18 @@ class _PkBattlePageViewState extends ConsumerState<_PkBattlePageView> {
                   rightScore: _rightScore,
                   isHost: _isHostMode,
                   onPlayAgain: _restartBattle,
-                  onSkip: widget.onBack,
-                  onBackToLive: widget.onBack,
-                  onStay: () => setState(() => _showWinnerOverlay = false),
+                  onSkip: () {
+                    widget.onBack();
+                    _showGiftSessionSummaryIfNeeded();
+                  },
+                  onBackToLive: () {
+                    widget.onBack();
+                    _showGiftSessionSummaryIfNeeded();
+                  },
+                  onStay: () {
+                    setState(() => _showWinnerOverlay = false);
+                    _showGiftSessionSummaryIfNeeded();
+                  },
                 ),
             ],
           ),

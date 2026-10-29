@@ -16,7 +16,7 @@ import '../live_stream/presentation/widgets/floating_stars_overlay.dart';
 import '../live_stream/presentation/widgets/gift_bottom_sheet.dart';
 import '../profile/presentation/controllers/follow_controller.dart';
 import '../profile/presentation/widgets/instagram_follow_actions_sheet.dart';
-import '../gift/gift_balance_details_dialog.dart';
+import '../gift/gift_session_summary_dialog.dart';
 import 'data/chat_room_data.dart';
 import 'widgets/chat_room_common.dart';
 import 'widgets/create_room_sheet.dart';
@@ -63,6 +63,8 @@ class _ChatRoomPartyScreenState extends ConsumerState<ChatRoomPartyScreen> {
 
   bool _isCommentsPaused = false;
   Timer? _commentSimulationTimer;
+  int _sessionUserGiftsCount = 0;
+  int _sessionUserStarsSpent = 0;
   int _simulationIndex = 0;
 
   static final List<({String user, String avatar, String msg, bool isGift})> _simulatedRoomComments = [
@@ -598,6 +600,7 @@ class _ChatRoomPartyScreenState extends ConsumerState<ChatRoomPartyScreen> {
       _stage = 1;
     });
     showChatToast(context, 'You left the room. Conversation is carrying on 💬');
+    _showGiftSessionSummaryIfNeeded();
   }
 
   void _endRoomAsHost() {
@@ -746,6 +749,8 @@ class _ChatRoomPartyScreenState extends ConsumerState<ChatRoomPartyScreen> {
     }
     final toLeft = seatIndex == -1 ? true : (seatIndex % 3 == 0);
     final totalCost = gift.diamonds * quantity;
+    _sessionUserGiftsCount += quantity;
+    _sessionUserStarsSpent += totalCost;
 
     _giftKey.currentState?.playGift(
       gift,
@@ -754,21 +759,25 @@ class _ChatRoomPartyScreenState extends ConsumerState<ChatRoomPartyScreen> {
       toLeft: toLeft,
       recipient: recipient,
       target: targetPosition,
-      onComplete: () {
-        if (!mounted) return;
-        GiftBalanceDetailsDialog.show(
-          context: context,
-          gift: gift,
-          quantity: quantity,
-          recipient: recipient,
-          deductedStars: totalCost,
-          onSendMore: () => _openGifts(initialRecipient: recipient),
-        );
-      },
     );
 
     _addMessage('sent ${gift.name} ${gift.icon} x$quantity to $recipient', gift: true);
     _heartsKey.currentState?.addHeart();
+  }
+
+  void _showGiftSessionSummaryIfNeeded() {
+    if (!mounted || _sessionUserGiftsCount <= 0) return;
+    final count = _sessionUserGiftsCount;
+    final stars = _sessionUserStarsSpent;
+    _sessionUserGiftsCount = 0;
+    _sessionUserStarsSpent = 0;
+    GiftSessionSummaryDialog.show(
+      context: context,
+      title: 'Chat Room Gift Summary',
+      subtitle: 'Thanks for supporting ${_room.hostName}!',
+      totalGiftsSent: count,
+      totalStarsSpent: stars,
+    );
   }
 
   void _openMore() {
@@ -813,7 +822,13 @@ class _ChatRoomPartyScreenState extends ConsumerState<ChatRoomPartyScreen> {
 
     final Widget page = switch (_stage) {
       1 || 2 => RoomListView(rooms: _rooms, onBack: _exit, onJoin: _openRoom, onCreate: _createRoom),
-      5 => RoomEndedView(room: _room, totalStars: _totalStars, onHome: _exit),
+      5 => RoomEndedView(
+            room: _room,
+            totalStars: _totalStars,
+            userGiftsSent: _sessionUserGiftsCount,
+            userStarsSpent: _sessionUserStarsSpent,
+            onHome: _exit,
+          ),
       _ => RoomStageView(
         room: _room,
         seats: _seats,

@@ -48,6 +48,12 @@ class PkLowerSection extends StatelessWidget {
         padding: EdgeInsets.fromLTRB(horizontalPad, 0, horizontalPad, effectiveBottom),
         child: LayoutBuilder(
           builder: (context, constraints) {
+            if (isKeyboardOpen) {
+              return Align(
+                alignment: Alignment.bottomCenter,
+                child: inputBar,
+              );
+            }
             final circle = (constraints.maxWidth / 9.8).clamp(34.0, 42.0);
             final rightWidth = circle;
             final hasEnoughHeight = constraints.maxHeight >= (circle + 36.0);
@@ -480,8 +486,9 @@ class _PkInputBarState extends State<PkInputBar> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        final isKeyboard = MediaQuery.viewInsetsOf(context).bottom > 50;
         final circle = (constraints.maxWidth / 9.8).clamp(36.0, 42.0);
-        const emojiColor = Color(0xFF00E5FF);
+        const emojiColor = Color(0xFFFFD600);
 
         return Row(
           children: [
@@ -533,14 +540,25 @@ class _PkInputBarState extends State<PkInputBar> {
                             controller: _controller,
                             focusNode: _focusNode,
                             cursorColor: const Color(0xFFFFD23F),
+                            cursorWidth: 2.2,
                             textAlignVertical: TextAlignVertical.center,
-                            style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
+                            keyboardAppearance: Brightness.dark,
+                            textInputAction: TextInputAction.send,
+                            keyboardType: TextInputType.text,
+                            enableSuggestions: true,
+                            autocorrect: true,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.2,
+                            ),
                             decoration: const InputDecoration(
-                              hintText: 'Type a messa...',
-                              hintStyle: TextStyle(color: Color(0xFF8E9BCC), fontSize: 13),
+                              hintText: 'Type a message...',
+                              hintStyle: TextStyle(color: Color(0xFF8E9BCC), fontSize: 13.5),
                               border: InputBorder.none,
                               isDense: true,
-                              contentPadding: EdgeInsets.zero,
+                              contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                             ),
                             onSubmitted: (_) => _send(),
                           ),
@@ -555,17 +573,7 @@ class _PkInputBarState extends State<PkInputBar> {
                                   onTap: _send,
                                   child: const Icon(Icons.send_rounded, color: Color(0xFFFFD23F), size: 18),
                                 )
-                              : _InlineIcon(
-                                  key: const ValueKey('emoji'),
-                                  size: circle - 4,
-                                  label: 'Emoji',
-                                  onTap: widget.onEmojiTap,
-                                  child: Icon(
-                                    Icons.sentiment_satisfied_alt_outlined,
-                                    color: emojiColor,
-                                    size: circle * 0.52,
-                                  ),
-                                ),
+                              : const SizedBox(key: ValueKey('none'), width: 10),
                         ),
                       ],
                     ),
@@ -573,17 +581,28 @@ class _PkInputBarState extends State<PkInputBar> {
                 ),
               ),
             ),
-            SizedBox(width: circle * 0.14),
-            SizedBox(width: circle * 0.12),
-            _LabeledCircle(
-              size: circle,
-              label: 'Share',
-              ring: const Color(0xFF00E5FF),
-              fill: const [Color(0xFF2E6BE0), Color(0xFF102A80)],
-              onTap: widget.onShareTap,
-              onLongPress: widget.onMoreTap,
-              icon: Icon(Icons.shortcut_rounded, color: Colors.white, size: circle * 0.44),
-            ),
+            if (!isKeyboard) ...[
+              SizedBox(width: circle * 0.14),
+              _LabeledCircle(
+                size: circle,
+                label: 'Share',
+                ring: const Color(0xFF00E5FF),
+                fill: const [Color(0xFF2E6BE0), Color(0xFF102A80)],
+                onTap: widget.onShareTap,
+                icon: Icon(Icons.shortcut_rounded, color: Colors.white, size: circle * 0.44),
+              ),
+              if (widget.onMoreTap != null) ...[
+                SizedBox(width: circle * 0.14),
+                _LabeledCircle(
+                  size: circle,
+                  label: 'More',
+                  ring: const Color(0xFFFFD54F),
+                  fill: const [Color(0xFF38236B), Color(0xFF19103C)],
+                  onTap: widget.onMoreTap,
+                  icon: Icon(Icons.more_horiz_rounded, color: const Color(0xFFFFD54F), size: circle * 0.5),
+                ),
+              ],
+            ],
           ],
         );
       },
@@ -626,7 +645,6 @@ class _LabeledCircle extends StatelessWidget {
   final List<Color> fill;
   final Widget icon;
   final VoidCallback? onTap;
-  final VoidCallback? onLongPress;
 
   const _LabeledCircle({
     required this.size,
@@ -635,7 +653,6 @@ class _LabeledCircle extends StatelessWidget {
     required this.fill,
     required this.icon,
     this.onTap,
-    this.onLongPress,
   });
 
   @override
@@ -645,7 +662,6 @@ class _LabeledCircle extends StatelessWidget {
       label: label,
       child: GestureDetector(
         onTap: onTap,
-        onLongPress: onLongPress,
         child: Container(
           width: size,
           height: size,
