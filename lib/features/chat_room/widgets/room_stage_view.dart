@@ -277,58 +277,6 @@ class _RoomHeader extends StatelessWidget {
               ),
             ),
           ),
-          if (!isHost && !room.hostName.toLowerCase().startsWith('you') && onHostFollowTap != null) ...[
-            const SizedBox(width: 6),
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: onHostFollowTap,
-              child: isHostFollowing
-                  ? Container(
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: const Color(0xFF1E2840),
-                        border: Border.all(color: const Color(0xFFFFD700), width: 1.2),
-                        boxShadow: const [
-                          BoxShadow(color: Color(0x33FFD700), blurRadius: 6),
-                        ],
-                      ),
-                      child: const Center(
-                        child: Icon(Icons.check, color: Color(0xFFFFD700), size: 15),
-                      ),
-                    )
-                  : isHostRequested
-                      ? Container(
-                          width: 28,
-                          height: 28,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: const Color(0xFF1E2840),
-                            border: Border.all(color: const Color(0xFFFFD700), width: 1.2),
-                          ),
-                          child: const Center(
-                            child: Icon(Icons.schedule_rounded, color: Color(0xFFFFD700), size: 14),
-                          ),
-                        )
-                      : Container(
-                          width: 28,
-                          height: 28,
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: LinearGradient(
-                              colors: [Color(0xFFFFD700), Color(0xFFFFA000)],
-                            ),
-                            boxShadow: [
-                              BoxShadow(color: Color(0x66FFD700), blurRadius: 6),
-                            ],
-                          ),
-                          child: const Center(
-                            child: Icon(Icons.add, color: Color(0xFF0F0E17), size: 17),
-                          ),
-                        ),
-            ),
-          ],
           const SizedBox(width: 6),
           if (pendingRequestsCount > 0 && onReviewRequests != null) ...[
             GestureDetector(
