@@ -93,10 +93,11 @@ class _ExploreReelCardState extends ConsumerState<ExploreReelCard> with SingleTi
 
   @override
   Widget build(BuildContext context) {
-    final compact = MediaQuery.sizeOf(context).height < 720;
-    final button = compact ? 44.0 : 48.0;
-    final gap = compact ? 14.0 : 18.0;
-    final bottom = compact ? 86.0 : 96.0;
+    final mq = MediaQuery.of(context);
+    final compact = mq.size.height < 720;
+    final button = compact ? 42.0 : 48.0;
+    final gap = compact ? 12.0 : 16.0;
+    final bottom = (compact ? 78.0 : 92.0) + mq.padding.bottom * 0.5;
     final comments = ref.watch(commentsProvider(_commentsKey)).length;
 
     return FloatingHeartsOverlay(

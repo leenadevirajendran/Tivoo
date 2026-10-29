@@ -11,7 +11,6 @@ import '../controllers/explore_controller.dart';
 import '../controllers/posts_controller.dart';
 import '../widgets/explore_header.dart';
 import '../widgets/explore_reel_card.dart';
-import '../widgets/upload_video_sheet.dart';
 
 ExploreStreamModel _postToExploreModel(VideoPost post) {
   final avatarIsAsset = post.authorAvatar.startsWith('assets/');
@@ -123,46 +122,19 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                     ),
                   ),
           ),
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: SafeArea(
-              bottom: false,
-              child: ExploreHeader(
-                onBackTap: Navigator.of(context).canPop() ? () => Navigator.of(context).pop() : null,
-                onSearchTap: _showSearch,
-                onUploadTap: () => UploadVideoSheet.show(context),
+          if (Navigator.of(context).canPop())
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                bottom: false,
+                child: ExploreHeader(
+                  onBackTap: () => Navigator.of(context).pop(),
+                ),
               ),
             ),
-          ),
         ],
-      ),
-    );
-  }
-
-  void _showSearch() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xF5161622),
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (context) => Padding(
-        padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.viewInsetsOf(context).bottom + 20),
-        child: TextFormField(
-          autofocus: true,
-          initialValue: ref.read(exploreSearchProvider),
-          style: const TextStyle(color: Colors.white),
-          decoration: InputDecoration(
-            hintText: 'Search creators or topics…',
-            hintStyle: const TextStyle(color: Colors.white54),
-            prefixIcon: const Icon(Icons.search, color: Colors.white70),
-            filled: true,
-            fillColor: const Color(0x66181824),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
-          ),
-          onChanged: (v) => ref.read(exploreSearchProvider.notifier).state = v,
-        ),
       ),
     );
   }

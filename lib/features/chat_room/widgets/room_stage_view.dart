@@ -1156,6 +1156,80 @@ class _RoomDockState extends State<_RoomDock> {
                 ),
                 const SizedBox(width: 8),
                 _DockIconButton(
+                  icon: Icons.chat_bubble_rounded,
+                  label: 'Comments',
+                  onTap: () => setState(() => _showInput = !_showInput),
+                ),
+                const SizedBox(width: 8),
+                if (!widget.isJoined)
+                  GestureDetector(
+                    onTap: widget.onJoin,
+                    child: Container(
+                      height: 40,
+                      padding: EdgeInsets.symmetric(horizontal: widget.isJoinRequested ? 10 : 13),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        gradient: widget.isJoinRequested
+                            ? const LinearGradient(
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                                colors: [Color(0xFFFF9800), Color(0xFFF57C00)],
+                              )
+                            : const LinearGradient(
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                                colors: [Color(0xFFFF2A85), Color(0xFFC2185B)],
+                              ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: (widget.isJoinRequested
+                                    ? const Color(0xFFFF9800)
+                                    : const Color(0xFFFF2A85))
+                                .withValues(alpha: 0.4),
+                            blurRadius: 10,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: widget.isJoinRequested
+                            ? const [
+                                SizedBox(
+                                  width: 12,
+                                  height: 12,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                ),
+                                SizedBox(width: 5),
+                                Text(
+                                  'Requested',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ]
+                            : const [
+                                Icon(Icons.groups_rounded, color: Colors.white, size: 16),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Join',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
+                      ),
+                    ),
+                  ),
+                const Spacer(),
+                _DockIconButton(
                   icon: Icons.share_rounded,
                   label: 'Share',
                   onTap: () {
@@ -1168,131 +1242,9 @@ class _RoomDockState extends State<_RoomDock> {
                     );
                   },
                 ),
-                const Spacer(),
-                if (!widget.isJoined)
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      GestureDetector(
-                        onTap: widget.onJoin,
-                        child: Container(
-                          height: 42,
-                          padding: EdgeInsets.symmetric(horizontal: widget.isJoinRequested ? 13 : 16),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(21),
-                            gradient: widget.isJoinRequested
-                                ? const LinearGradient(
-                                    begin: Alignment.centerLeft,
-                                    end: Alignment.centerRight,
-                                    colors: [Color(0xFFFF9800), Color(0xFFF57C00)],
-                                  )
-                                : const LinearGradient(
-                                    begin: Alignment.centerLeft,
-                                    end: Alignment.centerRight,
-                                    colors: [Color(0xFFFF2A85), Color(0xFFC2185B)],
-                                  ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: widget.isJoinRequested
-                                    ? const Color(0x66FF9800)
-                                    : const Color(0x66FF2A85),
-                                blurRadius: 14,
-                                spreadRadius: 1,
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: widget.isJoinRequested
-                                ? const [
-                                    SizedBox(
-                                      width: 14,
-                                      height: 14,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                      ),
-                                    ),
-                                    SizedBox(width: 6),
-                                    Text(
-                                      'Requested',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: 0.3,
-                                      ),
-                                    ),
-                                  ]
-                                : const [
-                                    Icon(Icons.groups_rounded, color: Colors.white, size: 19),
-                                    SizedBox(width: 5),
-                                    Text(
-                                      'Join',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 14.5,
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: 0.3,
-                                      ),
-                                    ),
-                                  ],
-                          ),
-                        ),
-                      ),
-                      if (!widget.isJoinRequested) ...[
-                        const SizedBox(width: 4),
-                        const CustomPaint(
-                          size: Size(10, 24),
-                          painter: _SparkleTicksPainter(),
-                        ),
-                      ],
-                    ],
-                  )
-                else
-                  GestureDetector(
-                    onTap: () => setState(() => _showInput = !_showInput),
-                    child: Container(
-                      height: 42,
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(21),
-                        gradient: LinearGradient(
-                          colors: _showInput
-                              ? [const Color(0xFF6C3CE9), const Color(0xFF4A148C)]
-                              : [const Color(0xFF00E676), const Color(0xFF00B0FF)],
-                        ),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x4400E676),
-                            blurRadius: 10,
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            _showInput ? Icons.keyboard_hide_rounded : Icons.chat_bubble_rounded,
-                            color: Colors.white,
-                            size: 16,
-                          ),
-                          const SizedBox(width: 5),
-                          Text(
-                            _showInput ? 'Hide' : 'Chat',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
               ],
             ),
-            if (widget.isJoined && _showInput) ...[
+            if (_showInput) ...[
               const SizedBox(height: 10),
               if (_showEmojiPicker) ...[
                 SizedBox(
@@ -1466,41 +1418,6 @@ class _RedStrikePainter extends CustomPainter {
     canvas.drawLine(
       Offset(size.width * 0.15, size.height * 0.15),
       Offset(size.width * 0.85, size.height * 0.85),
-      paint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class _SparkleTicksPainter extends CustomPainter {
-  const _SparkleTicksPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = const Color(0xFFFF6EB4)
-      ..strokeWidth = 2.0
-      ..strokeCap = StrokeCap.round;
-
-    final centerY = size.height / 2;
-    // Top tick
-    canvas.drawLine(
-      Offset(1, centerY - 6),
-      Offset(size.width - 1, centerY - 12),
-      paint,
-    );
-    // Middle tick
-    canvas.drawLine(
-      Offset(2, centerY),
-      Offset(size.width, centerY),
-      paint,
-    );
-    // Bottom tick
-    canvas.drawLine(
-      Offset(1, centerY + 6),
-      Offset(size.width - 1, centerY + 12),
       paint,
     );
   }
