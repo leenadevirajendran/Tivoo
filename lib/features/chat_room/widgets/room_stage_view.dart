@@ -1099,6 +1099,10 @@ class _RoomDockState extends State<_RoomDock> {
   Widget build(BuildContext context) {
     final viewInset = MediaQuery.viewInsetsOf(context).bottom;
     final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isCompact = screenWidth < 375;
+    final iconSize = isCompact ? 38.0 : 42.0;
+
     return AnimatedPadding(
       duration: const Duration(milliseconds: 180),
       curve: Curves.easeOutCubic,
@@ -1119,117 +1123,125 @@ class _RoomDockState extends State<_RoomDock> {
             ),
           ],
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: EdgeInsets.symmetric(horizontal: isCompact ? 10 : 12, vertical: 8),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 _DockIconButton(
+                  size: iconSize,
                   icon: Icons.mic_rounded,
                   label: 'Mic',
                   isStriked: widget.micMuted,
                   onTap: widget.onMic,
                 ),
-                const SizedBox(width: 8),
                 _DockIconButton(
+                  size: iconSize,
                   icon: Icons.volume_up_rounded,
                   label: 'Sound',
                   isStriked: widget.soundMuted,
                   onTap: widget.onSound,
                 ),
-                const SizedBox(width: 8),
                 _DockIconButton(
+                  size: iconSize,
                   label: 'Stars',
                   onTap: widget.onGift,
                   child: Image.asset(
                     AppAssets.goldenStar,
-                    width: 22,
-                    height: 22,
+                    width: iconSize * 0.52,
+                    height: iconSize * 0.52,
                     fit: BoxFit.contain,
-                    errorBuilder: (_, _, _) => const Icon(
+                    errorBuilder: (_, _, _) => Icon(
                       Icons.star_rounded,
-                      color: Color(0xFFFFD700),
-                      size: 22,
+                      color: const Color(0xFFFFD700),
+                      size: iconSize * 0.52,
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
                 _DockIconButton(
+                  size: iconSize,
                   icon: Icons.chat_bubble_rounded,
                   label: 'Comments',
                   onTap: () => setState(() => _showInput = !_showInput),
                 ),
-                const SizedBox(width: 8),
                 if (!widget.isJoined)
-                  GestureDetector(
-                    onTap: widget.onJoin,
-                    child: Container(
-                      height: 40,
-                      padding: EdgeInsets.symmetric(horizontal: widget.isJoinRequested ? 10 : 13),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        gradient: widget.isJoinRequested
-                            ? const LinearGradient(
-                                begin: Alignment.centerLeft,
-                                end: Alignment.centerRight,
-                                colors: [Color(0xFFFF9800), Color(0xFFF57C00)],
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 14),
+                    child: GestureDetector(
+                      onTap: widget.onJoin,
+                      behavior: HitTestBehavior.opaque,
+                      child: Container(
+                        height: isCompact ? 32 : 36,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: widget.isJoinRequested
+                              ? (isCompact ? 8 : 10)
+                              : (isCompact ? 10 : 13),
+                        ),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(18),
+                          gradient: widget.isJoinRequested
+                              ? const LinearGradient(
+                                  begin: Alignment.centerLeft,
+                                  end: Alignment.centerRight,
+                                  colors: [Color(0xFFFF9800), Color(0xFFF57C00)],
+                                )
+                              : const LinearGradient(
+                                  begin: Alignment.centerLeft,
+                                  end: Alignment.centerRight,
+                                  colors: [Color(0xFFFF2A85), Color(0xFFC2185B)],
+                                ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: (widget.isJoinRequested
+                                      ? const Color(0xFFFF9800)
+                                      : const Color(0xFFFF2A85))
+                                  .withValues(alpha: 0.45),
+                              blurRadius: 8,
+                              spreadRadius: 0.5,
+                            ),
+                          ],
+                        ),
+                        alignment: Alignment.center,
+                        child: widget.isJoinRequested
+                            ? Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  SizedBox(
+                                    width: isCompact ? 10 : 12,
+                                    height: isCompact ? 10 : 12,
+                                    child: const CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Requested',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: isCompact ? 10.5 : 11.5,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
                               )
-                            : const LinearGradient(
-                                begin: Alignment.centerLeft,
-                                end: Alignment.centerRight,
-                                colors: [Color(0xFFFF2A85), Color(0xFFC2185B)],
+                            : Text(
+                                'Join',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: isCompact ? 11.5 : 12.5,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.2,
+                                ),
                               ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: (widget.isJoinRequested
-                                    ? const Color(0xFFFF9800)
-                                    : const Color(0xFFFF2A85))
-                                .withValues(alpha: 0.4),
-                            blurRadius: 10,
-                            spreadRadius: 1,
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: widget.isJoinRequested
-                            ? const [
-                                SizedBox(
-                                  width: 12,
-                                  height: 12,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                  ),
-                                ),
-                                SizedBox(width: 5),
-                                Text(
-                                  'Requested',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ]
-                            : const [
-                                Icon(Icons.groups_rounded, color: Colors.white, size: 16),
-                                SizedBox(width: 4),
-                                Text(
-                                  'Join',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ],
                       ),
                     ),
                   ),
-                const Spacer(),
                 _DockIconButton(
+                  size: iconSize,
                   icon: Icons.share_rounded,
                   label: 'Share',
                   onTap: () {
@@ -1339,6 +1351,7 @@ class _DockIconButton extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
   final bool isStriked;
+  final double size;
 
   const _DockIconButton({
     this.icon,
@@ -1346,6 +1359,7 @@ class _DockIconButton extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.isStriked = false,
+    this.size = 42.0,
   });
 
   @override
@@ -1357,8 +1371,8 @@ class _DockIconButton extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 42,
-            height: 42,
+            width: size,
+            height: size,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: const Color(0x551E1848),
