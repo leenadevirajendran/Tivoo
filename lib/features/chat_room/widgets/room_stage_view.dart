@@ -11,7 +11,7 @@ import '../data/chat_room_data.dart';
 import 'chat_room_common.dart';
 
 /// Step 3: inside the room — header, tagline, 3×3 seats, recent chat and the action dock.
-class RoomStageView extends StatelessWidget {
+class RoomStageView extends StatefulWidget {
   final ChatRoom room;
   final List<ChatSeat?> seats;
   final List<LiveComment> messages;
@@ -86,75 +86,102 @@ class RoomStageView extends StatelessWidget {
   });
 
   @override
+  State<RoomStageView> createState() => _RoomStageViewState();
+}
+
+class _RoomStageViewState extends State<RoomStageView> {
+  bool _isCommentInputOpen = false;
+
+  void _openCommentInput() {
+    setState(() => _isCommentInputOpen = true);
+  }
+
+  void _closeCommentInput() {
+    FocusScope.of(context).unfocus();
+    setState(() => _isCommentInputOpen = false);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const SizedBox(height: 6),
-        _RoomHeader(
-          room: room,
-          seats: seats,
-          isVideo: isVideo,
-          isHost: isHost,
-          onShowMembers: onShowMembers,
-          pendingRequestsCount: pendingRequestsCount,
-          onReviewRequests: onReviewRequests,
-          isHostFollowing: isHostFollowing,
-          isHostRequested: isHostRequested,
-          onHostFollowTap: onHostFollowTap,
-          onHostProfileTap: onHostProfileTap,
-          onBack: onBack,
-          onLeave: onLeave,
-          onMore: onMore,
-        ),
-        const _TaglineBanner(),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-            child: _SeatGrid(
-              seats: seats,
-              selectedSeatIndex: selectedSeatIndex,
-              onSeatSelected: onSeatSelected,
-              onSeatLongPress: onSeatLongPress,
-              onSeatTap: onSeatTap,
-              onInvite: onInvite,
-              seatKeys: seatKeys,
+    final viewInset = MediaQuery.viewInsetsOf(context).bottom;
+    final isTyping = _isCommentInputOpen || viewInset > 50;
+
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: isTyping ? _closeCommentInput : null,
+      child: Column(
+        children: [
+          const SizedBox(height: 6),
+          _RoomHeader(
+            room: widget.room,
+            seats: widget.seats,
+            isVideo: widget.isVideo,
+            isHost: widget.isHost,
+            onShowMembers: widget.onShowMembers,
+            pendingRequestsCount: widget.pendingRequestsCount,
+            onReviewRequests: widget.onReviewRequests,
+            isHostFollowing: widget.isHostFollowing,
+            isHostRequested: widget.isHostRequested,
+            onHostFollowTap: widget.onHostFollowTap,
+            onHostProfileTap: widget.onHostProfileTap,
+            onBack: widget.onBack,
+            onLeave: widget.onLeave,
+            onMore: widget.onMore,
+          ),
+          if (!isTyping) const _TaglineBanner(),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+              child: _SeatGrid(
+                seats: widget.seats,
+                selectedSeatIndex: widget.selectedSeatIndex,
+                onSeatSelected: widget.onSeatSelected,
+                onSeatLongPress: widget.onSeatLongPress,
+                onSeatTap: widget.onSeatTap,
+                onInvite: widget.onInvite,
+                seatKeys: widget.seatKeys,
+              ),
             ),
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(bottom: 2),
-          child: Stack(
-            alignment: Alignment.bottomRight,
-            children: [
-              _ChatFeed(
-                messages: messages,
-                hasJoinButton: !isJoined,
-                onCommentTap: onCommentTap,
-                onCommentLongPress: onCommentLongPress,
-              ),
-              if (!isJoined)
-                Positioned(
-                  right: 14,
-                  bottom: 6,
-                  child: _JoinFloatingButton(
-                    isJoinRequested: isJoinRequested,
-                    onTap: onJoinConversation,
-                  ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 2),
+            child: Stack(
+              alignment: Alignment.bottomRight,
+              children: [
+                _ChatFeed(
+                  messages: widget.messages,
+                  hasJoinButton: !widget.isJoined && !isTyping,
+                  isCompact: isTyping,
+                  onCommentTap: widget.onCommentTap,
+                  onCommentLongPress: widget.onCommentLongPress,
                 ),
-            ],
+                if (!widget.isJoined && !isTyping)
+                  Positioned(
+                    right: 14,
+                    bottom: 6,
+                    child: _JoinFloatingButton(
+                      isJoinRequested: widget.isJoinRequested,
+                      onTap: widget.onJoinConversation,
+                    ),
+                  ),
+              ],
+            ),
           ),
-        ),
-        _RoomDock(
-          micMuted: micMuted,
-          soundMuted: soundMuted,
-          onMic: onMic,
-          onSound: onSound,
-          onGift: onGift,
-          onStar: onStar,
-          onMore: onMore,
-          onSend: onSend,
-        ),
-      ],
+          _RoomDock(
+            micMuted: widget.micMuted,
+            soundMuted: widget.soundMuted,
+            isTyping: isTyping,
+            onOpenCommentInput: _openCommentInput,
+            onCloseCommentInput: _closeCommentInput,
+            onMic: widget.onMic,
+            onSound: widget.onSound,
+            onGift: widget.onGift,
+            onStar: widget.onStar,
+            onMore: widget.onMore,
+            onSend: widget.onSend,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -726,12 +753,14 @@ class _InviteSeat extends StatelessWidget {
 class _ChatFeed extends StatefulWidget {
   final List<LiveComment> messages;
   final bool hasJoinButton;
+  final bool isCompact;
   final ValueChanged<LiveComment>? onCommentTap;
   final ValueChanged<LiveComment>? onCommentLongPress;
 
   const _ChatFeed({
     required this.messages,
     this.hasJoinButton = false,
+    this.isCompact = false,
     this.onCommentTap,
     this.onCommentLongPress,
   });
@@ -775,7 +804,9 @@ class _ChatFeedState extends State<_ChatFeed> {
 
     // Media query responsive height adapting gracefully to small & large phone viewports
     final screenH = MediaQuery.sizeOf(context).height;
-    final feedHeight = (screenH * 0.155).clamp(105.0, 140.0);
+    final feedHeight = widget.isCompact
+        ? 44.0
+        : (screenH * 0.155).clamp(105.0, 140.0);
 
     return SizedBox(
       height: feedHeight,
@@ -1084,6 +1115,9 @@ class _JoinFloatingButton extends StatelessWidget {
 class _RoomDock extends StatefulWidget {
   final bool micMuted;
   final bool soundMuted;
+  final bool isTyping;
+  final VoidCallback onOpenCommentInput;
+  final VoidCallback onCloseCommentInput;
   final VoidCallback onMic;
   final VoidCallback onSound;
   final VoidCallback onGift;
@@ -1094,6 +1128,9 @@ class _RoomDock extends StatefulWidget {
   const _RoomDock({
     required this.micMuted,
     required this.soundMuted,
+    required this.isTyping,
+    required this.onOpenCommentInput,
+    required this.onCloseCommentInput,
     required this.onMic,
     required this.onSound,
     required this.onGift,
@@ -1108,13 +1145,26 @@ class _RoomDock extends StatefulWidget {
 
 class _RoomDockState extends State<_RoomDock> {
   final _input = TextEditingController();
-  bool _showInput = false;
+  final _focusNode = FocusNode();
   bool _showEmojiPicker = false;
 
   static const List<String> _quickEmojis = [
     '❤️', '😍', '🔥', '👏', '⭐', '🎉', '🌹', '💯', '😂', '✨',
     '🙌', '🥰', '🥳', '😎', '💖', '🤩', '👍', '🎁', '👑', '💃',
   ];
+
+  @override
+  void didUpdateWidget(covariant _RoomDock oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isTyping && !oldWidget.isTyping) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _focusNode.requestFocus();
+      });
+    } else if (!widget.isTyping && oldWidget.isTyping) {
+      _focusNode.unfocus();
+      setState(() => _showEmojiPicker = false);
+    }
+  }
 
   void _insertEmoji(String emoji) {
     final text = _input.text;
@@ -1134,6 +1184,7 @@ class _RoomDockState extends State<_RoomDock> {
   @override
   void dispose() {
     _input.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -1143,6 +1194,7 @@ class _RoomDockState extends State<_RoomDock> {
     widget.onSend(text);
     _input.clear();
     setState(() => _showEmojiPicker = false);
+    widget.onCloseCommentInput();
   }
 
   @override
@@ -1156,11 +1208,11 @@ class _RoomDockState extends State<_RoomDock> {
     return AnimatedPadding(
       duration: const Duration(milliseconds: 180),
       curve: Curves.easeOutCubic,
-      padding: EdgeInsets.fromLTRB(14, 2, 14, 10 + (viewInset > 0 ? viewInset : bottomInset)),
+      padding: EdgeInsets.fromLTRB(14, 2, 14, 8 + (viewInset > 0 ? viewInset : bottomInset)),
       child: Container(
         decoration: BoxDecoration(
           color: const Color(0xEE0E0B2A),
-          borderRadius: BorderRadius.circular(30),
+          borderRadius: BorderRadius.circular(widget.isTyping ? 24 : 30),
           border: Border.all(
             color: const Color(0xFF6C3CE9).withValues(alpha: 0.65),
             width: 1.5,
@@ -1173,150 +1225,162 @@ class _RoomDockState extends State<_RoomDock> {
             ),
           ],
         ),
-        padding: EdgeInsets.symmetric(horizontal: isCompact ? 10 : 12, vertical: 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                _DockIconButton(
-                  size: iconSize,
-                  icon: Icons.mic_rounded,
-                  label: 'Mic',
-                  isStriked: widget.micMuted,
-                  onTap: widget.onMic,
-                ),
-                _DockIconButton(
-                  size: iconSize,
-                  icon: Icons.volume_up_rounded,
-                  label: 'Sound',
-                  isStriked: widget.soundMuted,
-                  onTap: widget.onSound,
-                ),
-                _DockIconButton(
-                  size: iconSize,
-                  label: 'Stars',
-                  onTap: widget.onGift,
-                  child: Image.asset(
-                    AppAssets.goldenStar,
-                    width: iconSize * 0.52,
-                    height: iconSize * 0.52,
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, _, _) => Icon(
-                      Icons.star_rounded,
-                      color: const Color(0xFFFFD700),
-                      size: iconSize * 0.52,
+        padding: EdgeInsets.symmetric(
+          horizontal: isCompact ? 10 : 12,
+          vertical: widget.isTyping ? 6 : 8,
+        ),
+        child: widget.isTyping
+            ? Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_showEmojiPicker) ...[
+                    SizedBox(
+                      height: 36,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
+                        itemCount: _quickEmojis.length,
+                        separatorBuilder: (_, _) => const SizedBox(width: 6),
+                        itemBuilder: (context, index) {
+                          final emoji = _quickEmojis[index];
+                          return GestureDetector(
+                            onTap: () => _insertEmoji(emoji),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Center(
+                                child: Text(emoji, style: const TextStyle(fontSize: 18)),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                  ],
+                  Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () => setState(() => _showEmojiPicker = !_showEmojiPicker),
+                        behavior: HitTestBehavior.opaque,
+                        child: Icon(
+                          _showEmojiPicker ? Icons.keyboard_rounded : Icons.sentiment_satisfied_alt_rounded,
+                          color: LuxeColors.gold,
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextField(
+                          controller: _input,
+                          focusNode: _focusNode,
+                          autofocus: true,
+                          cursorColor: LuxeColors.gold,
+                          cursorWidth: 2,
+                          keyboardType: TextInputType.text,
+                          enableSuggestions: true,
+                          autocorrect: true,
+                          style: const TextStyle(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.w600),
+                          decoration: const InputDecoration(
+                            hintText: 'Type a message to the room...',
+                            hintStyle: TextStyle(color: Color(0xFF9E9EAF), fontSize: 13),
+                            border: InputBorder.none,
+                            isDense: true,
+                            contentPadding: EdgeInsets.symmetric(vertical: 8),
+                          ),
+                          onSubmitted: (_) => _send(),
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          _input.clear();
+                          widget.onCloseCommentInput();
+                        },
+                        behavior: HitTestBehavior.opaque,
+                        child: Container(
+                          width: 26,
+                          height: 26,
+                          margin: const EdgeInsets.only(right: 6),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white.withValues(alpha: 0.1),
+                          ),
+                          child: const Icon(Icons.close_rounded, color: Colors.white60, size: 15),
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: _send,
+                        behavior: HitTestBehavior.opaque,
+                        child: Container(
+                          width: 34,
+                          height: 34,
+                          decoration: LuxeDecor.goldButton(radius: 17),
+                          child: const Icon(Icons.send_rounded, color: kGoldInk, size: 16),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  _DockIconButton(
+                    size: iconSize,
+                    icon: Icons.mic_rounded,
+                    label: 'Mic',
+                    isStriked: widget.micMuted,
+                    onTap: widget.onMic,
+                  ),
+                  _DockIconButton(
+                    size: iconSize,
+                    icon: Icons.volume_up_rounded,
+                    label: 'Sound',
+                    isStriked: widget.soundMuted,
+                    onTap: widget.onSound,
+                  ),
+                  _DockIconButton(
+                    size: iconSize,
+                    label: 'Stars',
+                    onTap: widget.onGift,
+                    child: Image.asset(
+                      AppAssets.goldenStar,
+                      width: iconSize * 0.52,
+                      height: iconSize * 0.52,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, _, _) => Icon(
+                        Icons.star_rounded,
+                        color: const Color(0xFFFFD700),
+                        size: iconSize * 0.52,
+                      ),
                     ),
                   ),
-                ),
-                _DockIconButton(
-                  size: iconSize,
-                  icon: Icons.chat_bubble_rounded,
-                  label: 'Comments',
-                  onTap: () => setState(() => _showInput = !_showInput),
-                ),
-                _DockIconButton(
-                  size: iconSize,
-                  icon: Icons.share_rounded,
-                  label: 'Share',
-                  onTap: () {
-                    TivooShareSheet.show(
-                      context,
-                      title: 'Share Chat Room',
-                      subtitle: 'Invite friends to the room party',
-                      shareUrl: 'https://tivoo.app/chatroom/party',
-                      shareText: 'Join our live room party on Tivoo! https://tivoo.app/chatroom/party',
-                    );
-                  },
-                ),
-              ],
-            ),
-            if (_showInput) ...[
-              const SizedBox(height: 10),
-              if (_showEmojiPicker) ...[
-                SizedBox(
-                  height: 36,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    physics: const BouncingScrollPhysics(),
-                    itemCount: _quickEmojis.length,
-                    separatorBuilder: (_, _) => const SizedBox(width: 6),
-                    itemBuilder: (context, index) {
-                      final emoji = _quickEmojis[index];
-                      return GestureDetector(
-                        onTap: () => _insertEmoji(emoji),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Center(
-                            child: Text(emoji, style: const TextStyle(fontSize: 18)),
-                          ),
-                        ),
+                  _DockIconButton(
+                    size: iconSize,
+                    icon: Icons.chat_bubble_rounded,
+                    label: 'Comments',
+                    onTap: widget.onOpenCommentInput,
+                  ),
+                  _DockIconButton(
+                    size: iconSize,
+                    icon: Icons.share_rounded,
+                    label: 'Share',
+                    onTap: () {
+                      TivooShareSheet.show(
+                        context,
+                        title: 'Share Chat Room',
+                        subtitle: 'Invite friends to the room party',
+                        shareUrl: 'https://tivoo.app/chatroom/party',
+                        shareText: 'Join our live room party on Tivoo! https://tivoo.app/chatroom/party',
                       );
                     },
                   ),
-                ),
-                const SizedBox(height: 8),
-              ],
-              Container(
-                height: 44,
-                padding: const EdgeInsets.only(left: 12, right: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0E0B2C),
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(color: LuxeColors.purple.withValues(alpha: 0.5)),
-                ),
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => setState(() => _showEmojiPicker = !_showEmojiPicker),
-                      child: Icon(
-                        _showEmojiPicker ? Icons.keyboard_rounded : Icons.sentiment_satisfied_alt_rounded,
-                        color: LuxeColors.gold,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: TextField(
-                        controller: _input,
-                        autofocus: true,
-                        cursorColor: LuxeColors.gold,
-                        cursorWidth: 2,
-                        keyboardType: TextInputType.text,
-                        enableSuggestions: true,
-                        autocorrect: true,
-                        style: const TextStyle(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.w600),
-                        decoration: const InputDecoration(
-                          hintText: 'Type a message to the room...',
-                          hintStyle: TextStyle(color: Color(0xFF9E9EAF), fontSize: 13),
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: EdgeInsets.symmetric(vertical: 10),
-                        ),
-                        onSubmitted: (_) => _send(),
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: _send,
-                      child: Container(
-                        width: 34,
-                        height: 34,
-                        decoration: LuxeDecor.goldButton(radius: 17),
-                        child: const Icon(Icons.send_rounded, color: kGoldInk, size: 16),
-                      ),
-                    ),
-                  ],
-                ),
+                ],
               ),
-            ],
-          ],
-        ),
       ),
     );
   }
