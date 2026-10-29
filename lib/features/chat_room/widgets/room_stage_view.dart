@@ -121,18 +121,32 @@ class RoomStageView extends StatelessWidget {
             ),
           ),
         ),
-        _ChatFeed(
-          messages: messages,
-          onCommentTap: onCommentTap,
-          onCommentLongPress: onCommentLongPress,
+        Padding(
+          padding: const EdgeInsets.only(bottom: 2),
+          child: Stack(
+            alignment: Alignment.bottomRight,
+            children: [
+              _ChatFeed(
+                messages: messages,
+                hasJoinButton: !isJoined,
+                onCommentTap: onCommentTap,
+                onCommentLongPress: onCommentLongPress,
+              ),
+              if (!isJoined)
+                Positioned(
+                  right: 14,
+                  bottom: 6,
+                  child: _JoinFloatingButton(
+                    isJoinRequested: isJoinRequested,
+                    onTap: onJoinConversation,
+                  ),
+                ),
+            ],
+          ),
         ),
         _RoomDock(
-          isJoined: isJoined,
-          isJoinRequested: isJoinRequested,
           micMuted: micMuted,
           soundMuted: soundMuted,
-          onJoin: onJoinConversation,
-          onCancelJoinRequest: onCancelJoinRequest,
           onMic: onMic,
           onSound: onSound,
           onGift: onGift,
@@ -763,11 +777,13 @@ class _InviteSeat extends StatelessWidget {
 /// Glassmorphic continuous live chat feed, streaming upwards like PK and Live Streaming.
 class _ChatFeed extends StatefulWidget {
   final List<LiveComment> messages;
+  final bool hasJoinButton;
   final ValueChanged<LiveComment>? onCommentTap;
   final ValueChanged<LiveComment>? onCommentLongPress;
 
   const _ChatFeed({
     required this.messages,
+    this.hasJoinButton = false,
     this.onCommentTap,
     this.onCommentLongPress,
   });
@@ -803,7 +819,11 @@ class _ChatFeedState extends State<_ChatFeed> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.messages.isEmpty) return const SizedBox.shrink();
+    if (widget.messages.isEmpty) {
+      return widget.hasJoinButton
+          ? const SizedBox(height: 48, width: double.infinity)
+          : const SizedBox.shrink();
+    }
 
     // Media query responsive height adapting gracefully to small & large phone viewports
     final screenH = MediaQuery.sizeOf(context).height;
@@ -828,7 +848,7 @@ class _ChatFeedState extends State<_ChatFeed> {
           controller: _scrollController,
           reverse: true, // Anchor to bottom, streaming upwards!
           physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+          padding: EdgeInsets.fromLTRB(14, 2, widget.hasJoinButton ? 115 : 14, 2),
           itemCount: widget.messages.length,
           itemBuilder: (context, index) {
             final itemIndex = widget.messages.length - 1 - index;
@@ -1022,14 +1042,100 @@ class _ChatLine extends StatelessWidget {
   }
 }
 
-/// Dock: Mic / Sound / Stars / More plus the Join button (or Chat input when joined).
-class _RoomDock extends StatefulWidget {
-  final bool isJoined;
+/// Floating Join button positioned above the bottom dock near the streaming live comments.
+class _JoinFloatingButton extends StatelessWidget {
   final bool isJoinRequested;
+  final VoidCallback onTap;
+
+  const _JoinFloatingButton({
+    required this.isJoinRequested,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        height: 38,
+        padding: EdgeInsets.symmetric(horizontal: isJoinRequested ? 12 : 16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(19),
+          gradient: isJoinRequested
+              ? const LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [Color(0xFFFF9800), Color(0xFFF57C00)],
+                )
+              : const LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [Color(0xFFFF2A85), Color(0xFFC2185B)],
+                ),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.35),
+            width: 1.2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: (isJoinRequested
+                      ? const Color(0xFFFF9800)
+                      : const Color(0xFFFF2A85))
+                  .withValues(alpha: 0.5),
+              blurRadius: 12,
+              spreadRadius: 1,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: isJoinRequested
+              ? const [
+                  SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  ),
+                  SizedBox(width: 6),
+                  Text(
+                    'Requested',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ]
+              : const [
+                  Icon(Icons.groups_rounded, color: Colors.white, size: 17),
+                  SizedBox(width: 5),
+                  Text(
+                    'Join',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Dock: Mic / Sound / Stars / Comments / Share (evenly spaced bottom panel).
+class _RoomDock extends StatefulWidget {
   final bool micMuted;
   final bool soundMuted;
-  final VoidCallback onJoin;
-  final VoidCallback? onCancelJoinRequest;
   final VoidCallback onMic;
   final VoidCallback onSound;
   final VoidCallback onGift;
@@ -1038,12 +1144,8 @@ class _RoomDock extends StatefulWidget {
   final ValueChanged<String> onSend;
 
   const _RoomDock({
-    required this.isJoined,
-    this.isJoinRequested = false,
     required this.micMuted,
     required this.soundMuted,
-    required this.onJoin,
-    this.onCancelJoinRequest,
     required this.onMic,
     required this.onSound,
     required this.onGift,
@@ -1167,79 +1269,6 @@ class _RoomDockState extends State<_RoomDock> {
                   label: 'Comments',
                   onTap: () => setState(() => _showInput = !_showInput),
                 ),
-                if (!widget.isJoined)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 14),
-                    child: GestureDetector(
-                      onTap: widget.onJoin,
-                      behavior: HitTestBehavior.opaque,
-                      child: Container(
-                        height: isCompact ? 32 : 36,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: widget.isJoinRequested
-                              ? (isCompact ? 8 : 10)
-                              : (isCompact ? 10 : 13),
-                        ),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(18),
-                          gradient: widget.isJoinRequested
-                              ? const LinearGradient(
-                                  begin: Alignment.centerLeft,
-                                  end: Alignment.centerRight,
-                                  colors: [Color(0xFFFF9800), Color(0xFFF57C00)],
-                                )
-                              : const LinearGradient(
-                                  begin: Alignment.centerLeft,
-                                  end: Alignment.centerRight,
-                                  colors: [Color(0xFFFF2A85), Color(0xFFC2185B)],
-                                ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: (widget.isJoinRequested
-                                      ? const Color(0xFFFF9800)
-                                      : const Color(0xFFFF2A85))
-                                  .withValues(alpha: 0.45),
-                              blurRadius: 8,
-                              spreadRadius: 0.5,
-                            ),
-                          ],
-                        ),
-                        alignment: Alignment.center,
-                        child: widget.isJoinRequested
-                            ? Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  SizedBox(
-                                    width: isCompact ? 10 : 12,
-                                    height: isCompact ? 10 : 12,
-                                    child: const CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'Requested',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: isCompact ? 10.5 : 11.5,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ],
-                              )
-                            : Text(
-                                'Join',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: isCompact ? 11.5 : 12.5,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 0.2,
-                                ),
-                              ),
-                      ),
-                    ),
-                  ),
                 _DockIconButton(
                   size: iconSize,
                   icon: Icons.share_rounded,
