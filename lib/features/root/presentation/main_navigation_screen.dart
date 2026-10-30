@@ -5,7 +5,7 @@ import '../../../../core/widgets/luxury_atmosphere_background.dart';
 import '../../activity/presentation/screens/activity_screen.dart';
 import '../../broadcast/presentation/screens/go_live_broadcast_screen.dart';
 import '../../explore/presentation/screens/explore_screen.dart';
-import '../../explore/presentation/widgets/upload_video_sheet.dart';
+import '../../video_creator/presentation/screens/video_camera_screen.dart';
 import '../../home/presentation/controllers/home_controller.dart';
 import '../../home/presentation/screens/home_screen.dart';
 import '../../home/presentation/widgets/floating_bottom_nav_bar.dart';
@@ -99,7 +99,7 @@ class MainNavigationScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 18),
               const Text(
-                'Create & Broadcast',
+                'Create & Upload',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 18,
@@ -109,7 +109,7 @@ class MainNavigationScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 4),
               const Text(
-                'Go live, host PK battles or upload high-res video posts',
+                'Go live, host PK battles or create and upload video reels',
                 style: TextStyle(color: Colors.white54, fontSize: 12),
                 textAlign: TextAlign.center,
               ),
@@ -130,17 +130,19 @@ class MainNavigationScreen extends ConsumerWidget {
                 },
               ),
               const SizedBox(height: 12),
-              // Option 2: Upload Video Post
+              // Option 2: Upload New Video
               _ChoiceTile(
                 icon: Icons.video_library_rounded,
                 gradient: const [Color(0xFF00E5FF), Color(0xFF7000FF)],
                 glowColor: const Color(0x5500E5FF),
-                title: 'Upload Video Post',
-                subtitle: 'Publish 4K & high-clarity video reels to Explore',
-                badge: '4K REELS',
+                title: 'Upload New Video',
+                subtitle: 'Record, edit, apply filters & publish reels to Explore',
+                badge: 'CREATOR',
                 onTap: () {
                   Navigator.of(ctx).pop();
-                  UploadVideoSheet.show(context);
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const VideoCameraScreen()),
+                  );
                 },
               ),
             ],

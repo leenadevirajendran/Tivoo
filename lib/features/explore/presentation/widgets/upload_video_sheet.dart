@@ -9,6 +9,7 @@ import 'package:tivoo/core/config/api_config.dart';
 import 'package:tivoo/features/explore/data/video_processor.dart';
 import 'package:tivoo/features/explore/presentation/controllers/posts_controller.dart';
 import 'package:tivoo/features/home/presentation/controllers/home_controller.dart';
+import 'package:tivoo/features/video_creator/presentation/screens/video_camera_screen.dart';
 
 const _gold = Color(0xFFFFC928);
 const _goldDeep = Color(0xFFFF9500);
@@ -338,7 +339,13 @@ class _UploadVideoSheetState extends ConsumerState<UploadVideoSheet> {
             runSpacing: 6,
             alignment: WrapAlignment.center,
             children: [
-              source(Icons.videocam_rounded, 'Record', () => _pickWithImagePicker(ImageSource.camera)),
+              source(Icons.videocam_rounded, 'Camera Studio', () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const VideoCameraScreen()),
+                );
+              }),
+              source(Icons.photo_library_rounded, 'Gallery', () => _pickWithImagePicker(ImageSource.gallery)),
               source(Icons.folder_open_rounded, 'Files', _pickFromFiles),
             ],
           ),
