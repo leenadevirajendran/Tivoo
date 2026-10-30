@@ -75,6 +75,25 @@ class FamilyController extends StateNotifier<FamilyState> {
       ),
     ];
 
+    final rsTechPending = [
+      FamilyJoinRequestModel(
+        id: 'req_1',
+        userId: 'user_priya',
+        userName: 'Priya Singh',
+        userAvatar: AppAssets.avatarPriya,
+        userTikiId: 'ID: 4892104',
+        requestedAt: DateTime.now().subtract(const Duration(minutes: 18)),
+      ),
+      FamilyJoinRequestModel(
+        id: 'req_2',
+        userId: 'user_arun',
+        userName: 'Arun Kumar',
+        userAvatar: AppAssets.avatarArun,
+        userTikiId: 'ID: 994012',
+        requestedAt: DateTime.now().subtract(const Duration(hours: 1)),
+      ),
+    ];
+
     final rsTech = FamilyTeamModel(
       id: 'family_rs_tech',
       name: 'RS TECH',
@@ -86,7 +105,7 @@ class FamilyController extends StateNotifier<FamilyState> {
       diamonds: 118000,
       memberCount: 4,
       members: rsTechMembers,
-      pendingRequests: const [],
+      pendingRequests: rsTechPending,
       badgeIcon: '🛡️',
     );
 
@@ -99,28 +118,41 @@ class FamilyController extends StateNotifier<FamilyState> {
 
   /// User submits a request to join the Family (dispatched as private notification to Leader)
   void submitJoinRequest({
-    required String userName,
-    required String userAvatar,
-    required String userTikiId,
+    String userName = 'Kasshvi',
+    String userAvatar = AppAssets.avatarDiya,
+    String userTikiId = 'ID: 10341053',
   }) {
     if (state.isFamilyFull) return;
 
+    final alreadyPending = state.currentFamily.pendingRequests.any(
+      (r) => r.userName.toLowerCase() == userName.toLowerCase() || r.userTikiId == userTikiId,
+    );
+    if (alreadyPending) {
+      state = state.copyWith(hasRequestedToJoin: true);
+      return;
+    }
+
     final newRequest = FamilyJoinRequestModel(
       id: 'req_${DateTime.now().millisecondsSinceEpoch}',
-      userId: 'user_current',
+      userId: 'user_${DateTime.now().millisecondsSinceEpoch}',
       userName: userName,
       userAvatar: userAvatar,
       userTikiId: userTikiId,
       requestedAt: DateTime.now(),
     );
 
-    final updatedPending = List<FamilyJoinRequestModel>.from(state.currentFamily.pendingRequests)..add(newRequest);
+    final updatedPending = [newRequest, ...state.currentFamily.pendingRequests];
     final updatedFamily = state.currentFamily.copyWith(pendingRequests: updatedPending);
 
     state = state.copyWith(
       currentFamily: updatedFamily,
       hasRequestedToJoin: true,
     );
+  }
+
+  /// Reset join request state (useful for UI test demonstration)
+  void resetJoinRequest() {
+    state = state.copyWith(hasRequestedToJoin: false);
   }
 
   /// Accept join request (Leader approval)
@@ -137,7 +169,7 @@ class FamilyController extends StateNotifier<FamilyState> {
       name: target.userName,
       avatar: target.userAvatar,
       role: 'Member',
-      joinedDate: 'Just now',
+      joinedDate: 'Today',
       tikiId: target.userTikiId,
     );
 
@@ -148,14 +180,22 @@ class FamilyController extends StateNotifier<FamilyState> {
       memberCount: updatedMembers.length,
     );
 
-    state = state.copyWith(currentFamily: updatedFamily);
+    state = state.copyWith(
+      currentFamily: updatedFamily,
+      hasRequestedToJoin: target.userName == 'Kasshvi' ? false : state.hasRequestedToJoin,
+    );
   }
 
   /// Decline join request
   void declineJoinRequest(String requestId) {
     final pending = List<FamilyJoinRequestModel>.from(state.currentFamily.pendingRequests);
-    pending.removeWhere((r) => r.id == requestId);
-    state = state.copyWith(currentFamily: state.currentFamily.copyWith(pendingRequests: pending));
+    final index = pending.indexWhere((r) => r.id == requestId);
+    if (index == -1) return;
+    final target = pending.removeAt(index);
+    state = state.copyWith(
+      currentFamily: state.currentFamily.copyWith(pendingRequests: pending),
+      hasRequestedToJoin: target.userName == 'Kasshvi' ? false : state.hasRequestedToJoin,
+    );
   }
 
   /// Claim Gray Tivoo verification
