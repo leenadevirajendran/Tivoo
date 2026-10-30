@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/services/reel_video_manager.dart';
 import '../../../../core/widgets/luxury_atmosphere_background.dart';
 import '../../activity/presentation/screens/activity_screen.dart';
-import '../../broadcast/presentation/screens/go_live_broadcast_screen.dart';
 import '../../explore/presentation/screens/explore_screen.dart';
 import '../../video_creator/presentation/screens/video_camera_screen.dart';
 import '../../home/presentation/controllers/home_controller.dart';
@@ -109,28 +108,12 @@ class MainNavigationScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 4),
               const Text(
-                'Go live, host PK battles or create and upload video reels',
+                'Record, edit, apply filters & publish reels to Explore',
                 style: TextStyle(color: Colors.white54, fontSize: 12),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 20),
-              // Option 1: Go Live Broadcast & PK Battle
-              _ChoiceTile(
-                icon: Icons.sensors_rounded,
-                gradient: const [Color(0xFFFF2D55), Color(0xFFFF8F00)],
-                glowColor: const Color(0x55FF2D55),
-                title: 'Go Live Broadcast',
-                subtitle: 'Stream live, use AR filters & host 1v1 PK Battles',
-                badge: 'HOST PK',
-                onTap: () {
-                  Navigator.of(ctx).pop();
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const GoLiveBroadcastScreen()),
-                  );
-                },
-              ),
-              const SizedBox(height: 12),
-              // Option 2: Upload New Video
+              // Upload New Video
               _ChoiceTile(
                 icon: Icons.video_library_rounded,
                 gradient: const [Color(0xFF00E5FF), Color(0xFF7000FF)],
