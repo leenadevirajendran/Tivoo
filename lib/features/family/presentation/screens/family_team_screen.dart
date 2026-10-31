@@ -39,8 +39,6 @@ class FamilyTeamScreen extends ConsumerWidget {
         family.leaderId == profile.id ||
         family.leaderName.toLowerCase() == profile.name.toLowerCase();
 
-    final pendingCount = family.pendingRequests.length;
-
     return Scaffold(
       backgroundColor: const Color(0xFF0C0B14),
       appBar: AppBar(
@@ -55,25 +53,6 @@ class FamilyTeamScreen extends ConsumerWidget {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
-          // 1. Notification Panel icon with pending requests badge
-          IconButton(
-            tooltip: 'Notifications',
-            icon: Badge(
-              isLabelVisible: isLeader && pendingCount > 0,
-              label: Text(
-                '$pendingCount',
-                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-              ),
-              backgroundColor: const Color(0xFFFF2D55),
-              child: const Icon(Icons.notifications_rounded, color: Colors.white, size: 22),
-            ),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const ActivityScreen()),
-              );
-            },
-          ),
-          // 2. Share Family Link icon
           IconButton(
             tooltip: 'Share Family Link',
             icon: const Icon(Icons.share_rounded, color: Colors.white, size: 20),

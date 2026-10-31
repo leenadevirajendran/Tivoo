@@ -642,27 +642,27 @@ class ProfileActions extends StatelessWidget {
           ),
         ),
         SizedBox(width: 10 * s),
-        // Messages Panel Button
+        // Messages Panel Button (Same style as Edit Profile)
         Expanded(
           child: Semantics(
             button: true,
             child: GestureDetector(
               onTap: onMessagesTap,
-              child: _GlossyGoldButton(
+              child: _GlossyGlassButton(
                 height: h,
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.chat_bubble_outline_rounded, color: _ink, size: 18 * s),
+                      Icon(Icons.chat_bubble_outline_rounded, color: LuxeColors.gold, size: 18 * s),
                       SizedBox(width: 7 * s),
                       Text(
                         'Messages',
                         style: TextStyle(
-                          color: _ink,
+                          color: Colors.white,
                           fontSize: 13.5 * s,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w600,
                           letterSpacing: 0.2,
                         ),
                       ),
@@ -671,13 +671,13 @@ class ProfileActions extends StatelessWidget {
                         Container(
                           padding: EdgeInsets.symmetric(horizontal: 6 * s, vertical: 2 * s),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF161200),
+                            color: LuxeColors.gold,
                             borderRadius: BorderRadius.circular(10 * s),
                           ),
                           child: Text(
                             '$unreadCount',
                             style: TextStyle(
-                              color: LuxeColors.gold,
+                              color: Colors.black,
                               fontSize: 10.5 * s,
                               fontWeight: FontWeight.w900,
                             ),
@@ -744,62 +744,6 @@ class _GlossyGlassButton extends StatelessWidget {
               ),
             ),
             Center(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 10), child: child)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Gold pill with a glossy top highlight and a diagonal light streak near its right end.
-class _GlossyGoldButton extends StatelessWidget {
-  final double height;
-  final Widget child;
-  const _GlossyGoldButton({required this.height, required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    final r = BorderRadius.circular(height / 2);
-    return Container(
-      height: height,
-      decoration: BoxDecoration(
-        borderRadius: r,
-        border: Border.all(color: const Color(0xFFFFE9A0), width: 1),
-        boxShadow: const [BoxShadow(color: Color(0x88FFC928), blurRadius: 16, offset: Offset(0, 3))],
-      ),
-      child: ClipRRect(
-        borderRadius: r,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFFFFE066), LuxeColors.gold, Color(0xFFF2B200), Color(0xFFFFF0A8), Color(0xFFE59A00)],
-                  stops: [0, 0.4, 0.66, 0.74, 1],
-                ),
-              ),
-            ),
-            // Top gloss
-            Align(
-              alignment: Alignment.topCenter,
-              child: FractionallySizedBox(
-                heightFactor: 0.45,
-                widthFactor: 1,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [Colors.white.withValues(alpha: 0.45), Colors.white.withValues(alpha: 0)],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Center(child: child),
           ],
         ),
       ),
