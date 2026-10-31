@@ -198,7 +198,7 @@ class ActivityCard extends StatelessWidget {
     switch (activity.type) {
       case ActivityType.familyJoinRequest:
         badgeIcon = Icons.group_add_rounded;
-        badgeColor = const Color(0xFF00E676);
+        badgeColor = const Color(0xFFFFC928);
         break;
       case ActivityType.liveNow:
         badgeIcon = Icons.podcasts_rounded;
@@ -295,19 +295,19 @@ class ActivityCard extends StatelessWidget {
           return Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
             decoration: BoxDecoration(
-              color: const Color(0x3300E676),
+              color: const Color(0x33FFC928),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFF00E676), width: 0.8),
+              border: Border.all(color: const Color(0xFFFFC928), width: 0.8),
             ),
             child: const Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.check_circle_rounded, color: Color(0xFF00E676), size: 14),
+                Icon(Icons.check_circle_rounded, color: Color(0xFFFFC928), size: 14),
                 SizedBox(width: 6),
                 Text(
                   'Joined Family ✓',
                   style: TextStyle(
-                    color: Color(0xFF00E676),
+                    color: Color(0xFFFFC928),
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
@@ -338,7 +338,7 @@ class ActivityCard extends StatelessWidget {
                 height: 36,
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF00E676),
+                    backgroundColor: const Color(0xFFFFC928),
                     foregroundColor: Colors.black,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     elevation: 0,
@@ -351,7 +351,7 @@ class ActivityCard extends StatelessWidget {
                       SnackBar(
                         content: Row(
                           children: [
-                            const Icon(Icons.check_circle_rounded, color: Color(0xFF00E676), size: 18),
+                            const Icon(Icons.check_circle_rounded, color: Color(0xFFFFC928), size: 18),
                             const SizedBox(width: 8),
                             Text('Accepted ${activity.userName} into ${activity.familyName ?? "Family"}! 🎉'),
                           ],
