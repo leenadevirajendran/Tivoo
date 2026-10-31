@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/luxe_theme.dart';
 import '../../../../core/widgets/custom_avatar.dart';
+import '../../../../core/widgets/tivoo_share_sheet.dart';
 import '../../../activity/presentation/screens/activity_screen.dart';
 import '../../../profile/presentation/controllers/profile_controller.dart';
 import '../../domain/models/family_team_model.dart';
 import '../controllers/family_controller.dart';
-import '../widgets/family_share_link_sheet.dart';
-import 'family_join_link_screen.dart';
 
 /// Clean, concise frontend UI for Family Team screen.
 /// Includes Facebook-style Family Joining Request workflow:
@@ -15,6 +14,17 @@ import 'family_join_link_screen.dart';
 /// - Invitee View: Family Preview and "Join to Family" action
 class FamilyTeamScreen extends ConsumerWidget {
   const FamilyTeamScreen({super.key});
+
+  void _openShareSheet(BuildContext context, FamilyTeamModel family) {
+    final link = 'https://tivoo.app/family/join?code=${family.name.replaceAll(' ', '')}2026';
+    TivooShareSheet.show(
+      context,
+      title: 'Share Family Link',
+      subtitle: 'Invite creators to join ${family.name} on Tivoo',
+      shareUrl: link,
+      shareText: '🛡️ Join our Family team "${family.name}" on Tivoo! We support each other in PK battles and grow together. Tap the link to send your joining request: $link',
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -67,17 +77,7 @@ class FamilyTeamScreen extends ConsumerWidget {
           IconButton(
             tooltip: 'Share Family Link',
             icon: const Icon(Icons.share_rounded, color: Colors.white, size: 20),
-            onPressed: () => FamilyShareLinkSheet.show(context, family: family),
-          ),
-          // 3. Preview Join Link icon
-          IconButton(
-            tooltip: 'Preview Join Link',
-            icon: const Icon(Icons.open_in_new_rounded, color: LuxeColors.gold, size: 20),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const FamilyJoinLinkScreen()),
-              );
-            },
+            onPressed: () => _openShareSheet(context, family),
           ),
         ],
       ),
@@ -584,7 +584,7 @@ class FamilyTeamScreen extends ConsumerWidget {
                   elevation: 2,
                 ),
                 onPressed: () {
-                  FamilyShareLinkSheet.show(context, family: state.currentFamily);
+                  _openShareSheet(context, state.currentFamily);
                 },
                 icon: const Icon(Icons.share_rounded, color: Colors.black, size: 19),
                 label: const Text(

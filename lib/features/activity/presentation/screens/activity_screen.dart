@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/theme/luxe_theme.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/luxury_atmosphere_background.dart';
 import '../../../family/presentation/controllers/family_controller.dart';
@@ -96,90 +95,7 @@ class ActivityScreen extends ConsumerWidget {
 
                 const SliverToBoxAdapter(child: SizedBox(height: 12)),
 
-                // 2. Family Join Requests Highlight Banner (if any pending)
-                if (familyJoinItems.isNotEmpty)
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: context.isTablet
-                            ? ((context.screenWidth - 600) / 2).clamp(16.0, 200.0)
-                            : 16.0,
-                      ),
-                      child: Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF261D3B), Color(0xFF171426)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: LuxeColors.gold.withValues(alpha: 0.45),
-                            width: 1,
-                          ),
-                          boxShadow: const [
-                            BoxShadow(color: Colors.black45, blurRadius: 10, offset: Offset(0, 4)),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 38,
-                              height: 38,
-                              decoration: const BoxDecoration(
-                                shape: BoxShape.circle,
-                                gradient: LinearGradient(
-                                  colors: [Color(0xFFFFD700), Color(0xFFFF8F00)],
-                                ),
-                              ),
-                              child: Center(
-                                child: Text(family.badgeIcon, style: const TextStyle(fontSize: 19)),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '${family.name} Join Requests',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 13.5,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                  Text(
-                                    '${familyJoinItems.length} applicant(s) waiting for Leader approval',
-                                    style: const TextStyle(color: Colors.white70, fontSize: 11),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: LuxeColors.gold,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                '${familyJoinItems.length} PENDING',
-                                style: const TextStyle(
-                                  color: Colors.black,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-
-                // 3. Activity / Notification Items List
+                // 2. Activity / Notification Items List
                 SliverPadding(
                   padding: EdgeInsets.symmetric(
                     horizontal: context.isTablet
