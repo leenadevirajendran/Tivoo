@@ -76,7 +76,7 @@ class ActivityCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        '${activity.applicantId ?? ""} • Team: ${activity.familyName ?? "RS TECH"}',
+                        '${activity.applicantId ?? ""} • Team: ${activity.familyName ?? "Tivoo Angels ✨"}',
                         style: const TextStyle(color: Colors.white70, fontSize: 12),
                       ),
                       const SizedBox(height: 2),

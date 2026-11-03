@@ -328,6 +328,9 @@ class _PostPageState extends State<_PostPage> {
                     subtitle: '@${post.authorUsername}',
                     shareUrl: isNetworkVideo(post.videoUrl) ? post.videoUrl : 'https://tivoo.app/video/${post.id}',
                     shareText: 'Watch @${post.authorUsername} on Tivoo!',
+                    canDownload: true,
+                    allowDownload: post.allowDownloads,
+                    videoAuthor: post.authorUsername,
                   ),
                 ),
                 if (widget.isMine)

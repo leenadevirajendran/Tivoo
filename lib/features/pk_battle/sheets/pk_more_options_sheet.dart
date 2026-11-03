@@ -19,6 +19,8 @@ class PkMoreOptionsSheet extends StatelessWidget {
   final VoidCallback? onSwitchHost;
   final VoidCallback? onBlock;
   final VoidCallback? onHelp;
+  final VoidCallback? onSettings;
+  final VoidCallback? onInvite;
 
   const PkMoreOptionsSheet({
     super.key,
@@ -27,6 +29,8 @@ class PkMoreOptionsSheet extends StatelessWidget {
     this.onSwitchHost,
     this.onBlock,
     this.onHelp,
+    this.onSettings,
+    this.onInvite,
   });
 
   static Future<void> show(
@@ -36,6 +40,8 @@ class PkMoreOptionsSheet extends StatelessWidget {
     VoidCallback? onSwitchHost,
     VoidCallback? onBlock,
     VoidCallback? onHelp,
+    VoidCallback? onSettings,
+    VoidCallback? onInvite,
   }) {
     return showModalBottomSheet<void>(
       context: context,
@@ -47,6 +53,8 @@ class PkMoreOptionsSheet extends StatelessWidget {
         onSwitchHost: onSwitchHost,
         onBlock: onBlock,
         onHelp: onHelp,
+        onSettings: onSettings,
+        onInvite: onInvite,
       ),
     );
   }
@@ -220,6 +228,32 @@ class PkMoreOptionsSheet extends StatelessWidget {
                       onSwitchHost?.call();
                     },
                   ),
+
+                  // 6. PK Battle Settings
+                  if (onSettings != null)
+                    _PkOptionItem(
+                      icon: Icons.settings_rounded,
+                      label: 'PK\nSettings',
+                      gradient: const [Color(0xFF9C27B0), Color(0xFF673AB7)],
+                      glowColor: const Color(0x559C27B0),
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        onSettings!();
+                      },
+                    ),
+
+                  // 8. Match / Invite Rival Streamer
+                  if (onInvite != null)
+                    _PkOptionItem(
+                      icon: Icons.person_add_rounded,
+                      label: 'Match\nRival',
+                      gradient: const [Color(0xFF00E676), Color(0xFF00B0FF)],
+                      glowColor: const Color(0x5500E676),
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        onInvite!();
+                      },
+                    ),
                 ],
               ),
             ],

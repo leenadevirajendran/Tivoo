@@ -388,9 +388,9 @@ class _FamilyJoinLinkScreenState extends ConsumerState<FamilyJoinLinkScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Why Join RS TECH?',
-                            style: TextStyle(
+                          Text(
+                            'Why Join ${family.name}?',
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 13,
                               fontWeight: FontWeight.w800,
@@ -407,86 +407,26 @@ class _FamilyJoinLinkScreenState extends ConsumerState<FamilyJoinLinkScreen> {
                     ),
                     const SizedBox(height: 18),
 
-                    // 4. Member List Preview
-                    Row(
-                      children: [
-                        Text(
-                          'Current Members (${family.memberCount})',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const Spacer(),
-                        const Text(
-                          'Verified Team',
-                          style: TextStyle(color: Colors.white38, fontSize: 11),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-
-                    ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: family.members.length,
-                      itemBuilder: (context, i) {
-                        final m = family.members[i];
-                        final isLeaderRole = m.role.contains('Leader');
-
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: isLeaderRole ? const Color(0x22FFD700) : const Color(0xFF161424),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: isLeaderRole ? const Color(0xFFFFD700).withValues(alpha: 0.5) : Colors.white10,
+                    // 4. Privacy Notice for Non-Members
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.04),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.white10),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.shield_outlined, color: LuxeColors.gold, size: 18),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Member list and clan star rankings are protected and visible to verified Family members.',
+                              style: TextStyle(color: Colors.white60, fontSize: 11.5, height: 1.3),
                             ),
                           ),
-                          child: Row(
-                            children: [
-                              CustomAvatar(radius: 18, assetPath: m.avatar),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      m.name,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                    Text(
-                                      m.tikiId,
-                                      style: const TextStyle(color: Colors.white54, fontSize: 10.5),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
-                                decoration: BoxDecoration(
-                                  color: isLeaderRole ? const Color(0xFFFFD700) : Colors.white12,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  m.role,
-                                  style: TextStyle(
-                                    color: isLeaderRole ? Colors.black : Colors.white70,
-                                    fontSize: 9.5,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 16),
                   ],

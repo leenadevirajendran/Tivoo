@@ -20,12 +20,7 @@ class PkLowerSection extends StatelessWidget {
   final Widget rightColumn;
   final Widget inputBar;
 
-  const PkLowerSection({
-    super.key,
-    required this.commandList,
-    required this.rightColumn,
-    required this.inputBar,
-  });
+  const PkLowerSection({super.key, required this.commandList, required this.rightColumn, required this.inputBar});
 
   @override
   Widget build(BuildContext context) {
@@ -48,17 +43,15 @@ class PkLowerSection extends StatelessWidget {
         padding: EdgeInsets.fromLTRB(horizontalPad, 0, horizontalPad, effectiveBottom),
         child: LayoutBuilder(
           builder: (context, constraints) {
-            if (isKeyboardOpen) {
-              return Align(
-                alignment: Alignment.bottomCenter,
-                child: inputBar,
-              );
-            }
             final circle = (constraints.maxWidth / 9.8).clamp(34.0, 42.0);
             final rightWidth = circle;
-            final hasEnoughHeight = constraints.maxHeight >= (circle + 36.0);
+            // While typing only the input bar is shown. The input bar must stay
+            // the last child of this same Column in both states: moving it to
+            // another parent rebuilds the TextField and closes the keyboard.
+            final hasEnoughHeight = !isKeyboardOpen && constraints.maxHeight >= (circle + 36.0);
             return Column(
               mainAxisSize: MainAxisSize.max,
+              mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 if (hasEnoughHeight)
                   Expanded(
@@ -74,7 +67,7 @@ class PkLowerSection extends StatelessWidget {
                     ),
                   ),
                 if (hasEnoughHeight) SizedBox(height: isShort ? 4.0 : (isSmall ? 6.0 : 8.0)),
-                inputBar,
+                KeyedSubtree(key: const ValueKey('pk_input_bar'), child: inputBar),
               ],
             );
           },
@@ -92,10 +85,7 @@ class _GlassCommentPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 2, 0, 2),
-      child: child,
-    );
+    return Padding(padding: const EdgeInsets.fromLTRB(4, 2, 0, 2), child: child);
   }
 }
 
@@ -208,13 +198,7 @@ class _Pill extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(30),
           gradient: LinearGradient(colors: border),
-          boxShadow: [
-            BoxShadow(
-              color: primaryColor.withValues(alpha: 0.45),
-              blurRadius: 10,
-              spreadRadius: 0.5,
-            ),
-          ],
+          boxShadow: [BoxShadow(color: primaryColor.withValues(alpha: 0.45), blurRadius: 10, spreadRadius: 0.5)],
         ),
         child: Container(
           decoration: BoxDecoration(
@@ -255,9 +239,7 @@ class _Pill extends StatelessWidget {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: LinearGradient(colors: border),
-                        boxShadow: [
-                          BoxShadow(color: primaryColor.withValues(alpha: 0.5), blurRadius: 6),
-                        ],
+                        boxShadow: [BoxShadow(color: primaryColor.withValues(alpha: 0.5), blurRadius: 6)],
                       ),
                       child: CustomAvatar(radius: avatarRadius, assetPath: avatar),
                     ),
@@ -279,11 +261,7 @@ class _CommentPill extends StatelessWidget {
   final LiveComment comment;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
-  const _CommentPill({
-    required this.comment,
-    required this.onTap,
-    this.onLongPress,
-  });
+  const _CommentPill({required this.comment, required this.onTap, this.onLongPress});
 
   @override
   Widget build(BuildContext context) {
@@ -306,12 +284,7 @@ class _CommentPill extends StatelessWidget {
                   comment.userName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: style.name,
-                    fontSize: 12.0,
-                    fontWeight: FontWeight.w800,
-                    height: 1.15,
-                  ),
+                  style: TextStyle(color: style.name, fontSize: 12.0, fontWeight: FontWeight.w800, height: 1.15),
                 ),
               ),
               if (comment.userName == 'System') ...[
@@ -346,11 +319,7 @@ class _GiftCommentPill extends StatelessWidget {
   final PkGiftEvent gift;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
-  const _GiftCommentPill({
-    required this.gift,
-    required this.onTap,
-    this.onLongPress,
-  });
+  const _GiftCommentPill({required this.gift, required this.onTap, this.onLongPress});
 
   @override
   Widget build(BuildContext context) {
@@ -497,16 +466,9 @@ class _PkInputBarState extends State<PkInputBar> {
                 height: circle,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(circle / 2),
-                  border: Border.all(
-                    color: _hasText ? const Color(0xFFFFD23F) : const Color(0xFF00E5FF),
-                    width: 1.5,
-                  ),
-                  gradient: const LinearGradient(
-                    colors: [Color(0xDD0D113C), Color(0xBB080B28)],
-                  ),
-                  boxShadow: const [
-                    BoxShadow(color: Color(0x5500E5FF), blurRadius: 10, spreadRadius: 0.5),
-                  ],
+                  border: Border.all(color: _hasText ? const Color(0xFFFFD23F) : const Color(0xFF00E5FF), width: 1.5),
+                  gradient: const LinearGradient(colors: [Color(0xDD0D113C), Color(0xBB080B28)]),
+                  boxShadow: const [BoxShadow(color: Color(0x5500E5FF), blurRadius: 10, spreadRadius: 0.5)],
                 ),
                 child: Stack(
                   children: [

@@ -77,6 +77,8 @@ class AppAssets {
   // PK battle header banner (Neha · PK BATTLE · Arun) and VS emblem
   static const String pkTopBanner = 'assets/PKtop.png';
   static const String pkVsEmblem = 'assets/VS.png';
+  // Boxing-gloves clash shown when a PK battle restarts (Rewatch / Rebattle)
+  static const String pkBoxer = 'assets/boxer.png';
 
   // PK Lobby / Battle covers
   static const String pkBannerBg = 'assets/banners/banner_pk.jpg';

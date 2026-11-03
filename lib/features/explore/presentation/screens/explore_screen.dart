@@ -27,6 +27,7 @@ ExploreStreamModel _postToExploreModel(VideoPost post) {
     diamondsCount: '${post.likes}',
     isLive: false,
     isVerified: false,
+    allowDownloads: post.allowDownloads,
     post: post,
   );
 }

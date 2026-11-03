@@ -17,6 +17,9 @@ class TivooShareSheet extends StatefulWidget {
   final String? subtitle;
   final String shareUrl;
   final String shareText;
+  final bool canDownload;
+  final bool allowDownload;
+  final String? videoAuthor;
 
   const TivooShareSheet({
     super.key,
@@ -24,6 +27,9 @@ class TivooShareSheet extends StatefulWidget {
     this.subtitle,
     required this.shareUrl,
     required this.shareText,
+    this.canDownload = false,
+    this.allowDownload = true,
+    this.videoAuthor,
   });
 
   static Future<void> show(
@@ -32,6 +38,9 @@ class TivooShareSheet extends StatefulWidget {
     String? subtitle,
     required String shareUrl,
     required String shareText,
+    bool canDownload = false,
+    bool allowDownload = true,
+    String? videoAuthor,
   }) {
     HapticFeedback.lightImpact();
     return showModalBottomSheet<void>(
@@ -43,6 +52,9 @@ class TivooShareSheet extends StatefulWidget {
         subtitle: subtitle,
         shareUrl: shareUrl,
         shareText: shareText,
+        canDownload: canDownload,
+        allowDownload: allowDownload,
+        videoAuthor: videoAuthor,
       ),
     );
   }
@@ -739,56 +751,138 @@ class _TivooShareSheetState extends State<TivooShareSheet> {
                     assetPath: AppAssets.iconX,
                   ),
                   _buildCopyLinkOption(context),
+                  if (widget.canDownload) _buildDownloadOption(context),
                 ],
               ),
-              const SizedBox(height: 18),
-
-              // Link URL Box with Copy Button
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1C1642),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.link_rounded, color: Color(0xFFFFD700), size: 18),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        widget.shareUrl,
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
-                          fontFamily: 'monospace',
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: () => _launchSocial(context, 'Copy Link'),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: LuxeDecor.goldButton(radius: 12),
-                        child: const Text(
-                          'Copy',
-                          style: TextStyle(
-                            color: Color(0xFF221600),
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              const SizedBox(height: 10),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _handleDownload(BuildContext context) {
+    Navigator.of(context).pop();
+    if (!widget.allowDownload) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.lock_rounded, color: Color(0xFFFF5252), size: 18),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text('Downloads disabled: Creator has turned off downloads for this video 🔒'),
+              ),
+            ],
+          ),
+          backgroundColor: Color(0xFF2E1A29),
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
+    HapticFeedback.mediumImpact();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFFFD700)),
+            ),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text('Downloading video with TiVOO watermark... 🎬'),
+            ),
+          ],
+        ),
+        backgroundColor: Color(0xFF1B1638),
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(milliseconds: 1400),
+      ),
+    );
+
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      if (context.mounted) {
+        HapticFeedback.heavyImpact();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Color(0xFF00E676), size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text('Saved to Gallery with TiVOO watermark! ✨ (@${widget.videoAuthor ?? "tivoo_creator"})'),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFF10281E),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    });
+  }
+
+  Widget _buildDownloadOption(BuildContext context) {
+    final enabled = widget.allowDownload;
+    return GestureDetector(
+      onTap: () => _handleDownload(context),
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: enabled
+                  ? const LinearGradient(
+                      colors: [Color(0xFFFFD700), Color(0xFFFF9100)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    )
+                  : const LinearGradient(
+                      colors: [Color(0xFF4A4458), Color(0xFF2C2836)],
+                    ),
+              border: Border.all(
+                color: (enabled ? const Color(0xFFFFD700) : Colors.white24).withValues(alpha: 0.6),
+                width: 1.2,
+              ),
+              boxShadow: enabled
+                  ? [
+                      BoxShadow(
+                        color: const Color(0xFFFFD700).withValues(alpha: 0.35),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Center(
+              child: Icon(
+                enabled ? Icons.download_rounded : Icons.file_download_off_rounded,
+                color: enabled ? const Color(0xFF1F1500) : Colors.white38,
+                size: 24,
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            enabled ? 'Download' : 'Locked',
+            style: TextStyle(
+              color: enabled ? Colors.white70 : Colors.white38,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }

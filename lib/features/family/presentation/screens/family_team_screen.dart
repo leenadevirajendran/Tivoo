@@ -7,6 +7,7 @@ import '../../../activity/presentation/screens/activity_screen.dart';
 import '../../../profile/presentation/controllers/profile_controller.dart';
 import '../../domain/models/family_team_model.dart';
 import '../controllers/family_controller.dart';
+import 'view_family_details_screen.dart';
 
 /// Clean, concise frontend UI for Family Team screen.
 /// Includes Facebook-style Family Joining Request workflow:
@@ -53,10 +54,35 @@ class FamilyTeamScreen extends ConsumerWidget {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
-          IconButton(
-            tooltip: 'Share Family Link',
-            icon: const Icon(Icons.share_rounded, color: Colors.white, size: 20),
-            onPressed: () => _openShareSheet(context, family),
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: Center(
+              child: GestureDetector(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => ViewFamilyDetailsScreen(family: family)),
+                ),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: LuxeColors.gold.withValues(alpha: 0.6), width: 1.2),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.visibility_rounded, color: LuxeColors.gold, size: 14),
+                      SizedBox(width: 4),
+                      Text(
+                        'View Family',
+                        style: TextStyle(color: LuxeColors.gold, fontSize: 11.5, fontWeight: FontWeight.w800),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -70,7 +96,7 @@ class FamilyTeamScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // 1. Family Banner (Capacity limit 100 shown cleanly)
-                    _buildHeroBanner(family, isFull),
+                    _buildHeroBanner(context, family, isFull),
 
                     const SizedBox(height: 12),
 
@@ -100,7 +126,7 @@ class FamilyTeamScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeroBanner(FamilyTeamModel family, bool isFull) {
+  Widget _buildHeroBanner(BuildContext context, FamilyTeamModel family, bool isFull) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(16),
@@ -153,12 +179,47 @@ class FamilyTeamScreen extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(color: LuxeColors.gold, borderRadius: BorderRadius.circular(8)),
-                          child: const Text(
-                            'TOP FAMILY',
-                            style: TextStyle(color: Colors.black, fontSize: 8.5, fontWeight: FontWeight.w900),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => ViewFamilyDetailsScreen(family: family),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFFFFD54F), Color(0xFFFF9100)],
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x66FFD54F),
+                                  blurRadius: 8,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.visibility_rounded, color: Colors.black, size: 12),
+                                SizedBox(width: 4),
+                                Text(
+                                  'View Family',
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 0.2,
+                                  ),
+                                ),
+                                SizedBox(width: 2),
+                                Icon(Icons.arrow_forward_ios_rounded, color: Colors.black, size: 9),
+                              ],
+                            ),
                           ),
                         ),
                       ],
@@ -523,30 +584,36 @@ class FamilyTeamScreen extends ConsumerWidget {
     bool isLeader,
     bool isFull,
   ) {
+    final mq = MediaQuery.of(context);
+    final bottomInset = mq.padding.bottom > 0 ? mq.padding.bottom : 8.0;
+
     if (isFull) {
       return Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+        padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + bottomInset),
         decoration: const BoxDecoration(
           color: Color(0xFF14121E),
           border: Border(top: BorderSide(color: Color(0xFFFF2D55), width: 1.2)),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            Icon(Icons.lock_rounded, color: Color(0xFFFF2D55), size: 18),
-            SizedBox(width: 8),
-            Text(
-              'Family Full (100/100 Members) • Requests Closed',
-              style: TextStyle(color: Color(0xFFFF2D55), fontSize: 13, fontWeight: FontWeight.w800),
-            ),
-          ],
+        child: const FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.lock_rounded, color: Color(0xFFFF2D55), size: 18),
+              SizedBox(width: 8),
+              Text(
+                'Family Full (100/100 Members) • Requests Closed',
+                style: TextStyle(color: Color(0xFFFF2D55), fontSize: 13, fontWeight: FontWeight.w800),
+              ),
+            ],
+          ),
         ),
       );
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.fromLTRB(16, 10, 16, 10 + bottomInset),
       decoration: const BoxDecoration(
         color: Color(0xFF14121E),
         border: Border(top: BorderSide(color: Colors.white12)),
@@ -566,9 +633,12 @@ class FamilyTeamScreen extends ConsumerWidget {
                   _openShareSheet(context, state.currentFamily);
                 },
                 icon: const Icon(Icons.share_rounded, color: Colors.black, size: 19),
-                label: const Text(
-                  'Share Family Link',
-                  style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 14.5),
+                label: const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    'Share Family Link',
+                    style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 14.5),
+                  ),
                 ),
               ),
             )
@@ -601,11 +671,14 @@ class FamilyTeamScreen extends ConsumerWidget {
                   color: state.hasRequestedToJoin ? Colors.white60 : Colors.black,
                   size: 18,
                 ),
-                label: Text(
-                  state.hasRequestedToJoin ? 'Join Request Sent (Pending) ⏳' : 'Request to Join Family',
-                  style: TextStyle(
-                    color: state.hasRequestedToJoin ? Colors.white60 : Colors.black,
-                    fontWeight: FontWeight.bold,
+                label: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    state.hasRequestedToJoin ? 'Join Request Sent (Pending) ⏳' : 'Request to Join Family',
+                    style: TextStyle(
+                      color: state.hasRequestedToJoin ? Colors.white60 : Colors.black,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),

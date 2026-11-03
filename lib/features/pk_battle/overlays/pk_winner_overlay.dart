@@ -1,406 +1,311 @@
-// "PK Ended" winner celebration overlay that keeps both hosts live on screen.
+// Building blocks shared by the viewer and streamer end-of-battle popups:
+// the blurred full-screen frame, the winner/loser result header and the buttons.
 
-import 'dart:async';
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/theme/luxe_theme.dart';
 import '../../../core/widgets/custom_avatar.dart';
 import '../core/pk_models.dart';
+import '../core/pk_responsive.dart';
 
-/// In-stream celebration overlay shown when PK battle ends:
-/// - Announcement banner pops up in the center with celebration aesthetics
-/// - Both winner and loser stay active in live stream on the same screen
-/// - Automatically fades away after celebration announcement (or tap to dismiss)
-/// - Back to battles and Stay in room buttons removed for clean viewer experience
-class PkWinnerOverlay extends StatefulWidget {
+final _starFormat = NumberFormat('#,###');
+String formatPkStars(int value) => _starFormat.format(value);
+
+/// Blurred scrim with a centred, scrollable neon card that pops in.
+class PkEndFrame extends StatefulWidget {
+  final Widget child;
+  final Color glow;
+
+  const PkEndFrame({super.key, required this.child, this.glow = const Color(0xFFFFC928)});
+
+  @override
+  State<PkEndFrame> createState() => _PkEndFrameState();
+}
+
+class _PkEndFrameState extends State<PkEndFrame> with SingleTickerProviderStateMixin {
+  late final AnimationController _anim = AnimationController(vsync: this, duration: const Duration(milliseconds: 420))
+    ..forward();
+
+  @override
+  void dispose() {
+    _anim.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final r = PkResponsive.of(context);
+    final fade = CurvedAnimation(parent: _anim, curve: Curves.easeOut);
+    final scale = CurvedAnimation(parent: _anim, curve: Curves.easeOutBack);
+
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: FadeTransition(
+            opacity: fade,
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+              child: ColoredBox(color: Colors.black.withValues(alpha: 0.6)),
+            ),
+          ),
+        ),
+        SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.symmetric(vertical: r.s(16)),
+              child: ScaleTransition(
+                scale: scale,
+                child: FadeTransition(
+                  opacity: fade,
+                  child: Container(
+                    width: r.dialogWidth,
+                    padding: EdgeInsets.fromLTRB(r.s(18), r.s(20), r.s(18), r.s(18)),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(r.s(28)),
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xF5221650), Color(0xF50F0B28), Color(0xF5180C30)],
+                      ),
+                      border: Border.all(color: widget.glow.withValues(alpha: 0.9), width: 1.5),
+                      boxShadow: [
+                        BoxShadow(color: widget.glow.withValues(alpha: 0.4), blurRadius: 32, spreadRadius: 2),
+                        const BoxShadow(color: Colors.black87, blurRadius: 24),
+                      ],
+                    ),
+                    child: AnimatedSize(
+                      duration: const Duration(milliseconds: 260),
+                      curve: Curves.easeOutCubic,
+                      child: widget.child,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Both hosts side by side with WINNER / DEFEATED / DRAW badges and their scores.
+class PkResultHeader extends StatelessWidget {
   final PkHost left;
   final PkHost right;
   final int leftScore;
   final int rightScore;
-  final bool isHost;
-  final VoidCallback onPlayAgain;
-  final VoidCallback onSkip;
-  final VoidCallback? onBackToLive;
-  final VoidCallback? onStay;
 
-  const PkWinnerOverlay({
+  const PkResultHeader({
     super.key,
     required this.left,
     required this.right,
     required this.leftScore,
     required this.rightScore,
-    this.isHost = false,
-    required this.onPlayAgain,
-    required this.onSkip,
-    this.onBackToLive,
-    this.onStay,
   });
 
-  @override
-  State<PkWinnerOverlay> createState() => _PkWinnerOverlayState();
-}
-
-class _PkWinnerOverlayState extends State<PkWinnerOverlay> with SingleTickerProviderStateMixin {
-  late final AnimationController _anim = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 480),
-  )..forward();
-
-  late final Animation<double> _scale = CurvedAnimation(
-    parent: _anim,
-    curve: Curves.elasticOut,
-  );
-
-  late final Animation<double> _fade = CurvedAnimation(
-    parent: _anim,
-    curve: Curves.easeInOut,
-  );
-
-  Timer? _autoDismissTimer;
-  bool _isDismissing = false;
-
-  @override
-  void initState() {
-    super.initState();
-    // Auto fade away after 3.2 seconds
-    _autoDismissTimer = Timer(const Duration(milliseconds: 3200), _dismissOverlay);
-  }
-
-  void _dismissOverlay() {
-    if (!mounted || _isDismissing) return;
-    _isDismissing = true;
-    _autoDismissTimer?.cancel();
-    _anim.reverse().then((_) {
-      if (mounted) {
-        widget.onStay?.call();
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _autoDismissTimer?.cancel();
-    _anim.dispose();
-    super.dispose();
-  }
-
-  bool get isDraw => widget.leftScore == widget.rightScore;
-  bool get isLeftWinner => widget.leftScore > widget.rightScore;
-  PkHost get winner => isLeftWinner ? widget.left : widget.right;
-  PkHost get loser => isLeftWinner ? widget.right : widget.left;
-  int get winnerScore => isLeftWinner ? widget.leftScore : widget.rightScore;
-  int get loserScore => isLeftWinner ? widget.rightScore : widget.leftScore;
+  bool get isDraw => leftScore == rightScore;
+  PkHost get winner => leftScore > rightScore ? left : right;
 
   @override
   Widget build(BuildContext context) {
-    final format = NumberFormat('#,###');
-    final mq = MediaQuery.of(context);
-    final topPadding = mq.padding.top;
-    final isSmall = mq.size.width < 360;
+    final r = PkResponsive.of(context);
+    final leftOutcome = isDraw ? _Outcome.draw : (leftScore > rightScore ? _Outcome.won : _Outcome.lost);
+    final rightOutcome = isDraw ? _Outcome.draw : (rightScore > leftScore ? _Outcome.won : _Outcome.lost);
 
-    return GestureDetector(
-      onTap: _dismissOverlay,
-      behavior: HitTestBehavior.opaque,
-      child: Stack(
-        children: [
-          // 1. Semi-transparent backdrop scrim with blur
-          Positioned.fill(
-            child: FadeTransition(
-              opacity: _fade,
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-                child: Container(color: Colors.black.withValues(alpha: 0.50)),
-              ),
-            ),
-          ),
-
-          // 2. Badges directly over the video arena (Left & Right)
-          Positioned(
-            top: topPadding + 84,
-            left: 14,
-            right: 14,
-            child: Row(
-              children: [
-                Expanded(
-                  child: isDraw
-                      ? const _DrawBadge()
-                      : (isLeftWinner ? const _WinnerBadge() : const _LoserBadge()),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: isDraw
-                      ? const _DrawBadge()
-                      : (!isLeftWinner ? const _WinnerBadge() : const _LoserBadge()),
-                ),
-              ],
-            ),
-          ),
-
-          // 3. Center Announcement Banner Pop-up
-          Center(
-            child: ScaleTransition(
-              scale: _scale,
-              child: FadeTransition(
-                opacity: _fade,
-                child: Container(
-                  width: (mq.size.width * 0.86).clamp(270.0, 360.0),
-                  margin: const EdgeInsets.symmetric(horizontal: 20),
-                  padding: EdgeInsets.symmetric(horizontal: isSmall ? 16 : 22, vertical: isSmall ? 18 : 22),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(28),
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xF5181335), Color(0xF50D0B20), Color(0xF5180C28)],
-                    ),
-                    border: Border.all(
-                      color: isDraw ? const Color(0xFF7B52FF) : LuxeColors.gold,
-                      width: 1.6,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: (isDraw ? const Color(0xFF7B52FF) : const Color(0xFFFFC928)).withValues(alpha: 0.45),
-                        blurRadius: 30,
-                        spreadRadius: 2,
-                      ),
-                      const BoxShadow(color: Colors.black87, blurRadius: 24),
-                    ],
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Glowing Trophy / Crown Badge
-                      Container(
-                        width: isSmall ? 64 : 76,
-                        height: isSmall ? 64 : 76,
-                        padding: const EdgeInsets.all(3),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: isDraw
-                              ? const LinearGradient(colors: [Color(0xFF7B52FF), Color(0xFF00E5FF)])
-                              : LuxeColors.goldGradient,
-                          boxShadow: [
-                            BoxShadow(
-                              color: (isDraw ? const Color(0xFF7B52FF) : const Color(0xFFFFC928)).withValues(alpha: 0.6),
-                              blurRadius: 18,
-                            ),
-                          ],
-                        ),
-                        child: CustomAvatar(
-                          radius: isSmall ? 28 : 34,
-                          assetPath: isDraw ? widget.left.avatarAsset : winner.avatarAsset,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Winner Title
-                      Text(
-                        isDraw ? 'PK Battle Draw!' : '${winner.name} Won! 🏆',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: isSmall ? 18 : 21,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0.3,
-                          shadows: const [Shadow(color: Colors.black, blurRadius: 8)],
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-
-                      // Scores Clash Detail
-                      Container(
-                        margin: const EdgeInsets.symmetric(vertical: 8),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.07),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: Colors.white12, width: 0.8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.star_rounded, color: Color(0xFFFFDF00), size: 16),
-                            const SizedBox(width: 4),
-                            Text(
-                              isDraw
-                                  ? '${format.format(widget.leftScore)}  VS  ${format.format(widget.rightScore)}'
-                                  : '${format.format(winnerScore)} pts   VS   ${format.format(loserScore)} pts',
-                              style: const TextStyle(
-                                color: LuxeColors.gold,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.4,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      Text(
-                        isDraw
-                            ? 'Incredible clash! Both battlers tied.'
-                            : 'Glorious victory over ${loser.name}!',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.white60, fontSize: 12),
-                      ),
-
-                      // If Host mode, show Host Rebattle/End Battle; for viewers, only pure announcement that fades away
-                      if (widget.isHost) ...[
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton(
-                                style: OutlinedButton.styleFrom(
-                                  side: BorderSide(color: Colors.white.withValues(alpha: 0.25), width: 1.2),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                                  padding: EdgeInsets.symmetric(vertical: isSmall ? 10 : 12),
-                                ),
-                                onPressed: widget.onSkip,
-                                child: const Text(
-                                  'End Battle',
-                                  style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w700),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  gradient: LuxeColors.goldGradient,
-                                  borderRadius: BorderRadius.circular(18),
-                                  boxShadow: const [
-                                    BoxShadow(color: Color(0x66FFC928), blurRadius: 10, offset: Offset(0, 2)),
-                                  ],
-                                ),
-                                child: Material(
-                                  color: Colors.transparent,
-                                  child: InkWell(
-                                    borderRadius: BorderRadius.circular(18),
-                                    onTap: widget.onPlayAgain,
-                                    child: Padding(
-                                      padding: EdgeInsets.symmetric(vertical: isSmall ? 10 : 12),
-                                      child: const Center(
-                                        child: Text(
-                                          'Rebattle',
-                                          style: TextStyle(
-                                            color: Color(0xFF1F1400),
-                                            fontSize: 13.5,
-                                            fontWeight: FontWeight.w900,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _WinnerBadge extends StatelessWidget {
-  const _WinnerBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.topCenter,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [Color(0xFFFFEA79), Color(0xFFFFC928), Color(0xFFE59A00)]),
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: const [
-            BoxShadow(color: Color(0xAAFFD600), blurRadius: 10, offset: Offset(0, 2)),
-          ],
-        ),
-        child: const Text(
-          'WINNER',
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          isDraw ? 'PK Battle Draw! 🤝' : '${winner.name} Won! 🏆',
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(
-            color: Color(0xFF1F1400),
-            fontSize: 12,
+            color: Colors.white,
+            fontSize: r.s(20),
             fontWeight: FontWeight.w900,
-            letterSpacing: 1,
+            letterSpacing: 0.3,
+            shadows: const [Shadow(color: Colors.black, blurRadius: 8)],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _LoserBadge extends StatelessWidget {
-  const _LoserBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.topCenter,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        decoration: BoxDecoration(
-          color: const Color(0xCC1A102A),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white24, width: 0.9),
-        ),
-        child: const Text(
-          'DEFEATED',
-          style: TextStyle(
-            color: Color(0xFF8E88A8),
-            fontSize: 11,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0.8,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DrawBadge extends StatelessWidget {
-  const _DrawBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.topCenter,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [Color(0xFF5B3CFF), Color(0xFFB04DFF)]),
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: const [
-            BoxShadow(color: Color(0x887B52FF), blurRadius: 10, offset: Offset(0, 2)),
-          ],
-        ),
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
+        SizedBox(height: r.s(14)),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text('🤝', style: TextStyle(fontSize: 13)),
-            SizedBox(width: 4),
+            Expanded(
+              child: _HostResult(host: left, score: leftScore, outcome: leftOutcome, accent: const Color(0xFFFF2DC0)),
+            ),
             Text(
-              'DRAW',
+              'VS',
               style: TextStyle(
-                color: Colors.white,
-                fontSize: 11.5,
+                color: LuxeColors.gold,
+                fontSize: r.s(18),
                 fontWeight: FontWeight.w900,
-                letterSpacing: 0.8,
+                fontStyle: FontStyle.italic,
+                shadows: const [Shadow(color: Color(0xAAFFB300), blurRadius: 10)],
+              ),
+            ),
+            Expanded(
+              child: _HostResult(
+                host: right,
+                score: rightScore,
+                outcome: rightOutcome,
+                accent: const Color(0xFF00E5FF),
               ),
             ),
           ],
+        ),
+      ],
+    );
+  }
+}
+
+enum _Outcome { won, lost, draw }
+
+class _HostResult extends StatelessWidget {
+  final PkHost host;
+  final int score;
+  final _Outcome outcome;
+  final Color accent;
+
+  const _HostResult({required this.host, required this.score, required this.outcome, required this.accent});
+
+  @override
+  Widget build(BuildContext context) {
+    final r = PkResponsive.of(context);
+    final won = outcome == _Outcome.won;
+    final ring = won ? const Color(0xFFFFC928) : accent;
+    final avatarRadius = r.s(won ? 30 : 26);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(2.5),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: won ? LuxeColors.goldGradient : LinearGradient(colors: [accent, accent.withValues(alpha: 0.5)]),
+            boxShadow: [BoxShadow(color: ring.withValues(alpha: 0.6), blurRadius: 16)],
+          ),
+          child: Opacity(
+            opacity: outcome == _Outcome.lost ? 0.7 : 1,
+            child: CustomAvatar(radius: avatarRadius, assetPath: host.avatarAsset),
+          ),
+        ),
+        SizedBox(height: r.s(6)),
+        Text(
+          host.name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(color: Colors.white, fontSize: r.s(13), fontWeight: FontWeight.w800),
+        ),
+        SizedBox(height: r.s(2)),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.star_rounded, color: const Color(0xFFFFDF00), size: r.s(14)),
+              const SizedBox(width: 2),
+              Text(
+                formatPkStars(score),
+                style: TextStyle(color: LuxeColors.gold, fontSize: r.s(12.5), fontWeight: FontWeight.w800),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: r.s(6)),
+        _OutcomeBadge(outcome: outcome),
+      ],
+    );
+  }
+}
+
+class _OutcomeBadge extends StatelessWidget {
+  final _Outcome outcome;
+  const _OutcomeBadge({required this.outcome});
+
+  @override
+  Widget build(BuildContext context) {
+    final r = PkResponsive.of(context);
+    final (label, gradient, textColor) = switch (outcome) {
+      _Outcome.won => (
+        'WINNER',
+        const LinearGradient(colors: [Color(0xFFFFEA79), Color(0xFFFFC928), Color(0xFFE59A00)]),
+        const Color(0xFF1F1400),
+      ),
+      _Outcome.lost => (
+        'DEFEATED',
+        const LinearGradient(colors: [Color(0xCC2A1A40), Color(0xCC1A102A)]),
+        const Color(0xFF9E98B8),
+      ),
+      _Outcome.draw => ('DRAW', const LinearGradient(colors: [Color(0xFF5B3CFF), Color(0xFFB04DFF)]), Colors.white),
+    };
+
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: r.s(12), vertical: r.s(3.5)),
+      decoration: BoxDecoration(
+        gradient: gradient,
+        borderRadius: BorderRadius.circular(14),
+        border: outcome == _Outcome.lost ? Border.all(color: Colors.white24, width: 0.9) : null,
+      ),
+      child: Text(
+        label,
+        style: TextStyle(color: textColor, fontSize: r.s(10.5), fontWeight: FontWeight.w900, letterSpacing: 1),
+      ),
+    );
+  }
+}
+
+/// Pill button used for Exit / Rewatch / Rebattle.
+class PkEndButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool primary;
+  final VoidCallback onTap;
+
+  const PkEndButton({super.key, required this.label, required this.icon, required this.onTap, this.primary = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final r = PkResponsive.of(context);
+    final radius = BorderRadius.circular(r.s(18));
+    final fg = primary ? const Color(0xFF1F1400) : Colors.white;
+
+    return Container(
+      height: r.s(46).clamp(42.0, 52.0),
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        gradient: primary ? LuxeColors.goldGradient : null,
+        color: primary ? null : Colors.white.withValues(alpha: 0.06),
+        border: primary ? null : Border.all(color: Colors.white.withValues(alpha: 0.28), width: 1.2),
+        boxShadow: primary ? const [BoxShadow(color: Color(0x66FFC928), blurRadius: 12, offset: Offset(0, 3))] : null,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: radius,
+          onTap: onTap,
+          child: Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, color: fg, size: r.s(18)),
+                  SizedBox(width: r.s(6)),
+                  Text(
+                    label,
+                    style: TextStyle(color: fg, fontSize: r.s(14), fontWeight: FontWeight.w900, letterSpacing: 0.3),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
