@@ -3,6 +3,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 
 import '../../../core/widgets/custom_avatar.dart';
 import '../../../core/widgets/live_video_player.dart';
@@ -315,13 +316,21 @@ class _GiftPillInCard extends StatelessWidget {
         : const [Color(0xFF7FD0FF), Color(0xFF2E9BFF)];
 
     final giftIcon = gift.giftImage != null
-        ? Image.asset(
-            gift.giftImage!,
-            width: 22,
-            height: 22,
-            fit: BoxFit.contain,
-            errorBuilder: (_, _, _) => Text(gift.emoji, style: const TextStyle(fontSize: 16)),
-          )
+        ? (gift.giftImage!.endsWith('.lottie') || gift.giftImage!.endsWith('.json')
+            ? Lottie.asset(
+                gift.giftImage!,
+                width: 22,
+                height: 22,
+                fit: BoxFit.contain,
+                errorBuilder: (_, _, _) => Text(gift.emoji, style: const TextStyle(fontSize: 16)),
+              )
+            : Image.asset(
+                gift.giftImage!,
+                width: 22,
+                height: 22,
+                fit: BoxFit.contain,
+                errorBuilder: (_, _, _) => Text(gift.emoji, style: const TextStyle(fontSize: 16)),
+              ))
         : Text(gift.emoji, style: const TextStyle(fontSize: 16));
 
     return Container(

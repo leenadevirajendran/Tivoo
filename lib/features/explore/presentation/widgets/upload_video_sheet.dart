@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -78,7 +79,12 @@ class _UploadVideoSheetState extends ConsumerState<UploadVideoSheet> {
   }
 
   Future<void> _use(File file) async {
-    final bytes = await file.length();
+    int bytes = 0;
+    try {
+      if (!kIsWeb) {
+        bytes = await file.length();
+      }
+    } catch (_) {}
     if (bytes > ApiConfig.maxUploadBytes) return _fail('This video is larger than 2 GB');
     setState(() {
       _file = file;
@@ -371,7 +377,7 @@ class _UploadVideoSheetState extends ConsumerState<UploadVideoSheet> {
               width: thumbW,
               height: thumbH,
               color: const Color(0xFF1B1B26),
-              child: _thumb != null
+              child: (_thumb != null && !kIsWeb)
                   ? Stack(
                       fit: StackFit.expand,
                       children: [

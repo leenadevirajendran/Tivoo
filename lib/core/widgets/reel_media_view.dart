@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
@@ -117,14 +118,18 @@ class _ReelMediaViewState extends State<ReelMediaView> {
     }
     final url = widget.coverImageUrl;
     if (url != null && url.isNotEmpty) {
-      return url.startsWith('http')
-          ? CachedNetworkImage(
-              imageUrl: url,
-              fit: BoxFit.cover,
-              placeholder: (_, _) => placeholder,
-              errorWidget: (_, _, _) => placeholder,
-            )
-          : Image.file(File(url), fit: BoxFit.cover, errorBuilder: (_, _, _) => placeholder);
+      if (url.startsWith('http')) {
+        return CachedNetworkImage(
+          imageUrl: url,
+          fit: BoxFit.cover,
+          placeholder: (_, _) => placeholder,
+          errorWidget: (_, _, _) => placeholder,
+        );
+      }
+      if (kIsWeb || url.startsWith('blob:')) {
+        return Image.network(url, fit: BoxFit.cover, errorBuilder: (_, _, _) => placeholder);
+      }
+      return Image.file(File(url), fit: BoxFit.cover, errorBuilder: (_, _, _) => placeholder);
     }
     return placeholder;
   }

@@ -1,8 +1,9 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/constants/app_assets.dart';
 import '../../../../core/theme/luxe_theme.dart';
 import '../../../explore/presentation/controllers/posts_controller.dart';
 import '../../../home/presentation/controllers/home_controller.dart';
@@ -289,6 +290,8 @@ class _PostVideoScreenState extends ConsumerState<PostVideoScreen> {
       await ref.read(postsControllerProvider.notifier).upload(
         _state.videoFile,
         thumbnail: _state.coverThumbnail,
+        videoBytes: _state.videoBytes,
+        thumbnailBytes: _state.coverBytes,
         caption: caption,
         onProgress: (step, p) {
           if (mounted) {
@@ -344,6 +347,66 @@ class _PostVideoScreenState extends ConsumerState<PostVideoScreen> {
         ),
       );
     }
+  }
+
+  Widget _defaultCoverCard() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF2C1654), Color(0xFF131526)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.movie_creation_rounded, size: 28, color: Colors.white.withValues(alpha: 0.7)),
+            const SizedBox(height: 4),
+            Text(
+              'Reel',
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 10, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCoverThumbnailWidget() {
+    if (_state.coverBytes != null) {
+      return Image.memory(_state.coverBytes!, fit: BoxFit.cover);
+    }
+    if (_state.coverPath != null && _state.coverPath!.isNotEmpty) {
+      if (kIsWeb) {
+        return Image.network(
+          _state.coverPath!,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => _defaultCoverCard(),
+        );
+      }
+      if (_state.coverPath!.startsWith('blob:') || _state.coverPath!.startsWith('http')) {
+        return Image.network(
+          _state.coverPath!,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => _defaultCoverCard(),
+        );
+      }
+      return Image.file(
+        File(_state.coverPath!),
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => _defaultCoverCard(),
+      );
+    }
+    if (!kIsWeb && _state.coverThumbnail != null) {
+      return Image.file(
+        _state.coverThumbnail!,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => _defaultCoverCard(),
+      );
+    }
+    return _defaultCoverCard();
   }
 
   @override
@@ -425,9 +488,15 @@ class _PostVideoScreenState extends ConsumerState<PostVideoScreen> {
                           CoverPickerDialog.show(
                             context,
                             currentCover: _state.coverThumbnail,
+                            currentCoverBytes: _state.coverBytes,
+                            currentCoverPath: _state.coverPath,
                             videoDuration: _state.duration,
-                            onCoverSelected: (file) {
-                              setState(() => _state.coverThumbnail = file);
+                            onCoverSelected: (file, bytes, path) {
+                              setState(() {
+                                _state.coverThumbnail = file;
+                                _state.coverBytes = bytes;
+                                _state.coverPath = path;
+                              });
                             },
                           );
                         },
@@ -443,9 +512,7 @@ class _PostVideoScreenState extends ConsumerState<PostVideoScreen> {
                             children: [
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(10),
-                                child: _state.coverThumbnail != null
-                                    ? Image.file(_state.coverThumbnail!, fit: BoxFit.cover)
-                                    : Image.asset(AppAssets.status1, fit: BoxFit.cover),
+                                child: _buildCoverThumbnailWidget(),
                               ),
                               Positioned(
                                 left: 6,

@@ -1,12 +1,18 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../../../core/constants/app_assets.dart';
 import '../../../../core/theme/luxe_theme.dart';
+import '../../../broadcast/domain/models/camera_filter_model.dart';
+import '../../../broadcast/presentation/widgets/filter_overlay_widget.dart';
 import '../../domain/models/video_creation_state.dart';
 import '../widgets/editor_trim_timeline.dart';
 import '../widgets/music_picker_sheet.dart';
+import '../widgets/snap_lens_studio_sheet.dart';
+import '../widgets/video_filters.dart';
+import '../widgets/video_filter_overlay.dart';
 import 'post_video_screen.dart';
 
 class VideoEditorScreen extends StatefulWidget {
@@ -28,66 +34,14 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
   String? _activeText;
   Color _activeTextColor = const Color(0xFFFFD700);
   String? _activeSticker;
-  String _activeFilter = 'Natural';
+  late VideoFilterItem _activeFilterItem;
+  double _filterIntensity = 1.0;
   String? _activeEffect;
+  CameraFilterModel? _activeSnapLens;
 
   // Adjustments
   double _brightness = 0.0;
   double _contrast = 1.0;
-
-  static const List<({String name, ColorFilter? filter, Color previewColor})> _filters = [
-    (name: 'Original', filter: null, previewColor: Colors.grey),
-    (
-      name: 'Natural',
-      filter: ColorFilter.matrix([
-        1.05, 0, 0, 0, 5,
-        0, 1.02, 0, 0, 5,
-        0, 0, 0.98, 0, 0,
-        0, 0, 0, 1, 0,
-      ]),
-      previewColor: Color(0xFFFFB74D),
-    ),
-    (
-      name: 'Warm Sunset',
-      filter: ColorFilter.matrix([
-        1.2, 0, 0, 0, 10,
-        0, 1.0, 0, 0, 0,
-        0, 0, 0.8, 0, -10,
-        0, 0, 0, 1, 0,
-      ]),
-      previewColor: Color(0xFFFF7043),
-    ),
-    (
-      name: 'Cool Cyber',
-      filter: ColorFilter.matrix([
-        0.8, 0, 0, 0, -5,
-        0, 1.05, 0, 0, 5,
-        0, 0, 1.25, 0, 15,
-        0, 0, 0, 1, 0,
-      ]),
-      previewColor: Color(0xFF00E5FF),
-    ),
-    (
-      name: 'Golden Glow',
-      filter: ColorFilter.matrix([
-        1.2, 0, 0, 0, 15,
-        0, 1.15, 0, 0, 10,
-        0, 0, 0.7, 0, -20,
-        0, 0, 0, 1, 0,
-      ]),
-      previewColor: Color(0xFFFFD700),
-    ),
-    (
-      name: 'Noir B&W',
-      filter: ColorFilter.matrix([
-        0.33, 0.33, 0.33, 0, 0,
-        0.33, 0.33, 0.33, 0, 0,
-        0.33, 0.33, 0.33, 0, 0,
-        0, 0, 0, 1, 0,
-      ]),
-      previewColor: Colors.white60,
-    ),
-  ];
 
   static const List<String> _stickers = [
     '🔥', '👑', '⭐', '💖', '💃', '🎉', '🚀', '💎', '✨', '🎧', '⚡', '💯',
@@ -100,14 +54,37 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
     _activeText = _state.textOverlay;
     _activeTextColor = _state.textOverlayColor;
     _activeSticker = _state.stickerEmoji;
-    _activeFilter = _state.filterName;
+    _activeFilterItem = VideoFilterRepository.filters.firstWhere(
+      (f) => f.name.toLowerCase() == _state.filterName.toLowerCase() || f.id.toLowerCase() == _state.filterName.toLowerCase(),
+      orElse: () => VideoFilterRepository.filters.length > 1 ? VideoFilterRepository.filters[1] : VideoFilterRepository.filters.first,
+    );
+    _activeSnapLens = _state.activeSnapLens;
     _initVideo();
+  }
+
+  void _openSnapLensSheet() {
+    SnapLensStudioSheet.show(
+      context,
+      selectedLens: _activeSnapLens,
+      onSelectLens: (lens) {
+        setState(() {
+          _activeSnapLens = lens;
+          
+          _state.activeSnapLens = lens;
+        });
+      },
+    );
   }
 
   Future<void> _initVideo() async {
     try {
-      if (await _state.videoFile.exists() && (await _state.videoFile.length()) > 0) {
+      final path = _state.effectivePath;
+      if (kIsWeb || path.startsWith('blob:') || path.startsWith('http')) {
+        _controller = VideoPlayerController.networkUrl(Uri.parse(path));
+      } else if (await _state.videoFile.exists() && (await _state.videoFile.length()) > 0) {
         _controller = VideoPlayerController.file(_state.videoFile);
+      } else if (path.isNotEmpty) {
+        _controller = VideoPlayerController.networkUrl(Uri.parse(path));
       } else {
         _controller = VideoPlayerController.asset(AppAssets.video1);
       }
@@ -131,7 +108,28 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
       }
     } catch (e) {
       debugPrint('VideoEditorScreen init error: $e');
-      // Fallback to sample asset
+      // If error occurred and not web, try networkUrl
+      try {
+        final path = _state.effectivePath;
+        if (path.isNotEmpty) {
+          _controller = VideoPlayerController.networkUrl(Uri.parse(path));
+          await _controller!.initialize();
+          await _controller!.setLooping(true);
+          await _controller!.play();
+          _controller!.addListener(_onVideoTick);
+          if (mounted) {
+            setState(() {
+              _isInitialized = true;
+              _isPlaying = true;
+              _state.duration = _controller!.value.duration;
+              _state.trimEnd = _state.duration;
+            });
+            return;
+          }
+        }
+      } catch (_) {}
+
+      // Fallback only if all else fails
       _controller = VideoPlayerController.asset(AppAssets.video1);
       await _controller!.initialize();
       await _controller!.setLooping(true);
@@ -368,70 +366,165 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF131526),
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(width: 36, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
-                const SizedBox(height: 14),
-                const Text('Color Grade & Filters', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
-                const SizedBox(height: 16),
-                SizedBox(
-                  height: 90,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: _filters.length,
-                    separatorBuilder: (_, _) => const SizedBox(width: 14),
-                    itemBuilder: (context, i) {
-                      final item = _filters[i];
-                      final isSelected = _activeFilter == item.name;
-
-                      return GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _activeFilter = item.name;
-                            _state.filterName = item.name;
-                            _state.colorFilter = item.filter;
-                          });
-                          Navigator.of(ctx).pop();
-                        },
-                        child: Column(
-                          children: [
-                            Container(
-                              width: 52,
-                              height: 52,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: item.previewColor.withValues(alpha: 0.3),
-                                border: Border.all(
-                                  color: isSelected ? const Color(0xFFFF2A85) : Colors.white24,
-                                  width: isSelected ? 2.5 : 1,
-                                ),
-                              ),
-                              child: Icon(Icons.palette_rounded, color: item.previewColor, size: 24),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              item.name,
-                              style: TextStyle(
-                                color: isSelected ? const Color(0xFFFF2A85) : Colors.white70,
-                                fontSize: 11,
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                              ),
-                            ),
-                          ],
+        return StatefulBuilder(
+          builder: (sheetContext, setModalState) {
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(width: 38, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
+                    const SizedBox(height: 14),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Video Filters & FX',
+                          style: TextStyle(color: Colors.white, fontSize: 16.5, fontWeight: FontWeight.w800),
                         ),
-                      );
-                    },
-                  ),
+                        if (!_activeFilterItem.isOriginal)
+                          Text(
+                            '${(_filterIntensity * 100).round()}%',
+                            style: const TextStyle(color: LuxeColors.gold, fontSize: 13, fontWeight: FontWeight.bold),
+                          ),
+                      ],
+                    ),
+                    if (!_activeFilterItem.isOriginal) ...[
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          const Icon(Icons.tune_rounded, color: Color(0xFFFF2A85), size: 16),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: SliderTheme(
+                              data: SliderTheme.of(context).copyWith(
+                                activeTrackColor: const Color(0xFFFF2A85),
+                                inactiveTrackColor: Colors.white12,
+                                thumbColor: Colors.white,
+                                trackHeight: 3.0,
+                              ),
+                              child: Slider(
+                                value: _filterIntensity,
+                                min: 0.1,
+                                max: 1.0,
+                                onChanged: (val) {
+                                  setModalState(() => _filterIntensity = val);
+                                  setState(() {
+                                    _filterIntensity = val;
+                                    _state.colorFilter = _activeFilterItem.getColorFilter(val);
+                                  });
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      height: 106,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
+                        itemCount: VideoFilterRepository.filters.length,
+                        separatorBuilder: (_, _) => const SizedBox(width: 14),
+                        itemBuilder: (context, i) {
+                          final item = VideoFilterRepository.filters[i];
+                          final isSelected = _activeFilterItem.id == item.id;
+
+                          return GestureDetector(
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              setModalState(() {
+                                _activeFilterItem = item;
+                              });
+                              setState(() {
+                                _activeFilterItem = item;
+                                _state.filterName = item.name;
+                                _state.colorFilter = item.getColorFilter(_filterIntensity);
+                              });
+                            },
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  width: 58,
+                                  height: 58,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: isSelected ? const Color(0xFFFF2A85) : Colors.white24,
+                                      width: isSelected ? 2.8 : 1.2,
+                                    ),
+                                    boxShadow: isSelected
+                                        ? [
+                                            BoxShadow(
+                                              color: item.previewColor.withValues(alpha: 0.6),
+                                              blurRadius: 12,
+                                              spreadRadius: 1,
+                                            ),
+                                          ]
+                                        : null,
+                                  ),
+                                  child: ClipOval(
+                                    child: ColorFiltered(
+                                      colorFilter: item.getColorFilter(1.0) ??
+                                          const ColorFilter.mode(Colors.transparent, BlendMode.multiply),
+                                      child: Image.network(
+                                        item.coverUrl,
+                                        fit: BoxFit.cover,
+                                        cacheWidth: 140,
+                                        cacheHeight: 140,
+                                        errorBuilder: (_, _, _) => Container(
+                                          color: const Color(0xFF1B1638),
+                                          child: Icon(Icons.auto_awesome_rounded, color: item.previewColor, size: 22),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  item.name.length > 13 ? '${item.name.substring(0, 11)}...' : item.name,
+                                  style: TextStyle(
+                                    color: isSelected ? const Color(0xFFFF2A85) : Colors.white70,
+                                    fontSize: 10.5,
+                                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 2),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: item.previewColor.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    item.category,
+                                    style: TextStyle(
+                                      color: item.previewColor,
+                                      fontSize: 8.5,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
@@ -670,10 +763,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
     final c = _controller;
     final isReady = _isInitialized && c != null && c.value.isInitialized;
 
-    final filter = _filters.firstWhere(
-      (f) => f.name == _activeFilter,
-      orElse: () => _filters[0],
-    ).filter;
+    final filter = _activeFilterItem.getColorFilter(_filterIntensity);
 
     return Scaffold(
       backgroundColor: const Color(0xFF0B0E17),
@@ -766,6 +856,25 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
                               else
                                 const Center(
                                   child: CircularProgressIndicator(color: Color(0xFFFF2A85)),
+                                ),
+
+                              // Active Snap Lens Studio AR Overlay
+                              if (_activeSnapLens != null && !_activeSnapLens!.isNone)
+                                Positioned.fill(
+                                  child: IgnorePointer(
+                                    child: FilterOverlayWidget(filter: _activeSnapLens!),
+                                  ),
+                                ),
+
+                              // Active Video Filter AR / Atmospheric Overlay
+                              if (_activeFilterItem.overlayType != 'none')
+                                Positioned.fill(
+                                  child: IgnorePointer(
+                                    child: VideoFilterOverlay(
+                                      overlayType: _activeFilterItem.overlayType,
+                                      intensity: _filterIntensity,
+                                    ),
+                                  ),
                                 ),
 
                               // Play/Pause Overlay Icon
@@ -868,6 +977,63 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
                                     ),
                                   ),
                                 ),
+
+                              // Active Snap Lens Pill Badge
+                              if (_activeSnapLens != null && !_activeSnapLens!.isNone)
+                                Positioned(
+                                  top: _activeEffect != null ? 38 : 10,
+                                  right: 12,
+                                  child: GestureDetector(
+                                    onTap: _openSnapLensSheet,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xE60D0F1A),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: const Color(0xFFFFFC00), width: 1.2),
+                                        boxShadow: const [
+                                          BoxShadow(
+                                            color: Color(0x66FFFC00),
+                                            blurRadius: 8,
+                                            spreadRadius: 1,
+                                          ),
+                                        ],
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Container(
+                                            width: 7,
+                                            height: 7,
+                                            decoration: const BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: Color(0xFFFFFC00),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 5),
+                                          Text(
+                                            _activeSnapLens!.name,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 10.5,
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          GestureDetector(
+                                            onTap: () {
+                                              setState(() {
+                                                _activeSnapLens = null;
+                                                _state.activeSnapLens = null;
+                                              });
+                                            },
+                                            child: const Icon(Icons.close_rounded, color: Colors.white70, size: 12),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
                             ],
                           ),
                         ),
@@ -957,42 +1123,58 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  // Row 2: Filters, Adjust, Volume, Voice-over, Speed
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildToolButton(
-                        icon: Icons.palette_outlined,
-                        label: 'Filters',
-                        iconColor: const Color(0xFF00E676),
-                        onTap: _openFiltersSheet,
-                      ),
-                      _buildToolButton(
-                        icon: Icons.tune_rounded,
-                        label: 'Adjust',
-                        iconColor: const Color(0xFF40C4FF),
-                        onTap: _openAdjustDialog,
-                      ),
-                      _buildToolButton(
-                        icon: Icons.volume_up_rounded,
-                        label: 'Volume',
-                        iconColor: const Color(0xFFFFD700),
-                        onTap: _openMusic,
-                      ),
-                      _buildToolButton(
-                        icon: Icons.mic_rounded,
-                        label: 'Voice-over',
-                        iconColor: const Color(0xFFFF5252),
-                        onTap: _openVoiceoverSheet,
-                      ),
-                      _buildToolButton(
-                        icon: Icons.speed_rounded,
-                        label: 'Speed',
-                        iconColor: const Color(0xFFE040FB),
-                        badge: '${_state.playbackSpeed}x',
-                        onTap: _openSpeedSelector,
-                      ),
-                    ],
+                  // Row 2: Snap Lens, Filters, Adjust, Volume, Voice-over, Speed
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        const SizedBox(width: 4),
+                        _buildToolButton(
+                          icon: Icons.auto_awesome_rounded,
+                          label: 'Snap Lens',
+                          iconColor: const Color(0xFFFFFC00),
+                          badge: (_activeSnapLens != null && !_activeSnapLens!.isNone) ? 'ON' : null,
+                          onTap: _openSnapLensSheet,
+                        ),
+                        const SizedBox(width: 14),
+                        _buildToolButton(
+                          icon: Icons.palette_outlined,
+                          label: 'Filters',
+                          iconColor: const Color(0xFF00E676),
+                          onTap: _openFiltersSheet,
+                        ),
+                        const SizedBox(width: 14),
+                        _buildToolButton(
+                          icon: Icons.tune_rounded,
+                          label: 'Adjust',
+                          iconColor: const Color(0xFF40C4FF),
+                          onTap: _openAdjustDialog,
+                        ),
+                        const SizedBox(width: 14),
+                        _buildToolButton(
+                          icon: Icons.volume_up_rounded,
+                          label: 'Volume',
+                          iconColor: const Color(0xFFFFD700),
+                          onTap: _openMusic,
+                        ),
+                        const SizedBox(width: 14),
+                        _buildToolButton(
+                          icon: Icons.mic_rounded,
+                          label: 'Voice-over',
+                          iconColor: const Color(0xFFFF5252),
+                          onTap: _openVoiceoverSheet,
+                        ),
+                        const SizedBox(width: 14),
+                        _buildToolButton(
+                          icon: Icons.speed_rounded,
+                          label: 'Speed',
+                          iconColor: const Color(0xFFE040FB),
+                          badge: '${_state.playbackSpeed}x',
+                          onTap: _openSpeedSelector,
+                        ),
+                        const SizedBox(width: 4),
+                      ],
+                    ),
                   ),
                 ],
               ),

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,6 +10,8 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../../../../core/constants/app_assets.dart';
 import '../../../../core/theme/luxe_theme.dart';
+import '../../../broadcast/domain/models/camera_filter_model.dart';
+import '../../../broadcast/presentation/widgets/filter_overlay_widget.dart';
 import '../../domain/models/video_creation_state.dart';
 import '../widgets/camera_effects_overlay.dart';
 import '../widgets/camera_settings_sheet.dart';
@@ -16,7 +19,10 @@ import '../widgets/effects_bottom_sheet.dart';
 import '../widgets/filter_carousel.dart';
 import '../widgets/music_picker_sheet.dart';
 import '../widgets/retouch_bottom_sheet.dart';
+import '../widgets/snap_lens_carousel.dart';
+import '../widgets/snap_lens_studio_sheet.dart';
 import '../widgets/video_filters.dart';
+import '../widgets/video_filter_overlay.dart';
 import 'video_editor_screen.dart';
 
 /// Modern Instagram Reels-style video recording screen with Tivoo's signature pink & purple branding:
@@ -35,7 +41,7 @@ class VideoCameraScreen extends StatefulWidget {
 }
 
 class _VideoCameraScreenState extends State<VideoCameraScreen>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   CameraController? _cameraController;
   List<CameraDescription> _cameras = [];
   int _cameraIndex = 0;
@@ -44,10 +50,9 @@ class _VideoCameraScreenState extends State<VideoCameraScreen>
   bool _useFallbackViewfinder = false;
   bool _isPermissionDenied = false;
 
-  // Recording State
+  // Recording State (Instagram Reels-style circular shutter recording)
   bool _isRecording = false;
-  bool _isPaused = false;
-  Timer? _recordTimer;
+  late AnimationController _recordingAnimController;
   int _recordedSeconds = 0;
   static const int _maxDurationSeconds = 60; // 01:00 max duration
 
@@ -66,6 +71,10 @@ class _VideoCameraScreenState extends State<VideoCameraScreen>
   String _selectedFilterId = 'natural';
   double _filterIntensity = 0.85;
 
+  // Snap Lens Studio State (AR Lenses from https://developers.snap.com/lens-studio/home)
+  CameraFilterModel? _selectedSnapLens;
+  bool _useSnapLensMode = true;
+
   // Camera Mode: 'Photo', 'Video', 'Templates'
   String _activeMode = 'Video';
 
@@ -73,13 +82,29 @@ class _VideoCameraScreenState extends State<VideoCameraScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _recordingAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: _maxDurationSeconds),
+    );
+    _recordingAnimController.addListener(() {
+      final currentSec =
+          (_recordingAnimController.value * _maxDurationSeconds).floor();
+      if (currentSec != _recordedSeconds) {
+        setState(() => _recordedSeconds = currentSec);
+      }
+    });
+    _recordingAnimController.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        _stopRecording();
+      }
+    });
     _initCamera();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _recordTimer?.cancel();
+    _recordingAnimController.dispose();
     _countdownTimer?.cancel();
     _cameraController?.dispose();
     super.dispose();
@@ -191,7 +216,11 @@ class _VideoCameraScreenState extends State<VideoCameraScreen>
       final picker = ImagePicker();
       final picked = await picker.pickVideo(source: ImageSource.gallery);
       if (picked != null) {
-        _proceedToEditor(File(picked.path));
+        Uint8List? bytes;
+        try {
+          bytes = await picked.readAsBytes();
+        } catch (_) {}
+        _proceedToEditor(File(picked.path), pickedPath: picked.path, videoBytes: bytes);
       }
     } catch (e) {
       if (mounted) {
@@ -264,52 +293,18 @@ class _VideoCameraScreenState extends State<VideoCameraScreen>
 
     setState(() {
       _isRecording = true;
-      _isPaused = false;
       _recordedSeconds = 0;
     });
 
-    _recordTimer?.cancel();
-    _recordTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-      if (!_isPaused) {
-        setState(() {
-          _recordedSeconds++;
-          if (_recordedSeconds >= _maxDurationSeconds) {
-            _stopRecording();
-          }
-        });
-      }
-    });
-  }
-
-  Future<void> _pauseResumeRecording() async {
-    HapticFeedback.selectionClick();
-    final c = _cameraController;
-    if (!_isRecording) return;
-
-    if (c != null && c.value.isInitialized && c.value.isRecordingVideo) {
-      try {
-        if (_isPaused) {
-          await c.resumeVideoRecording();
-        } else {
-          await c.pauseVideoRecording();
-        }
-      } catch (e) {
-        debugPrint('pause/resume error: $e');
-      }
-    }
-
-    setState(() => _isPaused = !_isPaused);
+    _recordingAnimController.forward(from: 0.0);
   }
 
   Future<void> _cancelRecording() async {
     HapticFeedback.lightImpact();
     final c = _cameraController;
-    _recordTimer?.cancel();
     _countdownTimer?.cancel();
+    _recordingAnimController.stop();
+    _recordingAnimController.reset();
 
     if (c != null && c.value.isInitialized && c.value.isRecordingVideo) {
       try {
@@ -319,15 +314,15 @@ class _VideoCameraScreenState extends State<VideoCameraScreen>
 
     setState(() {
       _isRecording = false;
-      _isPaused = false;
       _recordedSeconds = 0;
       _currentCountdown = 0;
     });
   }
 
   Future<void> _stopRecording() async {
+    HapticFeedback.mediumImpact();
     final c = _cameraController;
-    _recordTimer?.cancel();
+    _recordingAnimController.stop();
 
     File? outputFile;
     if (c != null && c.value.isInitialized && c.value.isRecordingVideo) {
@@ -352,9 +347,10 @@ class _VideoCameraScreenState extends State<VideoCameraScreen>
       }
     }
 
+    _recordingAnimController.reset();
     setState(() {
       _isRecording = false;
-      _isPaused = false;
+      _recordedSeconds = 0;
     });
 
     if (outputFile != null && outputFile.existsSync()) {
@@ -362,7 +358,13 @@ class _VideoCameraScreenState extends State<VideoCameraScreen>
     }
   }
 
-  void _proceedToEditor(File file) {
+  String _formatInstagramTimer(int seconds) {
+    final m = seconds ~/ 60;
+    final s = (seconds % 60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
+  void _proceedToEditor(File file, {String? pickedPath, Uint8List? videoBytes}) {
     final selectedFilter = VideoFilterRepository.filters.firstWhere(
       (f) => f.id == _selectedFilterId,
       orElse: () => VideoFilterRepository.filters.first,
@@ -370,22 +372,19 @@ class _VideoCameraScreenState extends State<VideoCameraScreen>
 
     final state = VideoCreationState(
       videoFile: file,
+      videoPath: pickedPath ?? file.path,
+      videoBytes: videoBytes,
       filterName: selectedFilter.name,
       colorFilter: selectedFilter.getColorFilter(_filterIntensity),
       selectedMusicTitle: _selectedMusicTitle,
       activeEffectName: _activeEffectId,
+      activeSnapLens: _selectedSnapLens,
       playbackSpeed: 1.0,
     );
 
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => VideoEditorScreen(creationState: state)),
     );
-  }
-
-  String _formatTimer(int seconds) {
-    final m = (seconds ~/ 60).toString().padLeft(2, '0');
-    final s = (seconds % 60).toString().padLeft(2, '0');
-    return '$m:$s';
   }
 
   @override
@@ -420,10 +419,29 @@ class _VideoCameraScreenState extends State<VideoCameraScreen>
           else
             _buildSimulatedViewfinder(activeColorFilter),
 
-          // 2. Active AR Visual Effects Overlay
+          // 2. Snap Lens Studio Live AR Effect Overlay
+          if (_selectedSnapLens != null && !_selectedSnapLens!.isNone)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: FilterOverlayWidget(filter: _selectedSnapLens!),
+              ),
+            ),
+
+          // Active Video Filter AR / Atmospheric Overlay
+          if (selectedFilter.overlayType != 'none')
+            Positioned.fill(
+              child: IgnorePointer(
+                child: VideoFilterOverlay(
+                  overlayType: selectedFilter.overlayType,
+                  intensity: _filterIntensity,
+                ),
+              ),
+            ),
+
+          // 3. Active AR Visual Effects Overlay
           CameraEffectsOverlay(activeEffectId: _activeEffectId),
 
-          // 3. Countdown Overlay (3, 2, 1)
+          // 4. Countdown Overlay (3, 2, 1)
           if (_currentCountdown > 0)
             Container(
               color: Colors.black45,
@@ -438,6 +456,76 @@ class _VideoCameraScreenState extends State<VideoCameraScreen>
                       Shadow(color: Colors.white, blurRadius: 40),
                       Shadow(color: Color(0xFFFF2DC0), blurRadius: 20),
                     ],
+                  ),
+                ),
+              ),
+            ),
+
+          // 5. Active Snap Lens Floating Indicator
+          if (_selectedSnapLens != null && !_selectedSnapLens!.isNone)
+            Positioned(
+              top: mq.padding.top + 54,
+              left: 20,
+              right: 20,
+              child: Center(
+                child: GestureDetector(
+                  onTap: () => SnapLensStudioSheet.show(
+                    context,
+                    selectedLens: _selectedSnapLens,
+                    onSelectLens: (lens) => setState(() => _selectedSnapLens = lens),
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xE60D0F1A),
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: const Color(0xFFFFFC00), width: 1.2),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x66FFFC00),
+                          blurRadius: 12,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Color(0xFFFFFC00),
+                            boxShadow: [
+                              BoxShadow(color: Color(0xFFFFFC00), blurRadius: 6),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Snap Lens: ${_selectedSnapLens!.name}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            setState(() => _selectedSnapLens = null);
+                          },
+                          child: const Icon(
+                            Icons.close_rounded,
+                            color: Colors.white70,
+                            size: 16,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -571,68 +659,78 @@ class _VideoCameraScreenState extends State<VideoCameraScreen>
     );
   }
 
-  // Top Bar - Recording Active
+  // Top Bar - Recording Active (Instagram Reels-style with pink timer badge matching reference)
   Widget _buildRecordingTopBar() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
+        // Cancel / Dismiss Recording Button on Left
+        GestureDetector(
+          onTap: _cancelRecording,
+          behavior: HitTestBehavior.opaque,
+          child: Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.black.withValues(alpha: 0.4),
+              border: Border.all(color: Colors.white24, width: 1),
+            ),
+            child: const Icon(Icons.close_rounded, color: Colors.white, size: 22),
+          ),
+        ),
+
+        // Instagram Reels Pink Timer Pill Badge on Right (matching reference image)
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
           decoration: BoxDecoration(
-            color: const Color(0xCC131526),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: const Color(0xFFFF2DC0).withValues(alpha: 0.7),
-              width: 1.2,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 9,
-                height: 9,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Color(0xFFFF2DC0),
-                  boxShadow: [
-                    BoxShadow(color: Color(0xFFFF2DC0), blurRadius: 8),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '${_formatTimer(_recordedSeconds)} / ${_formatTimer(_maxDurationSeconds)}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.3,
-                ),
+            color: const Color(0xFFFF007F), // Vibrant Instagram Reels pink/magenta
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x66FF007F),
+                blurRadius: 10,
+                spreadRadius: 1,
               ),
             ],
           ),
-        ),
-        GestureDetector(
-          onTap: _cancelRecording,
-          child: Container(
-            padding: const EdgeInsets.all(7),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.black.withValues(alpha: 0.5),
+          child: Text(
+            _formatInstagramTimer(_recordedSeconds),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.5,
             ),
-            child: const Icon(Icons.close_rounded, color: Colors.white, size: 20),
           ),
         ),
       ],
     );
   }
 
-  // Right-Side Toolbar: Music, Effects, Retouch, Timer (Filter button removed!)
+  // Right-Side Toolbar: Snap Lens, Music, Effects, Retouch, Timer
   Widget _buildRightToolbar() {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // 0. Snap Lens Studio (AR Face & World Filters)
+        _buildToolbarItem(
+          icon: Icons.camera_front_rounded,
+          label: 'Snap Lens',
+          badge: (_selectedSnapLens != null && !_selectedSnapLens!.isNone) ? 'ON' : 'SNAP',
+          isActive: _selectedSnapLens != null && !_selectedSnapLens!.isNone,
+          onTap: () {
+            SnapLensStudioSheet.show(
+              context,
+              selectedLens: _selectedSnapLens,
+              onSelectLens: (lens) {
+                setState(() => _selectedSnapLens = lens);
+              },
+            );
+          },
+        ),
+        const SizedBox(height: 16),
+
         // 1. Music
         _buildToolbarItem(
           icon: Icons.music_note_rounded,
@@ -789,23 +887,107 @@ class _VideoCameraScreenState extends State<VideoCameraScreen>
     );
   }
 
-  // Normal Bottom Controls (Filter carousel, Shutter, Gallery, Flip, Mode selector)
+  Widget _buildFilterModeTab({
+    required String title,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? (title.contains('Snap')
+                  ? const Color(0xFFFFFC00)
+                  : const Color(0xFFFF2DC0))
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Text(
+          title,
+          style: TextStyle(
+            color: isSelected
+                ? (title.contains('Snap') ? Colors.black : Colors.white)
+                : Colors.white70,
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Normal Bottom Controls (Snap Lens / Filter carousel, Shutter, Gallery, Flip, Mode selector)
   Widget _buildNormalBottomControls() {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // 1. Horizontally Scrollable Filter Carousel with Intensity Slider
-        FilterCarousel(
-          filters: VideoFilterRepository.filters,
-          selectedFilterId: _selectedFilterId,
-          intensity: _filterIntensity,
-          onSelectFilter: (id) {
-            setState(() => _selectedFilterId = id);
-          },
-          onIntensityChanged: (val) {
-            setState(() => _filterIntensity = val);
-          },
+        // Lens Mode Switcher: Snap Lens Studio vs Color Filters
+        Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(3),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.55),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: _useSnapLensMode
+                  ? const Color(0xFFFFFC00).withValues(alpha: 0.6)
+                  : Colors.white24,
+              width: 1.2,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildFilterModeTab(
+                title: 'Snap Lenses 🟡',
+                isSelected: _useSnapLensMode,
+                onTap: () => setState(() => _useSnapLensMode = true),
+              ),
+              _buildFilterModeTab(
+                title: 'Color Filters 🎨',
+                isSelected: !_useSnapLensMode,
+                onTap: () => setState(() => _useSnapLensMode = false),
+              ),
+            ],
+          ),
         ),
+
+        // Carousel based on selected mode
+        if (_useSnapLensMode)
+          SnapLensCarousel(
+            lenses: MockFilterData.allFilters,
+            selectedLens: _selectedSnapLens,
+            onSelectLens: (lens) {
+              setState(() => _selectedSnapLens = lens);
+            },
+            onOpenStudio: () {
+              SnapLensStudioSheet.show(
+                context,
+                selectedLens: _selectedSnapLens,
+                onSelectLens: (lens) {
+                  setState(() => _selectedSnapLens = lens);
+                },
+              );
+            },
+          )
+        else
+          FilterCarousel(
+            filters: VideoFilterRepository.filters,
+            selectedFilterId: _selectedFilterId,
+            intensity: _filterIntensity,
+            onSelectFilter: (id) {
+              setState(() => _selectedFilterId = id);
+            },
+            onIntensityChanged: (val) {
+              setState(() => _filterIntensity = val);
+            },
+          ),
         const SizedBox(height: 12),
 
         // 2. Shutter & Gallery Row
@@ -971,168 +1153,65 @@ class _VideoCameraScreenState extends State<VideoCameraScreen>
     );
   }
 
-  // Active Recording Bottom Controls
+  // Active Recording Bottom Controls (Instagram Reels-style circular shutter with sweeping progress arc)
   Widget _buildRecordingBottomControls() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Timeline & Progress Strip
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-          height: 38,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            color: const Color(0x661E1A3C),
-            border: Border.all(color: const Color(0xFF9D4EDD), width: 1.5),
-          ),
-          child: Stack(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: Row(
-                  children: [
-                    for (int i = 0; i < 6; i++)
-                      Expanded(
-                        child: Image.asset(
-                          AppAssets.status1,
-                          height: 38,
-                          fit: BoxFit.cover,
-                          cacheWidth: 80,
-                        ),
-                      ),
-                  ],
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Center(
+        child: GestureDetector(
+          onTap: _stopRecording,
+          behavior: HitTestBehavior.opaque,
+          child: AnimatedBuilder(
+            animation: _recordingAnimController,
+            builder: (context, child) {
+              return SizedBox(
+                width: 88,
+                height: 88,
+                child: CustomPaint(
+                  painter: _InstagramRecordProgressPainter(
+                    progress: _recordingAnimController.value,
+                    progressColor: const Color(0xFFFF007F),
+                    trackColor: Colors.white.withValues(alpha: 0.22),
+                    strokeWidth: 5.0,
+                  ),
+                  child: child,
                 ),
-              ),
-              Positioned.fill(
-                child: Container(color: Colors.black38),
-              ),
-              Positioned(
-                left: 0,
-                top: 0,
-                bottom: 0,
-                width: (MediaQuery.of(context).size.width - 48) *
-                    (_recordedSeconds / _maxDurationSeconds),
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF9D4EDD), Color(0xFFFF2DC0)],
+              );
+            },
+            child: Center(
+              child: Container(
+                width: 76,
+                height: 76,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.black.withValues(alpha: 0.38),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    width: 1,
+                  ),
+                ),
+                child: Center(
+                  child: Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(7),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black45,
+                          blurRadius: 4,
+                          offset: Offset(0, 1),
+                        ),
+                      ],
                     ),
-                    borderRadius: BorderRadius.circular(6),
                   ),
                 ),
               ),
-            ],
+            ),
           ),
         ),
-        const SizedBox(height: 12),
-
-        // Pause, Stop, Done Buttons
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 36),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Pause / Resume Button
-              GestureDetector(
-                onTap: _pauseResumeRecording,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.white.withValues(alpha: 0.2),
-                        border: Border.all(color: Colors.white70, width: 1.5),
-                      ),
-                      child: Icon(
-                        _isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
-                        color: Colors.white,
-                        size: 26,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _isPaused ? 'Resume' : 'Pause',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Big Stop Button (Square inside red ring)
-              GestureDetector(
-                onTap: _stopRecording,
-                child: Container(
-                  width: 76,
-                  height: 76,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 4),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0xFFFF2DC0),
-                        blurRadius: 22,
-                        spreadRadius: 2,
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Container(
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFF2DC0),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
-              // Done Checkmark Button
-              GestureDetector(
-                onTap: _stopRecording,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 50,
-                      height: 50,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: [Color(0xFF9D4EDD), Color(0xFFFF2DC0)],
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.check_rounded,
-                        color: Colors.white,
-                        size: 28,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'Done',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-      ],
+      ),
     );
   }
 
@@ -1210,5 +1289,59 @@ class _VideoCameraScreenState extends State<VideoCameraScreen>
           ),
       ],
     );
+  }
+}
+
+/// Sweeping circular progress arc painter for the Instagram Reels-style record button.
+class _InstagramRecordProgressPainter extends CustomPainter {
+  final double progress; // 0.0 to 1.0
+  final Color progressColor;
+  final Color trackColor;
+  final double strokeWidth;
+
+  _InstagramRecordProgressPainter({
+    required this.progress,
+    this.progressColor = const Color(0xFFFF007F),
+    this.trackColor = Colors.white24,
+    this.strokeWidth = 5.0,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (size.width - strokeWidth) / 2;
+
+    // 1. Draw subtle background track ring
+    final trackPaint = Paint()
+      ..color = trackColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth;
+    canvas.drawCircle(center, radius, trackPaint);
+
+    // 2. Draw sweeping progress arc in bright pink/magenta starting at 12 o'clock (-pi/2)
+    if (progress > 0) {
+      final progressPaint = Paint()
+        ..color = progressColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth
+        ..strokeCap = StrokeCap.round;
+
+      final sweepAngle = 2 * math.pi * progress;
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        -math.pi / 2,
+        sweepAngle,
+        false,
+        progressPaint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _InstagramRecordProgressPainter oldDelegate) {
+    return oldDelegate.progress != progress ||
+        oldDelegate.progressColor != progressColor ||
+        oldDelegate.trackColor != trackColor ||
+        oldDelegate.strokeWidth != strokeWidth;
   }
 }

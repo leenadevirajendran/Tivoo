@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../../core/constants/app_assets.dart';
 
 class EditorTrimTimeline extends StatefulWidget {
   final Duration totalDuration;
@@ -24,17 +23,6 @@ class EditorTrimTimeline extends StatefulWidget {
 }
 
 class _EditorTrimTimelineState extends State<EditorTrimTimeline> {
-  static const List<String> _filmstripThumbs = [
-    AppAssets.status1,
-    AppAssets.status2,
-    AppAssets.status3,
-    AppAssets.status4,
-    AppAssets.status5,
-    AppAssets.avatarDiya,
-    AppAssets.avatarSneha,
-    AppAssets.avatarPriya,
-  ];
-
   String _format(Duration d) {
     final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
     final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
@@ -100,16 +88,40 @@ class _EditorTrimTimelineState extends State<EditorTrimTimeline> {
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  // Filmstrip thumbnails
+                  // Instagram-style sleek timeline track
                   ClipRRect(
                     borderRadius: BorderRadius.circular(10),
-                    child: Row(
-                      children: [
-                        for (final img in _filmstripThumbs)
-                          Expanded(
-                            child: Image.asset(img, height: 48, fit: BoxFit.cover),
-                          ),
-                      ],
+                    child: Container(
+                      height: 48,
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Color(0xFF1E1035), Color(0xFF2C1654), Color(0xFF1A1528)],
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          for (int i = 0; i < 8; i++)
+                            Expanded(
+                              child: Container(
+                                margin: const EdgeInsets.symmetric(horizontal: 1.5, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF3D216E).withValues(alpha: 0.6),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 0.5),
+                                ),
+                                child: Center(
+                                  child: Icon(
+                                    Icons.movie_creation_outlined,
+                                    size: 16,
+                                    color: Colors.white.withValues(alpha: 0.25),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
 

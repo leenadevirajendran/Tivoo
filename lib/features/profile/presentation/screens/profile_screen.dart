@@ -549,7 +549,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           ProfileIdentityHeader(
                             username: isViewingStreamer
                                 ? streamer!.streamerName.toLowerCase().replaceAll(' ', '_')
-                                : profile.username,
+                                : (profile.username.isNotEmpty ? profile.username : 'creator'),
                             avatarAsset: isViewingStreamer
                                 ? (streamer!.streamerAssetPath ??
                                     (streamer.streamerAvatarUrl == null

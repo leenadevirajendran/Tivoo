@@ -12,6 +12,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_assets.dart';
+import '../../../core/services/gift_video_pool.dart';
 import '../../../core/services/reel_video_manager.dart';
 import '../../../core/theme/luxe_theme.dart';
 import '../../../core/widgets/comment_action_sheet.dart';
@@ -238,6 +239,7 @@ abstract class PkBattleViewState<T extends PkBattleView> extends ConsumerState<T
   @override
   void initState() {
     super.initState();
+    GiftVideoPool.instance.warmUp();
     final match = widget.feedItem.match;
     left = match.left;
     right = match.right;
@@ -473,6 +475,16 @@ abstract class PkBattleViewState<T extends PkBattleView> extends ConsumerState<T
     'Love Castle': 'p3d_love_castle',
     'Galaxy Rocket': 'p3d_galaxy_rocket',
     'Diamond Wings': 'p3d_diamond_wings',
+    'Search UFO': 'p3d_search_ufo',
+    'UFO': 'p3d_search_ufo',
+    'Kitsune Fox': 'p3d_kitsune_fox',
+    'Fox': 'p3d_kitsune_fox',
+    'Celestial Dragon': 'p3d_celestial_dragon',
+    'Dragon': 'p3d_celestial_dragon',
+    'Love Bunny': 'p3d_love_bunny',
+    'Bunny': 'p3d_love_bunny',
+    'Cupid Target': 'p3d_cupid_target',
+    'Target': 'p3d_cupid_target',
   };
 
   GiftItem _playable(store.GiftItem gift) => GiftItem(
@@ -480,7 +492,10 @@ abstract class PkBattleViewState<T extends PkBattleView> extends ConsumerState<T
     name: gift.name,
     icon: gift.icon,
     imageAssetPath: gift.imageAssetPath,
+    lottieAssetPath: gift.lottieAssetPath,
+    videoAssetPath: gift.videoAssetPath,
     diamonds: gift.diamonds,
+    animationTypeOverride: gift.animationTypeOverride,
   );
 
   void _sendGift(GiftItem gift, int quantity, String recipient) {

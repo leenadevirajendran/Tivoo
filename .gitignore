@@ -6,9 +6,11 @@
 *.zip
 .DS_Store
 .atom/
+.build/
 .buildlog/
 .history
 .svn/
+.swiftpm/
 migrate_working_dir/
 
 # IntelliJ related
@@ -72,3 +74,10 @@ migrate_working_dir/
 
 # Coverage
 coverage/
+
+# Local databases and temporary test artifacts
+*.db
+*.sqlite
+*.sqlite3
+test_*.jpg
+test_*.png

@@ -1,17 +1,21 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../../../core/constants/app_assets.dart';
 import '../../../../core/theme/luxe_theme.dart';
 
 class CoverPickerDialog extends StatefulWidget {
   final File? currentCover;
+  final Uint8List? currentCoverBytes;
+  final String? currentCoverPath;
   final Duration videoDuration;
-  final ValueChanged<File> onCoverSelected;
+  final void Function(File file, Uint8List? bytes, String? path) onCoverSelected;
 
   const CoverPickerDialog({
     super.key,
     this.currentCover,
+    this.currentCoverBytes,
+    this.currentCoverPath,
     required this.videoDuration,
     required this.onCoverSelected,
   });
@@ -19,8 +23,10 @@ class CoverPickerDialog extends StatefulWidget {
   static Future<void> show(
     BuildContext context, {
     File? currentCover,
+    Uint8List? currentCoverBytes,
+    String? currentCoverPath,
     required Duration videoDuration,
-    required ValueChanged<File> onCoverSelected,
+    required void Function(File file, Uint8List? bytes, String? path) onCoverSelected,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -28,6 +34,8 @@ class CoverPickerDialog extends StatefulWidget {
       backgroundColor: Colors.transparent,
       builder: (_) => CoverPickerDialog(
         currentCover: currentCover,
+        currentCoverBytes: currentCoverBytes,
+        currentCoverPath: currentCoverPath,
         videoDuration: videoDuration,
         onCoverSelected: onCoverSelected,
       ),
@@ -40,36 +48,95 @@ class CoverPickerDialog extends StatefulWidget {
 
 class _CoverPickerDialogState extends State<CoverPickerDialog> {
   File? _selectedFile;
-
-  static const List<String> _sampleFrames = [
-    AppAssets.status1,
-    AppAssets.status2,
-    AppAssets.status3,
-    AppAssets.status4,
-    AppAssets.status5,
-    AppAssets.avatarDiya,
-    AppAssets.avatarSneha,
-    AppAssets.avatarPriya,
-  ];
-
-  late int _selectedFrameIndex = 0;
+  Uint8List? _selectedBytes;
+  String? _selectedPath;
 
   @override
   void initState() {
     super.initState();
     _selectedFile = widget.currentCover;
+    _selectedBytes = widget.currentCoverBytes;
+    _selectedPath = widget.currentCoverPath;
   }
 
   Future<void> _pickFromGallery() async {
     try {
       final img = await ImagePicker().pickImage(source: ImageSource.gallery);
       if (img != null) {
-        final f = File(img.path);
-        setState(() => _selectedFile = f);
-        widget.onCoverSelected(f);
+        final bytes = await img.readAsBytes();
+        final path = img.path;
+        final f = File(path);
+        setState(() {
+          _selectedFile = f;
+          _selectedBytes = bytes;
+          _selectedPath = path;
+        });
+        widget.onCoverSelected(f, bytes, path);
         if (mounted) Navigator.of(context).pop();
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Error picking cover: $e');
+    }
+  }
+
+  Widget _defaultPlaceholder() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF2C1654), Color(0xFF131526)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.video_library_rounded, size: 36, color: Colors.white.withValues(alpha: 0.7)),
+            const SizedBox(height: 8),
+            Text(
+              'Select Cover',
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 11, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCoverPreview() {
+    if (_selectedBytes != null) {
+      return Image.memory(_selectedBytes!, fit: BoxFit.cover);
+    }
+    if (_selectedPath != null && _selectedPath!.isNotEmpty) {
+      if (kIsWeb) {
+        return Image.network(
+          _selectedPath!,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => _defaultPlaceholder(),
+        );
+      }
+      if (_selectedPath!.startsWith('blob:') || _selectedPath!.startsWith('http')) {
+        return Image.network(
+          _selectedPath!,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => _defaultPlaceholder(),
+        );
+      }
+      return Image.file(
+        File(_selectedPath!),
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => _defaultPlaceholder(),
+      );
+    }
+    if (!kIsWeb && _selectedFile != null) {
+      return Image.file(
+        _selectedFile!,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => _defaultPlaceholder(),
+      );
+    }
+    return _defaultPlaceholder();
   }
 
   @override
@@ -109,14 +176,16 @@ class _CoverPickerDialogState extends State<CoverPickerDialog> {
                 ),
                 TextButton(
                   onPressed: () {
-                    if (_selectedFile != null) widget.onCoverSelected(_selectedFile!);
+                    if (_selectedFile != null) {
+                      widget.onCoverSelected(_selectedFile!, _selectedBytes, _selectedPath);
+                    }
                     Navigator.of(context).pop();
                   },
                   child: const Text('Save', style: TextStyle(color: LuxeColors.gold, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             // Cover Preview Box
             Container(
               width: 140,
@@ -130,62 +199,33 @@ class _CoverPickerDialogState extends State<CoverPickerDialog> {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(14),
-                child: _selectedFile != null
-                    ? Image.file(_selectedFile!, fit: BoxFit.cover)
-                    : Image.asset(_sampleFrames[_selectedFrameIndex], fit: BoxFit.cover),
+                child: _buildCoverPreview(),
               ),
             ),
-            const SizedBox(height: 16),
-            const Text(
-              'Select a frame from your video',
-              style: TextStyle(color: Colors.white70, fontSize: 12.5, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 10),
-            // Frame filmstrip
+            const SizedBox(height: 20),
+            // Upload button
             SizedBox(
-              height: 56,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                itemCount: _sampleFrames.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 8),
-                itemBuilder: (context, i) {
-                  final isSelected = _selectedFile == null && _selectedFrameIndex == i;
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _selectedFile = null;
-                        _selectedFrameIndex = i;
-                      });
-                    },
-                    child: Container(
-                      width: 42,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: isSelected ? const Color(0xFFFF2A85) : Colors.white24,
-                          width: isSelected ? 2.2 : 1,
-                        ),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
-                        child: Image.asset(_sampleFrames[i], fit: BoxFit.cover),
-                      ),
-                    ),
-                  );
-                },
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton.icon(
+                onPressed: _pickFromGallery,
+                icon: const Icon(Icons.add_photo_alternate_rounded, color: Colors.black, size: 20),
+                label: const Text(
+                  'Upload Cover Image',
+                  style: TextStyle(color: Colors.black, fontSize: 14, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: LuxeColors.gold,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  elevation: 2,
+                ),
               ),
             ),
-            const SizedBox(height: 14),
-            OutlinedButton.icon(
-              onPressed: _pickFromGallery,
-              icon: const Icon(Icons.photo_library_outlined, color: LuxeColors.gold, size: 18),
-              label: const Text('Upload Cover from Gallery', style: TextStyle(color: Colors.white, fontSize: 13)),
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Colors.white24),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              ),
+            const SizedBox(height: 12),
+            Text(
+              'Select any photo from your device to use as the reel cover',
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 11.5),
+              textAlign: TextAlign.center,
             ),
           ],
         ),

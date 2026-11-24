@@ -1,10 +1,19 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+
+import '../../../broadcast/domain/models/camera_filter_model.dart';
 
 /// Holds the active state of a video creation and editing session.
 class VideoCreationState {
   final File videoFile;
+  final String? videoPath;
+  final Uint8List? videoBytes;
   File? coverThumbnail;
+  Uint8List? coverBytes;
+  String? coverPath;
+
+  String get effectivePath => (videoPath != null && videoPath!.isNotEmpty) ? videoPath! : videoFile.path;
   Duration duration;
   Duration trimStart;
   Duration trimEnd;
@@ -22,6 +31,7 @@ class VideoCreationState {
   double contrast;
   double saturation;
   String? activeEffectName;
+  CameraFilterModel? activeSnapLens;
 
   // Post metadata
   String caption;
@@ -36,7 +46,11 @@ class VideoCreationState {
 
   VideoCreationState({
     required this.videoFile,
+    this.videoPath,
+    this.videoBytes,
     this.coverThumbnail,
+    this.coverBytes,
+    this.coverPath,
     this.duration = const Duration(seconds: 15),
     this.trimStart = Duration.zero,
     Duration? trimEnd,
@@ -54,6 +68,7 @@ class VideoCreationState {
     this.contrast = 1.0,
     this.saturation = 1.0,
     this.activeEffectName,
+    this.activeSnapLens,
     this.caption = '',
     List<String>? hashtags,
     this.audience = 'Public',

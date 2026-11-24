@@ -86,9 +86,12 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Resume playback when coming back to the Explore tab.
+    // Resume playback and fetch latest reels when coming back to the Explore tab.
     ref.listen<int>(bottomNavIndexProvider, (prev, next) {
-      if (next == 0 && prev != 0) _onPageSettled(_currentIndex);
+      if (next == 0 && prev != 0) {
+        ref.read(postsControllerProvider.notifier).refresh();
+        _onPageSettled(_currentIndex);
+      }
     });
     // A new upload lands at the top of the feed: restart playback on the visible page.
     ref.listen<PostsState>(postsControllerProvider, (prev, next) {
@@ -107,18 +110,26 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
           Positioned.fill(
             child: feed.isEmpty
                 ? _EmptyState(onClear: () => ref.read(exploreSearchProvider.notifier).state = '')
-                : PageView.builder(
-                    controller: _pageController,
-                    scrollDirection: Axis.vertical,
-                    itemCount: feed.length,
-                    onPageChanged: (i) {
-                      setState(() => _currentIndex = i);
-                      _onPageSettled(i);
+                : RefreshIndicator(
+                    color: const Color(0xFFFF2A85),
+                    backgroundColor: const Color(0xFF131526),
+                    onRefresh: () async {
+                      await ref.read(postsControllerProvider.notifier).refresh();
                     },
-                    itemBuilder: (context, i) => Center(
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(maxWidth: context.isTablet ? 480 : double.infinity),
-                        child: ExploreReelCard(key: ValueKey(feed[i].id), stream: feed[i], isActive: i == _currentIndex),
+                    child: PageView.builder(
+                      controller: _pageController,
+                      scrollDirection: Axis.vertical,
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      itemCount: feed.length,
+                      onPageChanged: (i) {
+                        setState(() => _currentIndex = i);
+                        _onPageSettled(i);
+                      },
+                      itemBuilder: (context, i) => Center(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(maxWidth: context.isTablet ? 480 : double.infinity),
+                          child: ExploreReelCard(key: ValueKey(feed[i].id), stream: feed[i], isActive: i == _currentIndex),
+                        ),
                       ),
                     ),
                   ),

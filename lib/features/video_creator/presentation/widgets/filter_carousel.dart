@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../../core/constants/app_assets.dart';
 import 'video_filters.dart';
 
 /// Horizontally scrollable Instagram Reels-style filter carousel with:
@@ -157,11 +156,26 @@ class FilterCarousel extends StatelessWidget {
                         child: ColorFiltered(
                           colorFilter: previewFilter ??
                               const ColorFilter.mode(Colors.transparent, BlendMode.multiply),
-                          child: Image.asset(
-                            AppAssets.status1,
+                          child: Image.network(
+                            item.coverUrl,
                             fit: BoxFit.cover,
-                            cacheWidth: 120,
-                            cacheHeight: 120,
+                            cacheWidth: 140,
+                            cacheHeight: 140,
+                            errorBuilder: (_, _, _) => Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    item.previewColor.withValues(alpha: 0.8),
+                                    const Color(0xFF131526),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                              ),
+                              child: Center(
+                                child: Icon(Icons.auto_awesome_rounded, color: item.previewColor, size: 20),
+                              ),
+                            ),
                           ),
                         ),
                       ),

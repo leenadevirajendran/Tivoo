@@ -1,5 +1,6 @@
 // PK battle data: hosts, matches, settings, gift events and demo data.
 
+import 'dart:typed_data';
 import '../../../core/constants/app_assets.dart';
 
 /// One side of the PK battle.
@@ -11,6 +12,8 @@ class PkHost {
   final String videoAsset;
   final String likes;
   final String viewers;
+  final Uint8List? coverBytes;
+  final String? coverUrl;
 
   const PkHost({
     required this.name,
@@ -20,9 +23,19 @@ class PkHost {
     required this.viewers,
     this.handle = '',
     this.bio = '',
+    this.coverBytes,
+    this.coverUrl,
   });
 
-  PkHost copyWith({String? name, String? avatarAsset, String? videoAsset, String? likes, String? viewers}) {
+  PkHost copyWith({
+    String? name,
+    String? avatarAsset,
+    String? videoAsset,
+    String? likes,
+    String? viewers,
+    Uint8List? coverBytes,
+    String? coverUrl,
+  }) {
     return PkHost(
       name: name ?? this.name,
       avatarAsset: avatarAsset ?? this.avatarAsset,
@@ -31,6 +44,8 @@ class PkHost {
       viewers: viewers ?? this.viewers,
       handle: name != null ? '@${name.toLowerCase()}' : handle,
       bio: name != null ? '' : bio,
+      coverBytes: coverBytes ?? this.coverBytes,
+      coverUrl: coverUrl ?? this.coverUrl,
     );
   }
 }
@@ -284,6 +299,16 @@ class PkDemoData {
 
   /// Star value of gifts mentioned in chat messages (per gift); unknown gifts count as 10.
   static const Map<String, int> giftValues = {
+    'Search UFO': 2000,
+    'UFO': 2000,
+    'Kitsune Fox': 8000,
+    'Fox': 8000,
+    'Celestial Dragon': 12000,
+    'Dragon': 12000,
+    'Love Bunny': 1500,
+    'Bunny': 1500,
+    'Cupid Target': 800,
+    'Target': 800,
     'Rose': 1,
     'Heart': 5,
     'Car': 200,
@@ -300,6 +325,17 @@ class PkDemoData {
 
   /// Sticker artwork for gifts mentioned in simulated chat messages.
   static const Map<String, String> giftImages = {
+    'Search UFO': AppAssets.giftSearchLottie,
+    'UFO': AppAssets.giftSearchLottie,
+    'Search': AppAssets.giftSearchLottie,
+    'Kitsune Fox': AppAssets.giftThumbFox,
+    'Fox': AppAssets.giftThumbFox,
+    'Celestial Dragon': AppAssets.giftThumbDragon,
+    'Dragon': AppAssets.giftThumbDragon,
+    'Love Bunny': AppAssets.giftThumbBunny,
+    'Bunny': AppAssets.giftThumbBunny,
+    'Cupid Target': AppAssets.giftThumbTarget,
+    'Target': AppAssets.giftThumbTarget,
     'Rose': AppAssets.giftRose,
     'Golden Horse': AppAssets.giftGoldenHorse,
     'Ocean Whale': AppAssets.giftOceanWhale,
@@ -314,6 +350,9 @@ class PkDemoData {
     ('Priya', AppAssets.avatarPriya, 'Go go go 💛', false),
     ('Rahul', AppAssets.avatarArun, 'sent Golden Horse 🐎 x 1', true),
     ('Sneha', AppAssets.avatarSneha, 'Love this PK 🔥', false),
+    ('Vikram', AppAssets.avatarKarthik, 'sent Search UFO 🛸 x 1', true),
+    ('Arjun', AppAssets.avatarArun, 'sent Kitsune Fox 🦊 x 1', true),
+    ('Divya', AppAssets.avatarDiya, 'sent Celestial Dragon 🐉 x 1', true),
     ('Vicky', AppAssets.avatarVicky, 'Both are amazing 👏', false),
     ('Ananya', AppAssets.avatarDiya, 'sent Ocean Whale 🐋 x 1', true),
   ];
