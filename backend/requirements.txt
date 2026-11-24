@@ -1,0 +1,30 @@
+# Web Framework & ASGI Server
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+python-multipart>=0.0.18
+Jinja2>=3.1.4
+
+# Configuration & Validation
+pydantic>=2.10.0
+pydantic-settings>=2.6.0
+python-dotenv>=1.0.1
+email-validator>=2.2.0
+
+# Database (MySQL / phpMyAdmin)
+SQLAlchemy>=2.0.36
+PyMySQL>=1.1.1
+mysql-connector-python>=8.2.0
+cryptography>=44.0.0
+
+# Security & Authentication
+PyJWT>=2.10.0
+bcrypt>=4.2.0
+
+# Cloud Storage (AWS S3 / Cloudflare R2) & Media
+boto3>=1.35.0
+Pillow>=11.0.0
+
+# HTTP Client & Testing
+httpx>=0.28.0
+pytest>=8.3.0
+

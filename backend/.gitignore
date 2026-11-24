@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+venv/
+ENV/
+env/
+
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+*.db
+*.sqlite
+*.sqlite3
+
+# Uploaded & Transcoded Local Media
+storage/
+uploads/
+hls/
+temp/
+
+# Logs & IDE
+*.log
+.vscode/
+.idea/
+.pytest_cache/
+

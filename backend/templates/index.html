@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ app_name }} — Creator Studio &amp; Reels Platform</title>
+  <link rel="stylesheet" href="/static/css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js" defer></script>
+  <script src="/static/js/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <span class="brand-logo" aria-hidden="true">T</span>
+        <div>
+          <div class="brand-title">{{ app_name }}</div>
+          <div class="brand-sub">MySQL <code>{{ db_name }}</code> &middot; {{ storage_backend | upper }} Storage</div>
+        </div>
+      </div>
+
+      <div class="health-badges" id="healthBadges">
+        <span class="badge badge-muted">Checking server...</span>
+      </div>
+
+      <div class="topbar-actions">
+        <a href="/docs" class="btn btn-ghost btn-sm" target="_blank" rel="noopener">API Docs</a>
+        <button id="openAuthBtn" class="btn btn-primary btn-sm" type="button">Sign In</button>
+        <button id="logoutBtn" class="btn btn-ghost btn-sm hidden" type="button">Logout</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- Left Sidebar: Account, Profile & Creator Search -->
+    <aside class="sidebar">
+      <section class="card" id="guestCard">
+        <h2 class="card-title">Creator Account</h2>
+        <p class="muted">
+          Sign in with password or real Email OTP (<code>{{ mail_sender or "SMTP" }}</code>) to upload reels, follow creators, like, and comment. All records persist live in MySQL <code>{{ db_name }}</code>.
+        </p>
+        <div class="stack-row">
+          <button id="sidebarSignInBtn" class="btn btn-primary btn-full" type="button">Sign In / OTP</button>
+          <button id="sidebarRegisterBtn" class="btn btn-secondary btn-full" type="button">Create Account</button>
+        </div>
+      </section>
+
+      <section class="card hidden" id="profileCard">
+        <div class="profile-cover" id="profileCover">
+          <label class="cover-upload-pill" title="Upload cover image">
+            Cover
+            <input type="file" id="coverFileInput" accept="image/*" hidden>
+          </label>
+        </div>
+        <div class="profile-head">
+          <label class="avatar-wrap" title="Change avatar">
+            <img id="profileAvatarImg" src="" alt="Avatar" class="avatar-img hidden">
+            <span id="profileAvatarFallback" class="avatar-fallback">U</span>
+            <input type="file" id="avatarFileInput" accept="image/*" hidden>
+          </label>
+          <div class="profile-identity">
+            <div class="profile-name-row">
+              <h2 id="profileName" class="profile-name">Creator</h2>
+              <span id="profileVerifiedBadge" class="verified-chip hidden" title="Email verified">&#10003;</span>
+            </div>
+            <div id="profileHandle" class="muted">@username</div>
+          </div>
+        </div>
+
+        <p id="profileBio" class="profile-bio muted"></p>
+
+        <div class="stats-grid">
+          <button class="stat-box" type="button" id="showFollowersBtn">
+            <strong id="statFollowers">0</strong>
+            <span>Followers</span>
+          </button>
+          <button class="stat-box" type="button" id="showFollowingBtn">
+            <strong id="statFollowing">0</strong>
+            <span>Following</span>
+          </button>
+          <div class="stat-box">
+            <strong id="statLikes">0</strong>
+            <span>Likes</span>
+          </div>
+        </div>
+
+        <button id="toggleEditProfileBtn" class="btn btn-ghost btn-full btn-sm" type="button">Edit Profile</button>
+
+        <form id="editProfileForm" class="form-stack hidden">
+          <label class="field">
+            <span>Display Name</span>
+            <input type="text" id="editName" minlength="2" maxlength="100" required>
+          </label>
+          <label class="field">
+            <span>Username</span>
+            <input type="text" id="editUsername" minlength="3" maxlength="50" pattern="[A-Za-z0-9._]+" required>
+          </label>
+          <label class="field">
+            <span>Bio</span>
+            <textarea id="editBio" rows="2" maxlength="300"></textarea>
+          </label>
+          <label class="checkbox-row">
+            <input type="checkbox" id="editPrivate">
+            <span>Private account (require follow approval)</span>
+          </label>
+          <button class="btn btn-primary btn-sm" type="submit">Save Profile</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h3 class="card-title">Discover Creators</h3>
+        <form id="creatorSearchForm" class="search-row">
+          <input type="search" id="creatorSearchInput" placeholder="Search name or @username...">
+          <button class="btn btn-secondary btn-sm" type="submit">Search</button>
+        </form>
+        <div id="creatorSearchResults" class="creator-list">
+          <div class="muted small">Enter a query or leave blank to browse MySQL creators.</div>
+        </div>
+      </section>
+    </aside>
+
+    <!-- Main Column: Video Upload Studio & Algorithmic Feed -->
+    <section class="main-col">
+      <section class="card upload-card">
+        <div class="card-header-row">
+          <div>
+            <h2 class="card-title">Reels Upload &amp; FFmpeg Transcoder</h2>
+            <p class="muted small">
+              Max video {{ max_video_upload_mb }} MB &middot; Automatic H.264 MP4 + adaptive HLS (720p / 480p) transcoding
+            </p>
+          </div>
+          <span class="pill" id="uploadAuthHint">Sign in required to publish</span>
+        </div>
+
+        <form id="videoUploadForm" class="upload-form">
+          <div class="upload-grid">
+            <label class="dropzone" id="videoDropzone">
+              <input type="file" id="videoFileInput" accept="video/*" hidden required>
+              <strong id="videoFileLabel">Select or drop video file (.mp4, .mov, .webm)</strong>
+              <span class="muted small">Uploaded straight to {{ storage_backend | upper }} storage</span>
+            </label>
+
+            <label class="dropzone dropzone-thumb">
+              <input type="file" id="thumbFileInput" accept="image/*" hidden>
+              <strong id="thumbFileLabel">Optional Thumbnail</strong>
+              <span class="muted small">Auto-extracted if omitted</span>
+            </label>
+          </div>
+
+          <div class="form-two-col">
+            <label class="field">
+              <span>Caption &amp; #Hashtags</span>
+              <textarea id="uploadCaption" rows="2" maxlength="2000" placeholder="Share what makes this reel awesome #dance #tivoo"></textarea>
+            </label>
+            <div class="form-stack">
+              <div class="form-two-col compact">
+                <label class="field">
+                  <span>Category</span>
+                  <select id="uploadCategory">
+                    <option value="Entertainment">Entertainment</option>
+                    <option value="Music">Music</option>
+                    <option value="Dance">Dance</option>
+                    <option value="Comedy">Comedy</option>
+                    <option value="Gaming">Gaming</option>
+                    <option value="Education">Education</option>
+                    <option value="Travel">Travel</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Audience</span>
+                  <select id="uploadAudience">
+                    <option value="Public">Public</option>
+                    <option value="Followers Only">Followers Only</option>
+                    <option value="Private">Private</option>
+                  </select>
+                </label>
+              </div>
+              <div class="form-two-col compact">
+                <label class="field">
+                  <span>Snap Lens / Effect</span>
+                  <input type="text" id="uploadSnapLens" placeholder="e.g. Neon Dragon">
+                </label>
+                <label class="field">
+                  <span>Audio / Music Title</span>
+                  <input type="text" id="uploadMusic" placeholder="Original Audio">
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="upload-footer">
+            <div class="checkbox-group">
+              <label class="checkbox-row">
+                <input type="checkbox" id="uploadAllowComments" checked>
+                <span>Allow comments</span>
+              </label>
+              <label class="checkbox-row">
+                <input type="checkbox" id="uploadAllowDownloads" checked>
+                <span>Allow downloads</span>
+              </label>
+            </div>
+            <button id="uploadSubmitBtn" class="btn btn-primary" type="submit">Upload &amp; Transcode</button>
+          </div>
+
+          <div id="uploadProgressWrap" class="progress-wrap hidden">
+            <div class="progress-bar">
+              <div id="uploadProgressFill" class="progress-fill" style="width: 0%;"></div>
+            </div>
+            <div id="uploadStatusText" class="muted small">Preparing upload...</div>
+          </div>
+        </form>
+      </section>
+
+      <section class="feed-controls card">
+        <div class="tab-bar" role="tablist">
+          <button class="tab-btn active" data-feed="for_you" type="button">For You</button>
+          <button class="tab-btn" data-feed="following" type="button">Following</button>
+        </div>
+
+        <form id="feedFilterForm" class="search-row">
+          <select id="feedCategoryFilter" aria-label="Filter by category">
+            <option value="">All Categories</option>
+            <option value="Entertainment">Entertainment</option>
+            <option value="Music">Music</option>
+            <option value="Dance">Dance</option>
+            <option value="Comedy">Comedy</option>
+            <option value="Gaming">Gaming</option>
+            <option value="Education">Education</option>
+            <option value="Travel">Travel</option>
+          </select>
+          <input type="search" id="feedQueryInput" placeholder="Search captions or #hashtags...">
+          <button class="btn btn-secondary btn-sm" type="submit">Apply</button>
+        </form>
+      </section>
+
+      <section id="feedContainer" class="feed-grid"></section>
+
+      <div id="feedPagination" class="pagination-row hidden">
+        <button id="loadMoreBtn" class="btn btn-secondary" type="button">Load More Reels</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Authentication & Email OTP Modal -->
+  <div id="authModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 id="authModalTitle">Sign in to {{ app_name }}</h2>
+        <button id="closeAuthModalBtn" class="icon-btn" type="button" aria-label="Close">&times;</button>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="tab-btn active" data-auth-tab="password" type="button">Password</button>
+        <button class="tab-btn" data-auth-tab="otp" type="button">Email OTP</button>
+        <button class="tab-btn" data-auth-tab="register" type="button">Sign Up</button>
+      </div>
+
+      <form id="passwordLoginForm" class="form-stack">
+        <label class="field">
+          <span>Email, Username, or Phone</span>
+          <input type="text" id="loginIdentifier" required autocomplete="username">
+        </label>
+        <label class="field">
+          <span>Password</span>
+          <input type="password" id="loginPassword" required autocomplete="current-password">
+        </label>
+        <button class="btn btn-primary btn-full" type="submit">Sign In</button>
+      </form>
+
+      <div id="otpLoginPanel" class="form-stack hidden">
+        <p class="muted small">
+          Real verification email sent from <code>{{ mail_sender or "configured sender" }}</code>.
+          {% if not smtp_configured %}
+          <br><strong class="warn-text">Note:</strong> Set <code>MAIL_APP_PASSWORD</code> in <code>backend/.env</code> to enable live Gmail SMTP delivery.
+          {% endif %}
+        </p>
+        <form id="sendEmailOtpForm" class="form-stack">
+          <label class="field">
+            <span>Email Address</span>
+            <input type="email" id="otpEmailInput" required placeholder="you@example.com">
+          </label>
+          <button class="btn btn-secondary btn-full" type="submit">Send 6-Digit Email OTP</button>
+        </form>
+
+        <form id="verifyEmailOtpForm" class="form-stack">
+          <label class="field">
+            <span>6-Digit OTP Code</span>
+            <input type="text" id="otpCodeInput" minlength="4" maxlength="8" required placeholder="123456">
+          </label>
+          <label class="field">
+            <span>Display Name (for new email signups)</span>
+            <input type="text" id="otpDisplayName" placeholder="Optional if existing account">
+          </label>
+          <button class="btn btn-primary btn-full" type="submit">Verify OTP &amp; Continue</button>
+        </form>
+      </div>
+
+      <form id="registerForm" class="form-stack hidden">
+        <div class="form-two-col compact">
+          <label class="field">
+            <span>Full Name</span>
+            <input type="text" id="regName" minlength="2" maxlength="100" required>
+          </label>
+          <label class="field">
+            <span>Username</span>
+            <input type="text" id="regUsername" minlength="3" maxlength="50" pattern="[A-Za-z0-9._]+" required>
+          </label>
+        </div>
+        <label class="field">
+          <span>Email</span>
+          <input type="email" id="regEmail" required>
+        </label>
+        <label class="field">
+          <span>Phone Number (optional)</span>
+          <input type="tel" id="regPhone" placeholder="+91...">
+        </label>
+        <label class="field">
+          <span>Password (min 8 chars)</span>
+          <input type="password" id="regPassword" minlength="8" maxlength="72" required>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="regSendOtp">
+          <span>Send verification OTP to email on signup</span>
+        </label>
+        <button class="btn btn-primary btn-full" type="submit">Create MySQL Account</button>
+      </form>
+
+      <div id="authMessage" class="feedback hidden"></div>
+    </div>
+  </div>
+
+  <!-- Comments / Follows Drawer Modal -->
+  <div id="drawerModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
+    <div class="modal-card modal-wide">
+      <div class="modal-header">
+        <h2 id="drawerTitle">Comments</h2>
+        <button id="closeDrawerBtn" class="icon-btn" type="button" aria-label="Close">&times;</button>
+      </div>
+      <div id="drawerBody" class="drawer-body"></div>
+      <form id="commentForm" class="search-row hidden">
+        <input type="text" id="commentInput" maxlength="1000" placeholder="Write a comment..." required>
+        <button class="btn btn-primary btn-sm" type="submit">Post</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+</body>
+</html>
