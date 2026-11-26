@@ -105,7 +105,7 @@ class AuthController extends StateNotifier<AuthState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        errorMessage: 'Connection failed: ${e.toString()}',
+        errorMessage: _formatNetworkError(e),
       );
       return false;
     }
@@ -166,7 +166,7 @@ class AuthController extends StateNotifier<AuthState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        errorMessage: 'Connection failed: ${e.toString()}',
+        errorMessage: _formatNetworkError(e),
       );
       return false;
     }
@@ -227,7 +227,7 @@ class AuthController extends StateNotifier<AuthState> {
         return false;
       }
     } catch (e) {
-      state = state.copyWith(isLoading: false, errorMessage: 'Connection failed: $e');
+      state = state.copyWith(isLoading: false, errorMessage: _formatNetworkError(e));
       return false;
     }
   }
@@ -275,9 +275,23 @@ class AuthController extends StateNotifier<AuthState> {
         return false;
       }
     } catch (e) {
-      state = state.copyWith(isLoading: false, errorMessage: 'Connection failed: $e');
+      state = state.copyWith(isLoading: false, errorMessage: _formatNetworkError(e));
       return false;
     }
+  }
+
+  String _formatNetworkError(Object error) {
+    final str = error.toString().toLowerCase();
+    if (str.contains('failed host lookup') ||
+        str.contains('no address associated') ||
+        str.contains('network is unreachable') ||
+        str.contains('socketexception')) {
+      return 'No internet connection. Please check your phone Wi-Fi or mobile data.';
+    }
+    if (str.contains('timeout') || str.contains('timed out')) {
+      return 'Connection timed out. The server may be waking up, please retry in 10 seconds.';
+    }
+    return 'Connection failed: $error';
   }
 }
 
